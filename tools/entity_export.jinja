@@ -1,0 +1,18 @@
+{#-
+  Paste into Home Assistant: Developer Tools -> Template.
+  Copy the output on the right and send it back. It lists the entities that
+  matter for a dashboard, grouped by area, with their friendly names.
+-#}
+{%- set domains = ['light','switch','fan','climate','cover','lock','media_player',
+  'camera','vacuum','alarm_control_panel','sensor','binary_sensor','scene',
+  'script','person','weather','calendar','todo','input_boolean','button','valve'] -%}
+{%- for area in areas() %}
+## {{ area_name(area) }}
+{%- for e in area_entities(area) | sort if e.split('.')[0] in domains %}
+- {{ e }} | {{ state_attr(e, 'friendly_name') }} | {{ states(e) }}{{ ' ' ~ state_attr(e, 'unit_of_measurement') if state_attr(e, 'unit_of_measurement') }}
+{%- endfor %}
+{% endfor %}
+## (no area)
+{%- for s in states | sort(attribute='entity_id') if s.domain in domains and not area_id(s.entity_id) %}
+- {{ s.entity_id }} | {{ s.name }} | {{ s.state }}
+{%- endfor %}
