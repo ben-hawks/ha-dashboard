@@ -1,0 +1,68 @@
+# Climate: thermostat plus indoor air quality.
+title: Climate
+path: climate
+icon: mdi:thermostat
+type: sections
+theme: Wall Tablet
+max_columns: 3
+dense_section_placement: true
+
+sections:
+  - type: grid
+    cards:
+      - type: thermostat
+        entity: climate.hallway
+        name: Thermostat
+        grid_options:
+          columns: full
+        features:
+          - type: climate-hvac-modes
+            hvac_modes:
+              - heat
+              - cool
+              - heat_cool
+              - "off"
+
+  - type: grid
+    cards:
+      - type: heading
+        heading: Hallway
+        icon: mdi:home-thermometer
+      - type: tile
+        entity: sensor.hallway_temperature
+        name: Temperature
+        features: &trend
+          - type: trend-graph
+            hours_to_show: 24
+      - type: tile
+        entity: sensor.hallway_humidity
+        name: Humidity
+        features: *trend
+
+  # Airthings Wave+ in the work office.
+  - type: grid
+    cards:
+      - type: heading
+        heading: Air quality
+        icon: mdi:air-filter
+      - type: tile
+        entity: sensor.airthings_wave_055159_radon_1_day_average
+        name: Radon (today)
+        features: *trend
+      - type: tile
+        entity: sensor.airthings_wave_055159_radon_longterm_average
+        name: Radon (long-term)
+      - type: tile
+        entity: sensor.airthings_wave_055159_carbon_dioxide
+        name: CO₂
+        features: *trend
+      - type: tile
+        entity: sensor.airthings_wave_055159_volatile_organic_compounds_parts
+        name: VOCs
+        features: *trend
+      - type: tile
+        entity: sensor.airthings_wave_055159_temperature
+        name: Office temperature
+      - type: tile
+        entity: sensor.airthings_wave_055159_humidity
+        name: Office humidity

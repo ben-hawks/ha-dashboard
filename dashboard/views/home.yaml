@@ -1,0 +1,194 @@
+# Home: the at-a-glance screen. Keep this to what someone walking past
+# needs; everything else belongs on another tab.
+title: Home
+path: home
+icon: mdi:home
+type: sections
+theme: Wall Tablet
+max_columns: 3
+dense_section_placement: true
+
+header:
+  layout: responsive
+  badges_position: bottom
+  card:
+    type: markdown
+    text_only: true
+    content: >-
+      {%- set h = now().hour %}
+      # Good {{ 'morning' if h < 12 else 'afternoon' if h < 18 else 'evening' }}
+
+badges:
+  - type: entity
+    entity: person.bhawks
+    show_entity_picture: true
+  - type: entity
+    entity: person.megan
+    show_entity_picture: true
+  - type: entity
+    entity: weather.forecast_home
+    name: Outside
+    show_name: true
+    state_content: temperature
+  - type: entity
+    entity: sensor.hallway_temperature
+    name: Inside
+    show_name: true
+  - type: entity
+    entity: sensor.lights_on
+    name: Lights on
+    show_name: true
+    color: amber
+    tap_action:
+      action: navigate
+      navigation_path: /wall-tablet/rooms
+    visibility:
+      - condition: numeric_state
+        entity: sensor.lights_on
+        above: 0
+
+sections:
+  # Only shown when something needs doing (see sensor.household_alerts).
+  - type: grid
+    column_span: 3
+    visibility:
+      - condition: state
+        entity: sensor.household_alerts
+        state_not:
+          - All good
+          - unavailable
+          - unknown
+    cards:
+      - type: tile
+        entity: sensor.household_alerts
+        name: Needs attention
+        icon: mdi:alert-circle
+        color: red
+        grid_options:
+          columns: full
+        tap_action:
+          action: navigate
+          navigation_path: /wall-tablet/devices
+
+  - type: grid
+    cards:
+      - type: clock
+        clock_size: large
+        time_format: "12"
+        grid_options:
+          columns: full
+      - type: weather-forecast
+        entity: weather.forecast_home
+        show_current: true
+        show_forecast: true
+        forecast_type: daily
+        grid_options:
+          columns: full
+
+  - type: grid
+    cards:
+      - type: heading
+        heading: Lights
+        heading_style: title
+        icon: mdi:lightbulb-group
+      # Tap toggles, hold opens brightness/colour.
+      - type: tile
+        entity: light.basement_lights
+        name: Basement
+        tap_action: &toggle
+          action: toggle
+        hold_action: &more_info
+          action: more-info
+      - type: tile
+        entity: light.hallway_lights
+        name: Hallway
+        tap_action: *toggle
+        hold_action: *more_info
+      - type: tile
+        entity: light.garage_lights
+        name: Garage
+        tap_action: *toggle
+        hold_action: *more_info
+      - type: tile
+        entity: light.ben_s_office_lamp
+        name: Ben's Lamp
+        tap_action: *toggle
+        hold_action: *more_info
+      - type: tile
+        entity: script.wall_tablet_all_lights_off
+        name: All lights off
+        icon: mdi:lightbulb-group-off
+        color: amber
+        hide_state: true
+        grid_options:
+          columns: full
+        tap_action:
+          action: perform-action
+          perform_action: script.turn_on
+          target:
+            entity_id: script.wall_tablet_all_lights_off
+
+  - type: grid
+    cards:
+      - type: heading
+        heading: Comfort
+        heading_style: title
+        icon: mdi:home-thermometer
+      - type: tile
+        entity: climate.hallway
+        name: Thermostat
+        grid_options:
+          columns: full
+        features:
+          - type: target-temperature
+          - type: climate-hvac-modes
+            hvac_modes:
+              - heat
+              - cool
+              - heat_cool
+              - "off"
+
+      # Whatever is playing right now, anywhere in the house.
+      - type: custom:auto-entities
+        show_empty: false
+        grid_options:
+          columns: full
+        card:
+          type: grid
+          columns: 1
+          square: false
+        card_param: cards
+        filter:
+          include:
+            - domain: media_player
+              state: playing
+              options:
+                type: tile
+                features:
+                  - type: media-player-playback
+                  - type: media-player-volume-slider
+            - domain: media_player
+              state: paused
+              options:
+                type: tile
+                features:
+                  - type: media-player-playback
+
+      - type: heading
+        heading: Around the house
+        heading_style: subtitle
+      - type: tile
+        entity: vacuum.acearchr_gmail_com
+        name: Vacuum
+        features:
+          - type: vacuum-commands
+            commands:
+              - start_pause
+              - return_home
+      - type: tile
+        entity: sensor.turd_gobbler_9001_waste_drawer
+        name: Litter drawer
+        icon: mdi:cat
+        tap_action:
+          action: navigate
+          navigation_path: /wall-tablet/devices

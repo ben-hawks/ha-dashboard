@@ -1,0 +1,126 @@
+# Outdoors: forecast, Ecowitt weather station and soil sensors, chicken
+# coop, and the shed. The Ecowitt sections fill themselves in: any sensor
+# the Ecowitt integration adds appears here automatically.
+title: Outdoors
+path: outdoors
+icon: mdi:sprout
+type: sections
+theme: Wall Tablet
+max_columns: 3
+dense_section_placement: true
+
+sections:
+  - type: grid
+    cards:
+      - type: weather-forecast
+        entity: weather.forecast_home
+        show_current: true
+        show_forecast: true
+        forecast_type: hourly
+        grid_options:
+          columns: full
+
+  - type: grid
+    cards:
+      - type: heading
+        heading: Weather station
+        icon: mdi:weather-partly-cloudy
+      # Placeholder until the station is set up. Once it is, we'll swap this
+      # for a hand-picked list (Ecowitt adds a lot of sensors).
+      - type: custom:auto-entities
+        grid_options:
+          columns: full
+        card:
+          type: grid
+          columns: 2
+          square: false
+        card_param: cards
+        filter:
+          include:
+            - integration: ecowitt
+              domain: sensor
+              options:
+                type: tile
+          exclude:
+            - attributes:
+                device_class: moisture
+            - attributes:
+                device_class: battery
+            - attributes:
+                device_class: signal_strength
+        sort:
+          method: name
+        else:
+          type: markdown
+          content: Weather station not connected yet.
+
+  - type: grid
+    cards:
+      - type: heading
+        heading: Garden soil
+        icon: mdi:watering-can
+      - type: custom:auto-entities
+        grid_options:
+          columns: full
+        card:
+          type: grid
+          columns: 2
+          square: false
+        card_param: cards
+        filter:
+          include:
+            - integration: ecowitt
+              domain: sensor
+              attributes:
+                device_class: moisture
+              options:
+                type: tile
+                color: blue
+                features:
+                  - type: trend-graph
+                    hours_to_show: 72
+        sort:
+          method: name
+        else:
+          type: markdown
+          content: No soil sensors yet.
+
+  - type: grid
+    cards:
+      - type: heading
+        heading: Chicken coop
+        icon: mdi:egg
+      - type: tile
+        entity: sensor.timmerflotte_temp_hmd_sensor_temperature
+        name: Temperature
+        features: &trend
+          - type: trend-graph
+            hours_to_show: 24
+      - type: tile
+        entity: sensor.timmerflotte_temp_hmd_sensor_humidity
+        name: Humidity
+        features: *trend
+
+  # Power station in the shed.
+  - type: grid
+    cards:
+      - type: heading
+        heading: Shed power
+        icon: mdi:home-battery
+      - type: tile
+        entity: sensor.el30v22533005590342_battery_level
+        name: Battery
+        features:
+          - type: bar-gauge
+      - type: tile
+        entity: sensor.el30v22533005590342_battery_time_in_minutes
+        name: Time left
+        icon: mdi:timer-sand
+      - type: tile
+        entity: switch.el30v22533005590342_ac
+        name: AC outlets
+        icon: mdi:power-socket-us
+      - type: tile
+        entity: switch.el30v22533005590342_dc
+        name: DC outlets
+        icon: mdi:usb-port

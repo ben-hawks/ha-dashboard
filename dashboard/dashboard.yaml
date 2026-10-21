@@ -1,0 +1,22 @@
+# Wall tablet dashboard. Each tab lives in its own file under views/;
+# add a tab by creating a file and listing it here.
+
+# kiosk-mode (HACS): the tablet logs in as a non-admin user, so it gets no
+# sidebar or menus. Admins still see everything, which keeps editing easy.
+kiosk_mode:
+  non_admin_settings:
+    hide_sidebar: true
+    hide_menubutton: true
+    hide_search: true
+    hide_assistant: true
+    hide_notifications: true
+    hide_overflow: true
+
+title: Home
+views:
+  - !include views/home.yaml
+  - !include views/rooms.yaml
+  - !include views/climate.yaml
+  - !include views/outdoors.yaml
+  - !include views/safety.yaml
+  - !include views/devices.yaml

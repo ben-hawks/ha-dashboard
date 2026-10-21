@@ -1,0 +1,43 @@
+# Wall tablet theme. Dark and light share the same shapes and accent colours;
+# the automation in packages/wall_tablet.yaml picks the mode.
+Wall Tablet:
+  ha-card-border-radius: "18px"
+  ha-card-border-width: "0px"
+  ha-card-box-shadow: "none"
+  ha-badge-border-radius: "18px"
+
+  modes:
+    dark:
+      primary-color: "#5b9cf6"
+      accent-color: "#f4a940"
+      primary-background-color: "#0e1117"
+      secondary-background-color: "#161a22"
+      lovelace-background: "#0e1117"
+      card-background-color: "#1a1f29"
+      ha-card-background: "#1a1f29"
+      primary-text-color: "#e9ecf1"
+      secondary-text-color: "#9aa3b2"
+      disabled-text-color: "#5c6574"
+      divider-color: "rgba(255, 255, 255, 0.08)"
+      state-icon-color: "#9aa3b2"
+      app-header-background-color: "#0e1117"
+      app-header-text-color: "#e9ecf1"
+      app-header-selection-bar-color: "#5b9cf6"
+      mdc-dialog-scrim-color: "rgba(0, 0, 0, 0.7)"
+
+    light:
+      primary-color: "#1f6fe5"
+      accent-color: "#e08a00"
+      primary-background-color: "#f1f3f7"
+      secondary-background-color: "#e7eaf0"
+      lovelace-background: "#f1f3f7"
+      card-background-color: "#ffffff"
+      ha-card-background: "#ffffff"
+      primary-text-color: "#1b1f27"
+      secondary-text-color: "#5d6675"
+      disabled-text-color: "#a3abb8"
+      divider-color: "rgba(0, 0, 0, 0.08)"
+      state-icon-color: "#5d6675"
+      app-header-background-color: "#f1f3f7"
+      app-header-text-color: "#1b1f27"
+      app-header-selection-bar-color: "#1f6fe5"

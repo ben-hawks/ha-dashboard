@@ -1,0 +1,77 @@
+# Safety: smoke/CO alarms and the alarm hub.
+title: Safety
+path: safety
+icon: mdi:shield-home
+type: sections
+theme: Wall Tablet
+max_columns: 3
+dense_section_placement: true
+
+sections:
+  # Only shown while an alarm is sounding.
+  - type: grid
+    column_span: 3
+    visibility:
+      - condition: state
+        entity: binary_sensor.smoke_and_co_alarms
+        state: "on"
+    cards:
+      - type: tile
+        entity: script.wall_tablet_silence_alarms
+        name: Silence all alarms
+        icon: mdi:volume-off
+        color: red
+        hide_state: true
+        grid_options:
+          columns: full
+        tap_action:
+          action: perform-action
+          perform_action: script.turn_on
+          target:
+            entity_id: script.wall_tablet_silence_alarms
+          confirmation:
+            text: Silence every smoke/CO alarm in the house?
+
+  - type: grid
+    cards:
+      - type: heading
+        heading: Status
+        icon: mdi:smoke-detector-variant
+      - type: tile
+        entity: binary_sensor.smoke_and_co_alarms
+        name: Smoke & CO
+        grid_options:
+          columns: full
+      - type: tile
+        entity: sensor.highest_co_reading
+        name: Highest CO reading
+      - type: tile
+        entity: binary_sensor.base_station_connected
+        name: Alarm hub
+      - type: tile
+        entity: sensor.work_office_base_station_safe_mode
+        name: Security mode
+        icon: mdi:shield-lock-outline
+        grid_options:
+          columns: full
+
+  - type: grid
+    cards:
+      - type: heading
+        heading: Alarms by room
+        icon: mdi:home-alert
+      - type: tile
+        entity: binary_sensor.combination_alarm_alarm_status
+        name: Living Room
+      - type: tile
+        entity: binary_sensor.combination_alarm_5_alarm_status
+        name: Kitchen
+      - type: tile
+        entity: binary_sensor.combination_alarm_2_alarm_status
+        name: Bedroom
+      - type: tile
+        entity: binary_sensor.combination_alarm_3_alarm_status
+        name: Ben's Office
+      - type: tile
+        entity: binary_sensor.combination_alarm_4_alarm_status
+        name: Meg's Office

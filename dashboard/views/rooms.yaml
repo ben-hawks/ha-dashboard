@@ -1,0 +1,174 @@
+# Rooms: one section per room, in the order you'd walk through the house.
+# To add a room, copy a section. To add a device, add a tile to its room.
+title: Rooms
+path: rooms
+icon: mdi:sofa
+type: sections
+theme: Wall Tablet
+max_columns: 3
+dense_section_placement: true
+
+sections:
+  - type: grid
+    cards:
+      - type: heading
+        heading: Living Room
+        icon: mdi:sofa
+      - type: tile
+        entity: media_player.living_room
+        name: Speaker
+        grid_options:
+          columns: full
+        features:
+          - type: media-player-playback
+          - type: media-player-volume-slider
+      - type: tile
+        entity: media_player.main_room_tv
+        name: TV
+        grid_options:
+          columns: full
+
+  - type: grid
+    cards:
+      - type: heading
+        heading: Hallway
+        icon: mdi:door
+      - type: tile
+        entity: light.hallway_lights
+        name: All hallway lights
+        grid_options:
+          columns: full
+        tap_action: &toggle
+          action: toggle
+        hold_action: &more_info
+          action: more-info
+        features:
+          - type: light-brightness
+      - type: tile
+        entity: light.hallway_hallway_light_1
+        name: Light 1
+        tap_action: *toggle
+        hold_action: *more_info
+      - type: tile
+        entity: light.hallway_hallway_light_2
+        name: Light 2
+        tap_action: *toggle
+        hold_action: *more_info
+      - type: tile
+        entity: light.hallway_hallway_light_3
+        name: Light 3
+        tap_action: *toggle
+        hold_action: *more_info
+      - type: tile
+        entity: light.smart_multicolor_bulb_9
+        name: Light 4
+        tap_action: *toggle
+        hold_action: *more_info
+
+  - type: grid
+    cards:
+      - type: heading
+        heading: Kitchen
+        icon: mdi:silverware-fork-knife
+      - type: tile
+        entity: vacuum.acearchr_gmail_com
+        name: Vacuum
+        grid_options:
+          columns: full
+        features:
+          - type: vacuum-commands
+            commands:
+              - start_pause
+              - return_home
+              - locate
+
+  - type: grid
+    cards:
+      - type: heading
+        heading: Game Room
+        icon: mdi:controller
+      - type: tile
+        entity: light.basement_lights
+        name: Basement lights
+        grid_options:
+          columns: full
+        tap_action: *toggle
+        hold_action: *more_info
+        features:
+          - type: light-brightness
+
+  - type: grid
+    cards:
+      - type: heading
+        heading: Den
+        icon: mdi:bookshelf
+      - type: tile
+        entity: media_player.den
+        name: Speaker
+        grid_options:
+          columns: full
+        features:
+          - type: media-player-playback
+          - type: media-player-volume-slider
+
+  - type: grid
+    cards:
+      - type: heading
+        heading: Bedroom
+        icon: mdi:bed
+      - type: tile
+        entity: media_player.bedroom_tv_2
+        name: TV
+        grid_options:
+          columns: full
+
+  - type: grid
+    cards:
+      - type: heading
+        heading: Ben's Office
+        icon: mdi:desk
+      - type: tile
+        entity: light.ben_s_office_lamp
+        name: Lamp
+        tap_action: *toggle
+        hold_action: *more_info
+      - type: tile
+        entity: light.smart_multicolor_bulb
+        name: Fan light
+        tap_action: *toggle
+        hold_action: *more_info
+
+  - type: grid
+    cards:
+      - type: heading
+        heading: Garage
+        icon: mdi:garage
+      - type: tile
+        entity: light.garage_lights
+        name: All garage lights
+        grid_options:
+          columns: full
+        tap_action: *toggle
+        hold_action: *more_info
+        features:
+          - type: light-brightness
+      - type: tile
+        entity: light.smart_multicolor_bulb_2
+        name: Front
+        tap_action: *toggle
+        hold_action: *more_info
+      - type: tile
+        entity: light.smart_multicolor_bulb_8
+        name: Back
+        tap_action: *toggle
+        hold_action: *more_info
+      - type: tile
+        entity: light.smart_multicolor_bulb_5
+        name: Opener 1
+        tap_action: *toggle
+        hold_action: *more_info
+      - type: tile
+        entity: light.smart_multicolor_bulb_6
+        name: Opener 2
+        tap_action: *toggle
+        hold_action: *more_info

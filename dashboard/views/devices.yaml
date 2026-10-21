@@ -1,0 +1,182 @@
+# Devices: chores, pets, power, and anything that needs attention.
+title: Devices
+path: devices
+icon: mdi:devices
+type: sections
+theme: Wall Tablet
+max_columns: 3
+dense_section_placement: true
+
+sections:
+  - type: grid
+    cards:
+      - type: heading
+        heading: Needs attention
+        icon: mdi:alert-circle-outline
+      - type: tile
+        entity: sensor.household_alerts
+        name: Status
+        grid_options:
+          columns: full
+      - type: custom:auto-entities
+        grid_options:
+          columns: full
+        card:
+          type: entities
+          title: Low batteries
+        filter:
+          template: "{{ state_attr('sensor.low_batteries', 'entities') or [] }}"
+        sort:
+          method: state
+          numeric: true
+        show_empty: false
+      - type: custom:auto-entities
+        grid_options:
+          columns: full
+        card:
+          type: entities
+          title: Offline
+        filter:
+          include:
+            - domain: light
+              state: unavailable
+            - domain: media_player
+              state: unavailable
+            - domain: climate
+              state: unavailable
+            - domain: vacuum
+              state: unavailable
+          exclude:
+            # Groups go offline with their bulbs; list the bulbs only.
+            - entity_id: light.hallway_lights
+            - entity_id: light.garage_lights
+            - entity_id: light.ben_s_office_lamp
+            # Old or duplicate devices.
+            - entity_id: media_player.old_bedroom_tv
+            - entity_id: media_player.googletv9555
+            - entity_id: media_player.bedroom_tv
+            - entity_id: media_player.bedroom_tv_2_2
+        sort:
+          method: name
+        show_empty: false
+
+  - type: grid
+    cards:
+      - type: heading
+        heading: Vacuum
+        icon: mdi:robot-vacuum
+      - type: tile
+        entity: vacuum.acearchr_gmail_com
+        name: Vacuum
+        grid_options:
+          columns: full
+        features:
+          - type: vacuum-commands
+            commands:
+              - start_pause
+              - stop
+              - return_home
+              - locate
+      - type: tile
+        entity: sensor.acearchr_gmail_com_battery
+        name: Battery
+      - type: tile
+        entity: sensor.acearchr_gmail_com_station_state
+        name: Dock
+        icon: mdi:home-import-outline
+      # Parts and supplies that are nearly used up.
+      - type: custom:auto-entities
+        grid_options:
+          columns: full
+        card:
+          type: entities
+          title: Replace soon
+        filter:
+          include:
+            - entity_id: sensor.acearchr_gmail_com_*_lifespan
+              state: "< 10"
+        sort:
+          method: state
+          numeric: true
+        show_empty: false
+
+  - type: grid
+    cards:
+      - type: heading
+        heading: Cats
+        icon: mdi:cat
+      - type: tile
+        entity: sensor.turd_gobbler_9001_status_code
+        name: Litter box
+        icon: mdi:cat
+        grid_options:
+          columns: full
+      - type: tile
+        entity: sensor.turd_gobbler_9001_waste_drawer
+        name: Waste drawer
+        features: &gauge
+          - type: bar-gauge
+      - type: tile
+        entity: sensor.turd_gobbler_9001_litter_level
+        name: Litter level
+        features: *gauge
+      - type: tile
+        entity: sensor.smudge_visits_today
+        name: Smudge visits
+        icon: mdi:paw
+      - type: tile
+        entity: sensor.smudge_weight
+        name: Smudge weight
+        icon: mdi:scale
+      - type: tile
+        entity: sensor.yue_visits_today
+        name: Yue visits
+        icon: mdi:paw
+      - type: tile
+        entity: sensor.yue_weight
+        name: Yue weight
+        icon: mdi:scale
+
+  - type: grid
+    cards:
+      - type: heading
+        heading: Backup power
+        icon: mdi:battery-charging
+      - type: tile
+        entity: sensor.ecoflow_river_plus_3_battery_charge
+        name: Office UPS
+        features:
+          - type: bar-gauge
+      - type: tile
+        entity: sensor.ecoflow_river_plus_3_status
+        name: UPS status
+        icon: mdi:power-plug-outline
+      - type: tile
+        entity: sensor.el30v22533005590342_battery_level
+        name: Shed battery
+        features:
+          - type: bar-gauge
+
+  - type: grid
+    cards:
+      - type: heading
+        heading: Lists
+        icon: mdi:format-list-checks
+      - type: todo-list
+        entity: todo.shopping_list
+        grid_options:
+          columns: full
+
+  - type: grid
+    cards:
+      - type: heading
+        heading: Tablet
+        icon: mdi:tablet
+      - type: tile
+        entity: input_select.wall_tablet_theme_mode
+        name: Theme
+        grid_options:
+          columns: full
+        features:
+          - type: select-options
+            style: buttons

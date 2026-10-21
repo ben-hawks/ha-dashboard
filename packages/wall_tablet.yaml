@@ -1,0 +1,215 @@
+# Wall tablet dashboard: the helpers, groups, and summary sensors the
+# dashboard depends on. Loaded as a Home Assistant package (see docs/install.md).
+
+# ---------------------------------------------------------------------------
+# Theme
+# ---------------------------------------------------------------------------
+input_select:
+  wall_tablet_theme_mode:
+    name: Tablet theme
+    icon: mdi:theme-light-dark
+    options:
+      - Auto
+      - Dark
+      - Light
+
+automation:
+  - id: wall_tablet_apply_theme
+    alias: "Wall tablet: apply light/dark theme"
+    description: >-
+      Auto = light while the sun is up, dark after sunset. Re-applied every
+      30 minutes in case the tablet was offline when something changed.
+    mode: restart
+    triggers:
+      - trigger: state
+        entity_id: input_select.wall_tablet_theme_mode
+      - trigger: state
+        entity_id: sun.sun
+        to:
+          - above_horizon
+          - below_horizon
+      - trigger: homeassistant
+        event: start
+      - trigger: time_pattern
+        minutes: "/30"
+    actions:
+      - variables:
+          dark_mode: >-
+            {% set m = states('input_select.wall_tablet_theme_mode') %}
+            {% if m in ['Dark', 'Light'] %}{{ m | lower }}
+            {% else %}{{ 'dark' if is_state('sun.sun', 'below_horizon') else 'light' }}
+            {% endif %}
+      - action: browser_mod.set_theme
+        data:
+          browser_id:
+            - wall_tablet
+          theme: Wall Tablet
+          dark: "{{ dark_mode | trim }}"
+
+# ---------------------------------------------------------------------------
+# Light groups (one tile controls a whole room)
+# ---------------------------------------------------------------------------
+light:
+  - platform: group
+    name: Hallway Lights
+    unique_id: wall_tablet_hallway_lights
+    entities:
+      - light.hallway_hallway_light_1
+      - light.hallway_hallway_light_2
+      - light.hallway_hallway_light_3
+      - light.smart_multicolor_bulb_9
+
+  - platform: group
+    name: Garage Lights
+    unique_id: wall_tablet_garage_lights
+    entities:
+      - light.smart_multicolor_bulb_2
+      - light.smart_multicolor_bulb_5
+      - light.smart_multicolor_bulb_6
+      - light.smart_multicolor_bulb_8
+
+  - platform: group
+    name: Ben's Office Lamp
+    unique_id: wall_tablet_ben_office_lamp
+    entities:
+      - light.smart_multicolor_bulb_3
+      - light.smart_multicolor_bulb_4
+
+# ---------------------------------------------------------------------------
+# Smoke / CO: one "is anything going off?" sensor for every alarm
+# ---------------------------------------------------------------------------
+binary_sensor:
+  - platform: group
+    name: Smoke and CO Alarms
+    unique_id: wall_tablet_smoke_co_alarms
+    device_class: safety
+    entities:
+      - binary_sensor.combination_alarm_alarm_status
+      - binary_sensor.combination_alarm_2_alarm_status
+      - binary_sensor.combination_alarm_3_alarm_status
+      - binary_sensor.combination_alarm_4_alarm_status
+      - binary_sensor.combination_alarm_5_alarm_status
+      - binary_sensor.work_office_base_station_alarm_status
+
+script:
+  wall_tablet_all_lights_off:
+    alias: All lights off
+    icon: mdi:lightbulb-group-off
+    sequence:
+      - action: light.turn_off
+        target:
+          entity_id: all
+
+  wall_tablet_silence_alarms:
+    alias: Silence smoke alarms
+    icon: mdi:volume-off
+    sequence:
+      - action: button.press
+        target:
+          entity_id:
+            - button.living_room_combination_alarm_mute
+            - button.bedroom_combination_alarm_2_mute
+            - button.office_combination_alarm_3_mute
+            - button.meg_s_office_combination_alarm_4_mute
+            - button.kitchen_combination_alarm_5_mute
+
+# ---------------------------------------------------------------------------
+# Summary sensors. These discover new devices on their own, so most new
+# hardware shows up here without editing this file.
+# ---------------------------------------------------------------------------
+template:
+  - sensor:
+      - name: Lights On
+        unique_id: wall_tablet_lights_on
+        icon: mdi:lightbulb-group
+        # Light groups carry an entity_id attribute; skip them so bulbs
+        # aren't counted twice.
+        state: >-
+          {{ states.light
+             | rejectattr('attributes.entity_id', 'defined')
+             | selectattr('state', 'eq', 'on')
+             | list | count }}
+
+      # Battery sensors below 20%. Phones and power stations are left out
+      # by name; tag anything else with the "Hide from tablet" label in
+      # Home Assistant to leave it out too.
+      - name: Low Batteries
+        unique_id: wall_tablet_low_batteries
+        icon: mdi:battery-alert-variant-outline
+        state: >-
+          {%- set hidden = label_entities('hide_from_tablet') %}
+          {{ states.sensor
+             | selectattr('attributes.device_class', 'defined')
+             | selectattr('attributes.device_class', 'eq', 'battery')
+             | rejectattr('entity_id', 'search', 'pixel|xperia|ecoflow|el30v|meshtastic')
+             | rejectattr('entity_id', 'in', hidden)
+             | selectattr('state', 'is_number')
+             | map(attribute='state') | map('float')
+             | select('lt', 20)
+             | list | count }}
+        attributes:
+          entities: >-
+            {%- set hidden = label_entities('hide_from_tablet') %}
+            {%- set ns = namespace(found=[]) %}
+            {%- for s in states.sensor
+                 | selectattr('attributes.device_class', 'defined')
+                 | selectattr('attributes.device_class', 'eq', 'battery')
+                 | rejectattr('entity_id', 'search', 'pixel|xperia|ecoflow|el30v|meshtastic')
+                 | rejectattr('entity_id', 'in', hidden)
+                 if s.state | is_number and s.state | float < 20 %}
+              {%- set ns.found = ns.found + [s.entity_id] %}
+            {%- endfor %}
+            {{ ns.found }}
+
+      - name: Highest CO Reading
+        unique_id: wall_tablet_highest_co
+        icon: mdi:molecule-co
+        unit_of_measurement: ppm
+        device_class: carbon_monoxide
+        state_class: measurement
+        state: >-
+          {%- set readings = [
+               'sensor.combination_alarm_carbon_monoxide',
+               'sensor.combination_alarm_2_carbon_monoxide',
+               'sensor.combination_alarm_3_carbon_monoxide',
+               'sensor.combination_alarm_4_carbon_monoxide',
+               'sensor.combination_alarm_5_carbon_monoxide',
+             ] | map('states') | select('is_number') | map('float') | list %}
+          {{ readings | max if readings else 0 }}
+
+      # One line of plain English for the home screen. "All good" when
+      # nothing needs doing; the dashboard hides the alert banner then.
+      # To add a new kind of alert, add another `if` block below.
+      - name: Household Alerts
+        unique_id: wall_tablet_household_alerts
+        icon: mdi:alert-circle-outline
+        state: >-
+          {%- set ns = namespace(a=[]) %}
+          {%- if is_state('binary_sensor.smoke_and_co_alarms', 'on') %}
+            {%- set ns.a = ns.a + ['Smoke/CO alarm is going off'] %}
+          {%- endif %}
+          {%- if states('sensor.highest_co_reading') | float(0) >= 10 %}
+            {%- set ns.a = ns.a + ['CO detected (' ~ states('sensor.highest_co_reading') ~ ' ppm)'] %}
+          {%- endif %}
+          {%- if is_state('binary_sensor.base_station_connected', 'off') %}
+            {%- set ns.a = ns.a + ['Smoke alarm hub is offline'] %}
+          {%- endif %}
+          {%- if ['binary_sensor.combination_alarm_is_life_end',
+                  'binary_sensor.combination_alarm_2_is_life_end',
+                  'binary_sensor.combination_alarm_3_is_life_end',
+                  'binary_sensor.combination_alarm_4_is_life_end',
+                  'binary_sensor.combination_alarm_5_is_life_end']
+                | select('is_state', 'on') | list | count > 0 %}
+            {%- set ns.a = ns.a + ['A smoke alarm needs replacing'] %}
+          {%- endif %}
+          {%- set low = states('sensor.low_batteries') | int(0) %}
+          {%- if low > 0 %}
+            {%- set ns.a = ns.a + [low ~ (' battery is' if low == 1 else ' batteries are') ~ ' low'] %}
+          {%- endif %}
+          {%- if states('sensor.turd_gobbler_9001_waste_drawer') | float(0) >= 80 %}
+            {%- set ns.a = ns.a + ['Litter box drawer is full'] %}
+          {%- endif %}
+          {%- if is_state('vacuum.acearchr_gmail_com', 'error') %}
+            {%- set ns.a = ns.a + ['Vacuum is stuck'] %}
+          {%- endif %}
+          {{ (ns.a | join(' · ') if ns.a else 'All good')[:250] }}

@@ -1,53 +1,45 @@
 # Home Assistant Wall Tablet Dashboard
 
-A Home Assistant dashboard for a wall-mounted Android tablet. It should be easy
-for anyone in the house to use, including people who never open Home Assistant
-settings.
+A Home Assistant dashboard for a wall-mounted Lenovo Tab M10 HD (landscape).
+It's meant to be easy for anyone in the house, not just whoever set it up.
 
-## Design principles
+- **Install:** [docs/install.md](docs/install.md)
+- **Tablet setup:** [docs/tablet-setup.md](docs/tablet-setup.md)
+- **Adding devices, rooms, tabs and alerts:** [docs/adding-things.md](docs/adding-things.md)
 
-1. **One glance, one tap.** The home screen answers "what's going on?" and
-   handles the five or six things people do most, in one tap each.
-2. **Plain names.** "Kitchen Lights", never `light.hue_color_lamp_3`.
-3. **Big targets.** Tiles sized for a finger at arm's length. No tiny icons,
-   no long-press-only actions for anything important.
-4. **Scenes over switches.** "Movie Night", "Goodnight", "Leaving" do the
-   work of ten toggles.
-5. **Hide what isn't actionable.** Diagnostic sensors, battery levels, and
-   update entities stay off the main screens. Show alerts only when something
-   is wrong (door open, battery low, leak).
-6. **Nothing breakable.** No sidebar, no edit mode, no settings on the
-   tablet. Risky actions (unlock door, disarm alarm) ask for confirmation.
-7. **Same layout every time.** Rooms appear in the same order and colours
-   mean the same thing everywhere (amber = on/light, blue = climate,
-   red = needs attention).
+## Tabs
 
-## Proposed layout (landscape tablet)
+| Tab | What's on it |
+|-----|--------------|
+| **Home** | Greeting, who's home, outside/inside temperature, clock, forecast, main lights, "All lights off", thermostat, whatever's playing, vacuum, litter box. A red banner appears only when something needs attention. |
+| **Rooms** | Every light and speaker, grouped by room |
+| **Climate** | Thermostat, hallway temperature/humidity, Airthings air quality |
+| **Outdoors** | Forecast, Ecowitt weather station and soil sensors (fill in automatically), chicken coop, shed power station |
+| **Safety** | Smoke/CO status per room, alarm hub; "Silence all alarms" appears only while one is going off |
+| **Devices** | Alerts, low batteries, offline devices, vacuum parts, cats and litter box, backup power, shopping list, light/dark setting |
 
-Navigation is a fixed bar of 4–5 big buttons along the bottom (or side).
+## Design rules
 
-| View | What's on it |
-|------|--------------|
-| **Home** | Clock and weather, who's home, alert strip (only when needed), scene buttons, the most-used lights/climate, what's playing |
-| **Rooms** | One section per area: lights, blinds, fans, room temperature |
-| **Climate** | Thermostat(s), indoor/outdoor temperature and humidity, short history graphs |
-| **Security** | Locks, doors/windows, alarm, camera feeds, doorbell |
-| **Media** | Speakers and TVs, volume, sources |
+1. **One glance, one tap.** Tapping a light toggles it; holding opens
+   brightness and colour.
+2. **Plain names.** "Garage", not `light.smart_multicolor_bulb_2`.
+3. **Hide what isn't actionable.** Diagnostics stay off the screens; alerts
+   only appear when something is wrong.
+4. **Nothing breakable.** The tablet user has no sidebar, menus or edit mode.
+5. **Grows on its own where it can.** New soil sensors, low batteries, offline
+   devices and anything playing show up without editing the dashboard.
 
-The screen dims after inactivity and wakes on motion (tablet camera via Fully
-Kiosk) or a tap, with a dark theme after sunset.
+## Layout
 
-## Planned tech stack
+```
+dashboard/dashboard.yaml     tab list + kiosk settings
+dashboard/views/*.yaml       one file per tab
+packages/wall_tablet.yaml    light groups, helpers, alert sensors, theme automation
+themes/wall_tablet.yaml      dark + light theme
+tools/entity_export.jinja    lists your entities (paste into Developer Tools → Template)
+```
 
-- **Home Assistant Sections view** (built-in) with **Tile cards** as the base
-  — no custom cards required for the core.
-- Optional via HACS: **Mushroom** / **Bubble Card** for polish,
-  **kiosk-mode** to hide the header and sidebar, **Browser Mod** for popups.
-- **Fully Kiosk Browser** (Plus licence) on the tablet: locks the tablet to
-  the dashboard, motion wake, screen schedule, and a Home Assistant
-  integration for remote control.
-- A dedicated non-admin Home Assistant user for the tablet.
+## Requirements
 
-## Status
-
-Waiting on inventory from the household (see `tools/entity_export.jinja`).
+Home Assistant (current), HACS with **auto-entities**, **Kiosk Mode** and
+**Browser Mod**, and Fully Kiosk Browser (Plus) on the tablet.
