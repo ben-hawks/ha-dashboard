@@ -1,7 +1,6 @@
 # Devices: chores, pets, power, and anything that needs attention.
 title: Devices
 path: devices
-icon: mdi:devices
 type: sections
 theme: Wall Tablet
 max_columns: 3
@@ -36,16 +35,23 @@ sections:
         card:
           type: entities
           title: Offline
+          show_header_toggle: false
+        # simple-entity rows show the state instead of a useless toggle.
         filter:
           include:
             - domain: light
               state: unavailable
+              options: &plain_row
+                type: simple-entity
             - domain: media_player
               state: unavailable
+              options: *plain_row
             - domain: climate
               state: unavailable
+              options: *plain_row
             - domain: vacuum
               state: unavailable
+              options: *plain_row
           exclude:
             # Groups go offline with their bulbs; list the bulbs only.
             - entity_id: light.hallway_lights
@@ -91,10 +97,15 @@ sections:
         card:
           type: entities
           title: Replace soon
+        # Template so the long "DEEBOT X11 OmniCyclone" prefix can be dropped.
         filter:
-          include:
-            - entity_id: sensor.acearchr_gmail_com_*_lifespan
-              state: "< 10"
+          template: >-
+            {%- for s in states.sensor
+                 if s.entity_id is match('sensor.acearchr_gmail_com_.*_lifespan')
+                 and s.state | is_number and s.state | float < 10 %}
+              {{ {'entity': s.entity_id,
+                  'name': s.name | replace('DEEBOT X11 OmniCyclone ', '')} }},
+            {%- endfor %}
         sort:
           method: state
           numeric: true

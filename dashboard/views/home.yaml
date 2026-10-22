@@ -2,7 +2,6 @@
 # needs; everything else belongs on another tab.
 title: Home
 path: home
-icon: mdi:home
 type: sections
 theme: Wall Tablet
 max_columns: 3
@@ -21,9 +20,13 @@ header:
 badges:
   - type: entity
     entity: person.bhawks
+    name: Ben
+    show_name: true
     show_entity_picture: true
   - type: entity
     entity: person.megan
+    name: Megan
+    show_name: true
     show_entity_picture: true
   - type: entity
     entity: weather.forecast_home

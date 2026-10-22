@@ -50,8 +50,9 @@ and change the heading, icon and tiles.
 
 ## Add a tab
 
-1. Copy an existing file in `dashboard/views/`, change `title`, `path` and
-   `icon`.
+1. Copy an existing file in `dashboard/views/`, change `title` and `path`.
+   (Tabs show their title as text; adding an `icon:` would replace the text
+   with the icon.)
 2. Add `- !include views/<file>.yaml` to `dashboard/dashboard.yaml`.
 
 ## Add a new kind of alert

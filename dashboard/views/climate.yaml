@@ -1,7 +1,6 @@
 # Climate: thermostat plus indoor air quality.
 title: Climate
 path: climate
-icon: mdi:thermostat
 type: sections
 theme: Wall Tablet
 max_columns: 3

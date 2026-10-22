@@ -1,7 +1,6 @@
 # Safety: smoke/CO alarms and the alarm hub.
 title: Safety
 path: safety
-icon: mdi:shield-home
 type: sections
 theme: Wall Tablet
 max_columns: 3

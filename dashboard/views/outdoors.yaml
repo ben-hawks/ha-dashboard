@@ -3,7 +3,6 @@
 # the Ecowitt integration adds appears here automatically.
 title: Outdoors
 path: outdoors
-icon: mdi:sprout
 type: sections
 theme: Wall Tablet
 max_columns: 3

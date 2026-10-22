@@ -2,7 +2,6 @@
 # To add a room, copy a section. To add a device, add a tile to its room.
 title: Rooms
 path: rooms
-icon: mdi:sofa
 type: sections
 theme: Wall Tablet
 max_columns: 3

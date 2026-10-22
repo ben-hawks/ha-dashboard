@@ -2,15 +2,32 @@
 # dashboard depends on. Loaded as a Home Assistant package (see docs/install.md).
 
 # ---------------------------------------------------------------------------
+# Plain-English states: "Safe"/"Unsafe" for the smoke alarms and
+# "Connected"/"Disconnected" for the hub, instead of "Off"/"On".
+# ---------------------------------------------------------------------------
+homeassistant:
+  customize:
+    binary_sensor.combination_alarm_alarm_status: &safety
+      device_class: safety
+    binary_sensor.combination_alarm_2_alarm_status: *safety
+    binary_sensor.combination_alarm_3_alarm_status: *safety
+    binary_sensor.combination_alarm_4_alarm_status: *safety
+    binary_sensor.combination_alarm_5_alarm_status: *safety
+    binary_sensor.work_office_base_station_alarm_status: *safety
+    binary_sensor.base_station_connected:
+      device_class: connectivity
+
+# ---------------------------------------------------------------------------
 # Theme
 # ---------------------------------------------------------------------------
 input_select:
   wall_tablet_theme_mode:
     name: Tablet theme
     icon: mdi:theme-light-dark
+    # The first option is the default on a fresh install.
     options:
-      - Auto
       - Dark
+      - Auto
       - Light
 
 automation:
