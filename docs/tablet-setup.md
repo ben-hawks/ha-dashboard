@@ -3,22 +3,26 @@
 The Tab M10 HD is a modest tablet, so the dashboard sticks to built-in cards
 that render quickly. These steps keep it on the dashboard 24/7.
 
+The tablet runs LineageOS without Google apps (see
+[lineageos.md](lineageos.md)). On stock Android the steps are the same, except
+that apps come from the Play Store.
+
 ## 1. Prepare Android
 
-1. **Settings → System → System update**: install everything.
-2. **Play Store**: update **Android System WebView** and **Chrome**.
-   Fully Kiosk uses WebView to draw the dashboard, and older versions break
-   newer Home Assistant cards.
-3. **Settings → Battery**: if there's a **Battery protection** /
-   **Conservation mode** option, turn it on. A tablet plugged in forever
-   ages its battery fast; this caps the charge level.
-4. **Settings → Security → Screen lock**: None.
+1. **Settings → System → Updater** (LineageOS) or **System update** (stock):
+   install everything. On LineageOS this also updates WebView, which Fully
+   Kiosk uses to draw the dashboard.
+2. **Settings → Battery**: turn on the charge limit (80%). A tablet that's
+   always plugged in ages its battery quickly otherwise.
+3. **Settings → Security → Screen lock**: None.
+4. **Developer options → USB debugging**: on, for installing apps with `adb`.
 
 ## 2. Fully Kiosk Browser
 
-Install **Fully Kiosk Browser** from the Play Store and buy the **Plus**
-licence (one-time, per device). It's needed for kiosk lock, motion wake, and
-the Home Assistant integration.
+Download the APK from <https://www.fully-kiosk.com> and install it with
+`adb install <file>.apk` (on stock Android, the Play Store works too). Buy the
+**Plus** licence (one-time, per device). It's needed for kiosk lock, motion
+wake, and the Home Assistant integration.
 
 In Fully's settings:
 

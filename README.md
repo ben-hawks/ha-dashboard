@@ -5,6 +5,7 @@ It's meant to be easy for anyone in the house, not just whoever set it up.
 
 - **Install:** [docs/install.md](docs/install.md)
 - **Tablet setup:** [docs/tablet-setup.md](docs/tablet-setup.md)
+- **LineageOS on the tablet:** [docs/lineageos.md](docs/lineageos.md)
 - **Adding devices, rooms, tabs and alerts:** [docs/adding-things.md](docs/adding-things.md)
 
 ## Tabs
@@ -42,4 +43,4 @@ tools/entity_export.jinja    lists your entities (paste into Developer Tools →
 ## Requirements
 
 Home Assistant (current), HACS with **auto-entities**, **Kiosk Mode** and
-**Browser Mod**, and Fully Kiosk Browser (Plus) on the tablet.
+**Browser Mod**, and Fully Kiosk Browser (Plus) on the tablet, running LineageOS.
