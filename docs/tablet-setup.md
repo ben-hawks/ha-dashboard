@@ -15,7 +15,14 @@ that apps come from the Play Store.
 2. **Settings → Battery**: turn on the charge limit (80%). A tablet that's
    always plugged in ages its battery quickly otherwise.
 3. **Settings → Security → Screen lock**: None.
-4. **Developer options → USB debugging**: on, for installing apps with `adb`.
+4. Lock the whole tablet to landscape, so it's also landscape before Fully
+   starts:
+   ```sh
+   adb shell settings put system accelerometer_rotation 0   # auto-rotate off
+   adb shell settings put system user_rotation 1            # 0/1/2/3 = 0°/90°/180°/270°
+   ```
+   Try `1` first; if it's sideways or upside down, try `0` or `3`.
+5. **Developer options → USB debugging**: on, for installing apps with `adb`.
 
 ## 2. Fully Kiosk Browser
 
@@ -30,6 +37,7 @@ In Fully's settings:
 |---------|-------|
 | Web Content → **Start URL** | `http://<your-HA-IP>:8123/wall-tablet/home` |
 | Device Management → **Keep Screen On** | On |
+| Device Management → **Screen Orientation** | Landscape (or Reverse Landscape, if the tablet is mounted the other way up) |
 | Device Management → **Launch on Boot** | On |
 | Web Auto Reload → **Auto Reload on Network Reconnect** | On |
 | Web Browsing → **Pull to Refresh** | On |
