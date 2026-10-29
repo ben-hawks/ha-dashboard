@@ -73,19 +73,19 @@ views:
                 card_param: cards
                 filter:
                   include:
-                    - area: Chicken Coop
+                    - area: "Chicken Coop"
                       domain: cover
                       options:
                         type: tile
                         features:
                           - type: cover-open-close
-                    - area: Chicken Coop
+                    - area: "Chicken Coop"
                       domain: lock
                       options:
                         type: tile
                         features:
                           - type: lock-commands
-                    - area: Chicken Coop
+                    - area: "Chicken Coop"
                       domain: light
                       options: &toggle_tile
                         type: tile
@@ -93,7 +93,7 @@ views:
                           action: toggle
                         hold_action:
                           action: more-info
-                    - area: Chicken Coop
+                    - area: "Chicken Coop"
                       domain: switch
                       options: *toggle_tile
                   exclude:
@@ -117,7 +117,7 @@ views:
                 card_param: cards
                 filter:
                   include:
-                    - area: Chicken Coop
+                    - area: "Chicken Coop"
                       domain: sensor
                       attributes:
                         device_class: temperature
@@ -125,7 +125,7 @@ views:
                       # than a camera feed and push the screen into scrolling.
                       options: &sensor_tile
                         type: tile
-                    - area: Chicken Coop
+                    - area: "Chicken Coop"
                       domain: sensor
                       attributes:
                         device_class: humidity
