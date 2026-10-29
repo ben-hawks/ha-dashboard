@@ -118,11 +118,16 @@ automation:
   # zone.home's state is the number of people at home. Uses Home Assistant
   # floors (Settings → Areas), so a new light on either floor is covered
   # automatically. The floor IDs must match yours.
+  #
+  # Before switching off, the lights that were on are saved to a temporary
+  # scene so the welcome-home automation below can put them back. The
+  # hallway is left out of the snapshot: its own automation decides how it
+  # comes back on.
   - id: everyone_away_lights_off
     alias: "Everyone away: upstairs and basement lights off"
     description: >-
-      When nobody has been home for 10 minutes, turn off every light on the
-      upstairs and basement floors.
+      When nobody has been home for 10 minutes, remember which upstairs and
+      basement lights were on, then turn them all off.
     mode: single
     triggers:
       - trigger: state
@@ -131,12 +136,54 @@ automation:
         for:
           minutes: 10
     actions:
+      - variables:
+          hallway: >-
+            {{ ['light.hallway_lights']
+               + (state_attr('light.hallway_lights', 'entity_id') or []) }}
+          lights_on: >-
+            {{ (floor_entities('upstairs') + floor_entities('basement'))
+               | select('match', 'light\.')
+               | reject('in', hallway)
+               | select('is_state', 'on')
+               | list }}
+      - if: "{{ lights_on | count > 0 }}"
+        then:
+          - action: scene.create
+            data:
+              scene_id: away_lights_snapshot
+              snapshot_entities: "{{ lights_on }}"
       - action: light.turn_off
         target:
           floor_id:
             - upstairs
             - basement
         continue_on_error: true
+
+  # The snapshot only lives in memory, so if Home Assistant restarts while
+  # you're out there's nothing to restore and this does nothing.
+  - id: welcome_home_restore_lights
+    alias: "Welcome home: restore upstairs and basement lights"
+    description: >-
+      When the first person gets home, turn back on the lights that were on
+      when everyone left (hallway excluded), then forget the snapshot.
+    mode: single
+    triggers:
+      - trigger: state
+        entity_id: zone.home
+        from: "0"
+    conditions:
+      - condition: template
+        value_template: >-
+          {{ 'scene.away_lights_snapshot'
+             in states.scene | map(attribute='entity_id') | list }}
+    actions:
+      - action: scene.turn_on
+        target:
+          entity_id: scene.away_lights_snapshot
+        continue_on_error: true
+      - action: scene.delete
+        target:
+          entity_id: scene.away_lights_snapshot
 
 # ---------------------------------------------------------------------------
 # Light groups (one tile controls a whole room)
