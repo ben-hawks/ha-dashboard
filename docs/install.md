@@ -89,7 +89,11 @@ Then follow [tablet-setup.md](tablet-setup.md).
 cd /config/ha-dashboard && git pull
 ```
 
-- Dashboard changes (`dashboard/`): refresh the page.
+- Dashboard changes (`dashboard/`): Home Assistant only notices when
+  `dashboard.yaml` itself changes, not the `views/` files it includes. On
+  your admin account open the dashboard, click the pencil, then **⋮ →
+  Refresh**, or run `touch dashboard/dashboard.yaml`. Then refresh the
+  tablet.
 - Package changes (`packages/`): **Developer Tools → YAML → All YAML
   configuration**, or restart.
 - Theme changes (`themes/`): **Developer Tools → YAML → Themes**.
