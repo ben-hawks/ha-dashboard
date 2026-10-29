@@ -112,7 +112,9 @@ FLOORS = {
         ],
         "windows": [
             (120, 175, 1.8), (300, 175, 0.6), (442, 175, 0.9), (635, 175, 1.8),
-            (82, 660, 1.0), (287, 660, 1.0), (582, 660, 1.8),
+            (82, 660, 1.0), (287, 660, 1.0),
+            # Living room front: two side windows flanking a wider centre one.
+            (547, 660, 0.61), (602, 660, 1.26), (658, 660, 0.61),
         ],
         # Split foyer: from the landing by the front door, the left flight
         # goes down and the right flight goes up (3D: see downstairs).
