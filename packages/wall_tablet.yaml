@@ -105,6 +105,29 @@ automation:
         # Some hallway bulbs may be offline; don't fail on them.
         continue_on_error: true
 
+  # zone.home's state is the number of people at home. Uses Home Assistant
+  # floors (Settings → Areas), so a new light on either floor is covered
+  # automatically. The floor IDs must match yours.
+  - id: everyone_away_lights_off
+    alias: "Everyone away: upstairs and basement lights off"
+    description: >-
+      When nobody has been home for 10 minutes, turn off every light on the
+      upstairs and basement floors.
+    mode: single
+    triggers:
+      - trigger: state
+        entity_id: zone.home
+        to: "0"
+        for:
+          minutes: 10
+    actions:
+      - action: light.turn_off
+        target:
+          floor_id:
+            - upstairs
+            - basement
+        continue_on_error: true
+
 # ---------------------------------------------------------------------------
 # Light groups (one tile controls a whole room)
 # ---------------------------------------------------------------------------
