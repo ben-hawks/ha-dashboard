@@ -101,6 +101,10 @@ views:
                     # status light, IR…) as switches; keep them off this screen.
                     - entity_id: "*chicken_cam_*"
                     - entity_id: "*chicken_run_*"
+                    # The coop's UniFi AP and switch (LEDs, PoE ports,
+                    # restart). This is UniFi Network, not Protect, so the
+                    # cameras are unaffected.
+                    - integration: unifi
                 sort:
                   method: name
 
