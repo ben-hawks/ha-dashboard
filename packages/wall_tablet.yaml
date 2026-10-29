@@ -351,33 +351,13 @@ template:
           {%- if is_state('vacuum.acearchr_gmail_com', 'error') %}
             {%- set ns.a = ns.a + ['Vacuum is stuck'] %}
           {%- endif %}
-          {#- Cat water fountain (Bedroom). Its sensors are recognised by
-              name and unit, as on the Devices tab, so this works whatever
-              the integration calls them. #}
-          {%- for s in area_entities('bedroom')
-               | select('match', '(sensor|binary_sensor)\.') | expand
-               if s.name is search('water|filter|clean', ignorecase=True) %}
-            {%- set n = s.name | lower %}
-            {%- set unit = (s.attributes.unit_of_measurement or '') | lower %}
-            {%- set warning = s.domain == 'binary_sensor' and s.state == 'on' and (
-                  s.attributes.device_class == 'problem'
-                  or n is search('low|short|lack|empty|replace|due|need')) %}
-            {%- set pct = s.state | float(100) if unit == '%' else 100 %}
-            {%- set days = s.state | float(99) if unit in ['d', 'day', 'days'] else 99 %}
-            {%- if 'filter' in n %}
-              {%- set msg = 'Cat fountain filter needs replacing'
-                    if warning or pct < 10 or days <= 2 else '' %}
-            {%- elif 'clean' in n %}
-              {%- set msg = 'Cat fountain needs cleaning'
-                    if warning or pct < 10 or days <= 1 else '' %}
-            {%- else %}
-              {%- set msg = 'Cat fountain needs water'
-                    if warning or pct < 25
-                    or s.state | lower in ['low', 'empty', 'lack', 'shortage', 'insufficient']
-                    else '' %}
-            {%- endif %}
-            {%- if msg and msg not in ns.a %}
-              {%- set ns.a = ns.a + [msg] %}
-            {%- endif %}
-          {%- endfor %}
+          {%- if states('sensor.dockstream_2_smart_cordless_fountain_remaining_water_2') | float(100) < 25 %}
+            {%- set ns.a = ns.a + ['Cat fountain needs water'] %}
+          {%- endif %}
+          {%- if states('sensor.dockstream_2_smart_cordless_fountain_remaining_filter_day') | float(99) <= 2 %}
+            {%- set ns.a = ns.a + ['Cat fountain filter needs replacing'] %}
+          {%- endif %}
+          {%- if states('sensor.dockstream_2_smart_cordless_fountain_remaining_cleaning_days') | float(99) <= 1 %}
+            {%- set ns.a = ns.a + ['Cat fountain needs cleaning'] %}
+          {%- endif %}
           {{ (ns.a | join(' · ') if ns.a else 'All good')[:250] }}

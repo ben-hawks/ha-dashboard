@@ -148,38 +148,26 @@ sections:
         name: Yue weight
         icon: mdi:scale
 
-      # Water fountain (Bedroom): its water level, filter and cleaning
-      # sensors, picked up by name so they appear whatever the fountain
-      # integration calls them. Nothing else in the Bedroom matches.
+      # Water fountain (Bedroom): Petlibro Dockstream 2 Cordless.
       - type: heading
         heading: Water fountain
         heading_style: subtitle
         icon: mdi:fountain
-      - type: custom:auto-entities
+      - type: tile
+        entity: sensor.dockstream_2_smart_cordless_fountain_remaining_water_2
+        name: Water level
+        icon: mdi:water
+        features: *gauge
         grid_options:
           columns: full
-        card:
-          type: grid
-          columns: 2
-          square: false
-        card_param: cards
-        filter:
-          include:
-            - area: bedroom
-              domain: sensor
-              name: "/[Ww]ater|[Ff]ilter|[Cc]lean/"
-              options:
-                type: tile
-            - area: bedroom
-              domain: binary_sensor
-              name: "/[Ww]ater|[Ff]ilter|[Cc]lean/"
-              options:
-                type: tile
-        sort:
-          method: name
-        else:
-          type: markdown
-          content: Fountain not found in the Bedroom area.
+      - type: tile
+        entity: sensor.dockstream_2_smart_cordless_fountain_remaining_filter_day
+        name: Filter
+        icon: mdi:air-filter
+      - type: tile
+        entity: sensor.dockstream_2_smart_cordless_fountain_remaining_cleaning_days
+        name: Cleaning due
+        icon: mdi:spray-bottle
 
   - type: grid
     cards:
