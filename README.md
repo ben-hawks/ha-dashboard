@@ -20,7 +20,7 @@ It's meant to be easy for anyone in the house, not just whoever set it up.
 | **Climate** | Thermostat, hallway temperature/humidity, Airthings air quality |
 | **Outdoors** | Forecast, Ecowitt weather station and soil sensors (fill in automatically), chicken coop, shed power station |
 | **Safety** | Smoke/CO status per room, alarm hub; "Silence all alarms" appears only while one is going off |
-| **Devices** | Alerts, low batteries, offline devices, vacuum parts, cats and litter box, backup power, shopping list, light/dark setting |
+| **Devices** | Alerts, low batteries, offline devices, vacuum parts, cats, litter box and water fountain, backup power, shopping list, light/dark setting |
 
 ## Design rules
 
