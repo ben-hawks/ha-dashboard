@@ -56,9 +56,9 @@ Same base as the wall tablet: follow [tablet-setup.md](tablet-setup.md)
   `dashboard/chicken_coop.yaml` (each switching feed has a live and a still
   version). If even one live feed stutters, set its `camera_view` to `auto`
   too.
-- **Frame rate:** dropping the cameras to 15 fps in UniFi Protect (camera
-  Settings → Advanced) halves the decoding work. On most models it applies
-  to recordings too.
+- **Frame rate:** some UniFi models let you lower the frame rate (camera
+  Settings → Advanced), which halves the decoding work at 15 fps. Many
+  models, including ours, don't offer it.
 - **WebView:** keep it updated (LineageOS updates it with the system; on
   stock Android, update **Android System WebView** in the Play Store).
   Newer versions decode video in hardware more reliably.
