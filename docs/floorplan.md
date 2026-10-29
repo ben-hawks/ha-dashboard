@@ -50,6 +50,18 @@ line).
    placed on the Downstairs floor with the landing half a storey up. If a
    flight points the wrong way in 3D, rotate it 180° in the editor.
 
+   NeonPlan has no per-room floor level, so the landing itself is a
+   workaround. The landing sits directly over the downstairs closet:
+   - **Downstairs → Closet → Ceiling height: 1.2 m.** Its ceiling becomes
+     the landing at the right height (and it really is a low closet under
+     the landing and the up flight).
+   - **Upstairs → Floor opening tool:** draw it over the foyer (everything
+     but the small closet) so you can see down to the landing and both
+     flights.
+   - If you have the *Architecture & fit-out* furniture pack, its
+     **platform** piece (1.2 m high, on the Downstairs floor) is a cleaner
+     landing than the closet ceiling.
+
 After that, refresh the wall tablet. The Floor Plan tab shows the 3D house.
 
 ## Changing the layout
