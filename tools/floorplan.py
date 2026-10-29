@@ -85,8 +85,12 @@ FLOORS = {
              "light": "light.ben_s_office_lamp",
              "alarm": "binary_sensor.combination_alarm_3_alarm_status",
              "icons": [("light.smart_multicolor_bulb", "mdi:ceiling-fan-light")]},
+            # Closet at the top of the down flight, opening onto the hallway.
+            {"name": None, "area": "Closet", "rect": (363, 452, 419, 490)},
             {"name": "Foyer", "rect": (363, 452, 475, 628), "small": True,
-             "label_y": 607},
+             "label_y": 607,
+             "points": [(419, 452), (475, 452), (475, 628), (363, 628),
+                        (363, 490), (419, 490)]},
             {"name": "Living Room", "rect": (475, 392, 730, 660),
              "alarm": "binary_sensor.combination_alarm_alarm_status",
              "icons": [("media_player.living_room", None),
@@ -102,7 +106,8 @@ FLOORS = {
             (475, 422, 0.9),   # hallway → living room (opening)
             (160, 422, 0.8),   # hallway → Meg's office
             (245, 452, 0.8),   # hallway → office
-            (420, 452, 0.9),   # hallway → stairs
+            (447, 452, 0.9),   # hallway → stairs
+            (391, 452, 0.6),   # hallway → closet over the stairs
             (420, 628, 0.9),   # front door
         ],
         "windows": [
@@ -111,7 +116,7 @@ FLOORS = {
         ],
         # Split foyer: from the landing by the front door, the left flight
         # goes down and the right flight goes up (3D: see downstairs).
-        "treads": [(363, 475, 419, 575), (419, 475, 475, 575)],
+        "treads": [(363, 490, 419, 575), (419, 475, 475, 575)],
     },
     "downstairs": {
         "title": "Downstairs",
@@ -124,8 +129,9 @@ FLOORS = {
             {"name": "Game Room", "rect": (495, 175, 730, 470),
              "light": "light.basement_lights"},
             {"name": None, "area": "Hall", "rect": (343, 397, 495, 470)},
-            {"name": "Stairs", "rect": (343, 470, 425, 628), "small": True,
-             "label_y": 607},
+            {"name": None, "area": "Stairs", "rect": (343, 470, 425, 575)},
+            # Closet under the entry landing, at the end of the stairs.
+            {"name": None, "area": "Closet", "rect": (343, 575, 425, 628)},
             {"name": None, "area": "Closet", "rect": (425, 470, 480, 628)},
             {"name": "Work Office", "rect": (480, 470, 730, 628),
              "alarm": "binary_sensor.work_office_base_station_alarm_status",
@@ -136,6 +142,7 @@ FLOORS = {
             (455, 397, 0.8),   # hall → laundry
             (495, 433, 1.2),   # hall → game room (opening)
             (384, 470, 0.8),   # hall → stairs
+            (384, 575, 0.6),   # stairs → closet under the landing
             (520, 470, 0.8),   # game room → work office
         ],
         "windows": [
@@ -145,7 +152,7 @@ FLOORS = {
         # The entry landing is half a storey up (1.2 m): the down flight runs
         # from it to this floor's hall, the up flight from it to upstairs.
         "stairs": [
-            (363, 475, 419, 575, "north", 0, 1.2),    # down: landing → hall
+            (363, 490, 419, 575, "north", 0, 1.2),    # down: landing → hall
             (419, 475, 475, 575, "south", 1.2, 1.2),  # up: landing → upstairs
         ],
         "treads": [(343, 475, 425, 575)],
