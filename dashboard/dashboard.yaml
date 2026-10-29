@@ -15,6 +15,7 @@ kiosk_mode:
 title: Home
 views:
   - !include views/home.yaml
+  - !include views/floorplan.yaml
   - !include views/rooms.yaml
   - !include views/climate.yaml
   - !include views/outdoors.yaml

@@ -14,6 +14,7 @@ It's meant to be easy for anyone in the house, not just whoever set it up.
 | Tab | What's on it |
 |-----|--------------|
 | **Home** | Greeting, who's home, outside/inside temperature, clock, forecast, main lights, "All lights off", thermostat, whatever's playing, vacuum, litter box. A red banner appears only when something needs attention. |
+| **Floor Plan** | Both floors side by side. Rooms glow when their lights are on (tap to toggle, hold for brightness); temperatures, speakers, TV, vacuum and litter box in place; a red icon marks any smoke alarm going off |
 | **Rooms** | Every light and speaker, grouped by room |
 | **Climate** | Thermostat, hallway temperature/humidity, Airthings air quality |
 | **Outdoors** | Forecast, Ecowitt weather station and soil sensors (fill in automatically), chicken coop, shed power station |
@@ -40,6 +41,7 @@ dashboard/chicken_coop.yaml  Chicken Command Center (coop tablet)
 packages/wall_tablet.yaml    light groups, helpers, alert sensors, theme + hallway automations
 themes/wall_tablet.yaml      dark + light theme
 tools/entity_export.jinja    lists your entities (paste into Developer Tools → Template)
+tools/floorplan.py           generates the Floor Plan tab and floorplan/*.svg
 ```
 
 ## Requirements

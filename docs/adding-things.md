@@ -48,6 +48,13 @@ For a sensor, drop the two action lines and optionally add a mini graph:
 Copy any section in `rooms.yaml` (from `- type: grid` down to the next one)
 and change the heading, icon and tiles.
 
+## Change the floor plan
+
+The Floor Plan tab is generated. Edit the room list (`FLOORS`) in
+`tools/floorplan.py`, then run `python3 tools/floorplan.py` and commit the
+regenerated `dashboard/views/floorplan.yaml`. Each room can have a `light`
+(the room glows and toggles), `temp`, `alarm` and extra `icons`.
+
 ## Add a tab
 
 1. Copy an existing file in `dashboard/views/`, change `title` and `path`.
