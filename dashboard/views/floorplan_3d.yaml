@@ -1,0 +1,22 @@
+# Floor Plan tab, NeonPlan 3D version. The house itself (rooms, doors,
+# windows, which room is which area) lives in NeonPlan's editor; see
+# docs/floorplan.md. To go back to the flat 2D plan, swap the include in
+# dashboard.yaml for views/floorplan.yaml.
+title: Floor Plan
+path: floorplan
+type: panel
+theme: Wall Tablet
+cards:
+  - type: custom:neonplan3d-card
+    fill: true
+    # "auto" drops to the tablet quality level on slow hardware like the M10 HD.
+    quality: auto
+    theme: neon
+    markers: important
+    # Tap a room for its lights and devices.
+    room_panel: true
+    # Smoke, CO, water and alarm warnings shown on the plan.
+    alerts: true
+    # Kiosk: back to the start view after a minute untouched, dim after sunset.
+    idle_return: 60
+    night: sun

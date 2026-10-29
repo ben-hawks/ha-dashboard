@@ -50,10 +50,9 @@ and change the heading, icon and tiles.
 
 ## Change the floor plan
 
-The Floor Plan tab is generated. Edit the room list (`FLOORS`) in
-`tools/floorplan.py`, then run `python3 tools/floorplan.py` and commit the
-regenerated `dashboard/views/floorplan.yaml`. Each room can have a `light`
-(the room glows and toggles), `temp`, `alarm` and extra `icons`.
+See [floorplan.md](floorplan.md). In the 3D version, devices are placed in
+NeonPlan's editor. The 2D fallback is generated: edit `FLOORS` in
+`tools/floorplan.py` and run `python3 tools/floorplan.py`.
 
 ## Add a tab
 
