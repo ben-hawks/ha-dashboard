@@ -62,7 +62,10 @@ line).
      **platform** piece (1.2 m high, on the Downstairs floor) is a cleaner
      landing than the closet ceiling.
 
-After that, refresh the wall tablet. The Floor Plan tab shows the 3D house.
+After that, refresh the wall tablet. The 3D house shows on the **Home** tab
+(top left, `dashboard/views/home.yaml`) and full screen on the **Floor Plan**
+tab. To use the 2D version on Home instead, swap the `neonplan3d-card` there
+for the cards in `dashboard/views/floorplan.yaml`.
 
 ## Changing the layout
 

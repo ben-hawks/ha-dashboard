@@ -73,6 +73,24 @@ sections:
           action: navigate
           navigation_path: /wall-tablet/devices
 
+  # The house at a glance: rooms light up with their lights; tap a room for
+  # its devices. Two-thirds of the width, with the clock and forecast beside
+  # it. Same settings as the Floor Plan tab, sized to sit above the fold.
+  - type: grid
+    column_span: 2
+    cards:
+      - type: custom:neonplan3d-card
+        height: 460
+        quality: auto
+        theme: neon
+        markers: important
+        room_panel: true
+        alerts: true
+        idle_return: 60
+        night: sun
+        grid_options:
+          columns: full
+
   - type: grid
     cards:
       - type: clock

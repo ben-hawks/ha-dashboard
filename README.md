@@ -14,7 +14,7 @@ It's meant to be easy for anyone in the house, not just whoever set it up.
 
 | Tab | What's on it |
 |-----|--------------|
-| **Home** | Greeting, who's home, outside/inside temperature, clock, forecast, main lights, "All lights off", thermostat, whatever's playing, vacuum, litter box. A red banner appears only when something needs attention. |
+| **Home** | Greeting, who's home, outside/inside temperature, the 3D floor plan, clock, forecast, main lights, "All lights off", thermostat, whatever's playing, vacuum, litter box. A red banner appears only when something needs attention. |
 | **Floor Plan** | 3D model of both floors (NeonPlan 3D): rooms light up with their lights, tap a room for its devices, smoke/CO alerts on the plan. A flat 2D version is kept as a fallback |
 | **Rooms** | Every light and speaker, grouped by room |
 | **Climate** | Thermostat, hallway temperature/humidity, Airthings air quality |
