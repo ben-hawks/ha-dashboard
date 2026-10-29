@@ -1,8 +1,8 @@
-# Chicken Command Center (Surface Go 2, CachyOS)
+# Chicken Command Center (coop tablet)
 
 A one-screen dashboard at `/chicken-coop/coop`: three live coop cameras and a
 panel of controls and sensors in a 2×2 grid. Feeds are 16:9 and each takes a
-quarter of the screen (about 640×360 with Chromium at 150% scaling).
+quarter of the screen (about 640×360 on a 1280×800 tablet).
 A single stacked column of three would only fit about 505×284 per feed.
 
 ## What's on it
@@ -25,13 +25,61 @@ the **Chicken Coop** area and it appears.
 2. Check the camera entity IDs: **Settings → Entities**, search "chicken",
    and compare with the three `camera.` lines in
    `dashboard/chicken_coop.yaml`.
-3. Optional, lighter streams: in the UniFi Protect device page for each
-   camera, enable **Medium resolution channel** and use those entities
-   instead.
+3. **Enable the low-resolution streams** the dashboard uses: Settings →
+   Devices & services → UniFi Protect → each camera → its **Low resolution
+   channel** entity is disabled by default; enable it. (About 640×360, the
+   size of one quarter of the screen; much lighter for the tablet to decode
+   than the full-resolution stream.)
 4. The tablet can share the **Wall Tablet** user, or have its own non-admin
    user. Either way it gets no sidebar or header.
 
-## Surface Go 2 setup (CachyOS)
+## Android tablet setup (Fully Kiosk)
+
+Same base as the wall tablet: follow [tablet-setup.md](tablet-setup.md)
+(Android prep, landscape lock, Fully Kiosk Plus). Differences:
+
+| Setting | Value |
+|---------|-------|
+| Web Content → **Start URL** | `http://<HA-IP>:8123/chicken-coop/coop` |
+| Browser Mod **Browser ID** | `coop_tablet` (the theme automation targets it) |
+| Device Management → **Keep Screen On** | On |
+| Device Management → **Launch on Boot** | On |
+| Web Auto Reload → **Auto Reload on Network Reconnect** | On |
+| Motion detection / screensaver | Off: the feeds should always be on screen |
+
+### Keeping a slow tablet happy
+
+- **Streams:** use the low-resolution channels (step 3 above). If the feeds
+  still stutter or the tablet runs hot, change `camera_view: &camera_view
+  live` to `auto` in `dashboard/chicken_coop.yaml`. The feeds then become
+  stills refreshed every 10 seconds, which costs almost nothing.
+- **WebView:** keep it updated (LineageOS updates it with the system; on
+  stock Android, update **Android System WebView** in the Play Store).
+  Newer versions decode video in hardware more reliably.
+- **Nightly reload:** hours of live video can slowly eat a 2 GB tablet's
+  memory. Add the **Fully Kiosk Browser** integration for this tablet and
+  reload the page once a night:
+
+  ```yaml
+  automation:
+    - alias: "Coop tablet: nightly reload"
+      triggers:
+        - trigger: time
+          at: "03:30:00"
+      actions:
+        - action: button.press
+          target:
+            entity_id: button.coop_tablet_load_start_url   # check the name under the tablet's device
+  ```
+
+- **Nothing else running:** don't install other apps; no Google sign-in.
+
+## Alternative: Surface Go 2 (CachyOS)
+
+The earlier plan, kept in case the coop screen moves to the Surface. On a
+faster machine the full-resolution channels work too.
+
+### Setup
 
 The kiosk is **cage** (a minimal Wayland compositor that runs one app full
 screen) running **Chromium**, started at boot by **greetd** as a dedicated

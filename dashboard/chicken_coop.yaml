@@ -1,11 +1,18 @@
 # Chicken Command Center: a single-screen dashboard for the coop tablet
-# (Surface Go 2, landscape). Three live camera feeds and a control panel in a
-# 2×2 grid, so every feed is as large as the screen allows.
+# (low-power Android tablet, 1280×800, landscape). Three camera feeds and a
+# control panel in a 2×2 grid, so every feed is as large as the screen allows.
+#
+# Tuned for a slow tablet:
+# - Feeds use UniFi Protect's low resolution channel (about 640×360), which
+#   matches a quarter of the screen. Decoding three full-resolution streams
+#   is what would make the tablet struggle. Enable "Low resolution channel"
+#   on each camera in UniFi Protect (it's off by default).
+# - camera_view is set once, on the first feed, and reused by the others.
+#   "live" is real video; if the tablet still stutters or runs hot, change it
+#   to "auto": a still that refreshes every 10 seconds, far lighter.
 #
 # Camera entity IDs follow UniFi Protect's naming. If yours differ, check
-# Settings → Entities (search "chicken") and update the three `camera.`
-# lines below. To use a lighter stream, enable the "Medium resolution
-# channel" entity in UniFi Protect and swap `high` for `medium`.
+# Settings → Entities (search "chicken").
 
 # One screen, no tabs: hide the header too for the (non-admin) tablet user.
 kiosk_mode:
@@ -27,22 +34,22 @@ views:
           # Tap a feed to open it full screen.
           - type: picture-glance
             title: Coop Cam 1
-            camera_image: camera.chicken_cam_1_high_resolution_channel
-            camera_view: live
+            camera_image: camera.chicken_cam_1_low_resolution_channel
+            camera_view: &camera_view live
             aspect_ratio: "16:9"
             entities:
               - binary_sensor.chicken_cam_1_motion
           - type: picture-glance
             title: Coop Cam 2
-            camera_image: camera.chicken_cam_2_high_resolution_channel
-            camera_view: live
+            camera_image: camera.chicken_cam_2_low_resolution_channel
+            camera_view: *camera_view
             aspect_ratio: "16:9"
             entities:
               - binary_sensor.chicken_cam_2_motion
           - type: picture-glance
             title: Chicken Run
-            camera_image: camera.chicken_run_high_resolution_channel
-            camera_view: live
+            camera_image: camera.chicken_run_low_resolution_channel
+            camera_view: *camera_view
             aspect_ratio: "16:9"
             entities:
               - binary_sensor.chicken_run_motion
