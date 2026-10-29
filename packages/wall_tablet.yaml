@@ -64,6 +64,47 @@ automation:
           theme: Wall Tablet
           dark: "{{ dark_mode | trim }}"
 
+  # Day = sun up, night = sun down. To use fixed times instead, swap the two
+  # sun triggers for `trigger: time` and change `night` below to match.
+  - id: hallway_lights_day_night
+    alias: "Hallway lights: white by day, dim and warm at night"
+    description: >-
+      Switches the hallway lights on at sunrise (100%, neutral white) and
+      sunset (25%, warm). Whenever they're turned on in between, including
+      the bulbs coming back after the wall switch, they come on with the
+      right setting. After a restart, they're corrected only if already on.
+    mode: restart
+    triggers:
+      - trigger: sun
+        event: sunrise
+        id: switch_on
+      - trigger: sun
+        event: sunset
+        id: switch_on
+      - trigger: state
+        entity_id: light.hallway_lights
+        to: "on"
+        id: turned_on
+      - trigger: homeassistant
+        event: start
+        id: correct_if_on
+    conditions:
+      - condition: template
+        value_template: >-
+          {{ trigger.id != 'correct_if_on' or is_state('light.hallway_lights', 'on') }}
+    actions:
+      - variables:
+          night: "{{ is_state('sun.sun', 'below_horizon') }}"
+      - action: light.turn_on
+        target:
+          entity_id: light.hallway_lights
+        data:
+          brightness_pct: "{{ 25 if night else 100 }}"
+          color_temp_kelvin: "{{ 2700 if night else 4000 }}"
+          transition: "{{ 30 if trigger.id == 'switch_on' else 0 }}"
+        # Some hallway bulbs may be offline; don't fail on them.
+        continue_on_error: true
+
 # ---------------------------------------------------------------------------
 # Light groups (one tile controls a whole room)
 # ---------------------------------------------------------------------------

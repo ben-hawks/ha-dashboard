@@ -37,7 +37,7 @@ It's meant to be easy for anyone in the house, not just whoever set it up.
 dashboard/dashboard.yaml     tab list + kiosk settings
 dashboard/views/*.yaml       one file per tab
 dashboard/chicken_coop.yaml  Chicken Command Center (coop tablet)
-packages/wall_tablet.yaml    light groups, helpers, alert sensors, theme automation
+packages/wall_tablet.yaml    light groups, helpers, alert sensors, theme + hallway automations
 themes/wall_tablet.yaml      dark + light theme
 tools/entity_export.jinja    lists your entities (paste into Developer Tools → Template)
 ```
