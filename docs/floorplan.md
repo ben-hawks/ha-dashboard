@@ -31,7 +31,21 @@ line).
 5. **Tidy up in the editor:** the outline is simplified (straight walls,
    approximate doors and windows). Adjust anything that looks off and add
    furniture if you like.
-6. **Check the split-foyer stairs:** the file includes both flights from the
+6. **Open up the open-plan spaces:** the import format only has doors, so
+   openings come in as wide doors. In the editor, change them (manual
+   section 4.4 / 4.7):
+
+   | Between | Make it |
+   |---------|---------|
+   | Kitchen ↔ Dining | No wall: select the wall, choose no wall |
+   | Dining ↔ Living Room | Door → Style: **Opening (no door)** |
+   | Hallway ↔ Kitchen | Door → Style: **Opening (no door)** |
+   | Hallway ↔ Living Room | Door → Style: **Opening (no door)** |
+   | Hall ↔ Game Room (downstairs) | Door → Style: **Opening (no door)** |
+
+   The rooms stay separate Home Assistant areas either way; light from a
+   lamp shines through an opening or a removed wall into the next room.
+7. **Check the split-foyer stairs:** the file includes both flights from the
    entry landing (down to the downstairs hall, up to the upstairs hallway),
    placed on the Downstairs floor with the landing half a storey up. If a
    flight points the wrong way in 3D, rotate it 180° in the editor.
