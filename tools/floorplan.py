@@ -130,9 +130,11 @@ FLOORS = {
              "light": "light.basement_lights"},
             {"name": None, "area": "Hall", "rect": (343, 397, 495, 470)},
             {"name": None, "area": "Stairs", "rect": (343, 470, 425, 575)},
-            # Closet under the entry landing, at the end of the stairs.
-            {"name": None, "area": "Closet", "rect": (343, 575, 425, 628)},
-            {"name": None, "area": "Closet", "rect": (425, 470, 480, 628)},
+            # One L-shaped closet: beside the stairs and under the entry
+            # landing at their foot.
+            {"name": None, "area": "Closet", "rect": (425, 470, 480, 628),
+             "points": [(425, 470), (480, 470), (480, 628), (343, 628),
+                        (343, 575), (425, 575)]},
             {"name": "Work Office", "rect": (480, 470, 730, 628),
              "alarm": "binary_sensor.work_office_base_station_alarm_status",
              "temp": "sensor.airthings_wave_055159_temperature"},
