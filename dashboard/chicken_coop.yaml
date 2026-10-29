@@ -1,0 +1,130 @@
+# Chicken Command Center: a single-screen dashboard for the coop tablet
+# (Surface Go 2, landscape). Three live camera feeds and a control panel in a
+# 2×2 grid, so every feed is as large as the screen allows.
+#
+# Camera entity IDs follow UniFi Protect's naming. If yours differ, check
+# Settings → Entities (search "chicken") and update the three `camera.`
+# lines below. To use a lighter stream, enable the "Medium resolution
+# channel" entity in UniFi Protect and swap `high` for `medium`.
+
+# One screen, no tabs: hide the header too for the (non-admin) tablet user.
+kiosk_mode:
+  non_admin_settings:
+    hide_header: true
+    hide_sidebar: true
+
+title: Chicken Command Center
+views:
+  - title: Coop
+    path: coop
+    type: panel
+    theme: Wall Tablet
+    cards:
+      - type: grid
+        columns: 2
+        square: false
+        cards:
+          # Tap a feed to open it full screen.
+          - type: picture-glance
+            title: Coop Cam 1
+            camera_image: camera.chicken_cam_1_high_resolution_channel
+            camera_view: live
+            aspect_ratio: "16:9"
+            entities:
+              - binary_sensor.chicken_cam_1_motion
+          - type: picture-glance
+            title: Coop Cam 2
+            camera_image: camera.chicken_cam_2_high_resolution_channel
+            camera_view: live
+            aspect_ratio: "16:9"
+            entities:
+              - binary_sensor.chicken_cam_2_motion
+          - type: picture-glance
+            title: Chicken Run
+            camera_image: camera.chicken_run_high_resolution_channel
+            camera_view: live
+            aspect_ratio: "16:9"
+            entities:
+              - binary_sensor.chicken_run_motion
+
+          # Fourth quadrant: controls and sensors. Both lists fill
+          # themselves from the "Chicken Coop" area, so the automatic door,
+          # heat lamp and second temperature sensor appear once they're
+          # added to that area.
+          - type: vertical-stack
+            cards:
+              - type: heading
+                heading: Chicken Command Center
+                heading_style: title
+                icon: mdi:egg
+                badges:
+                  - type: entity
+                    entity: weather.forecast_home
+                    state_content: temperature
+                    name: Outside
+                    show_name: true
+
+              - type: custom:auto-entities
+                show_empty: false
+                card:
+                  type: grid
+                  columns: 2
+                  square: false
+                card_param: cards
+                filter:
+                  include:
+                    - area: Chicken Coop
+                      domain: cover
+                      options:
+                        type: tile
+                        features:
+                          - type: cover-open-close
+                    - area: Chicken Coop
+                      domain: lock
+                      options:
+                        type: tile
+                        features:
+                          - type: lock-commands
+                    - area: Chicken Coop
+                      domain: light
+                      options: &toggle_tile
+                        type: tile
+                        tap_action:
+                          action: toggle
+                        hold_action:
+                          action: more-info
+                    - area: Chicken Coop
+                      domain: switch
+                      options: *toggle_tile
+                  exclude:
+                    # UniFi Protect adds camera settings (privacy mode,
+                    # status light, IR…) as switches; keep them off this screen.
+                    - entity_id: "*chicken_cam_*"
+                    - entity_id: "*chicken_run_*"
+                sort:
+                  method: name
+
+              - type: custom:auto-entities
+                show_empty: false
+                card:
+                  type: grid
+                  columns: 2
+                  square: false
+                card_param: cards
+                filter:
+                  include:
+                    - area: Chicken Coop
+                      domain: sensor
+                      attributes:
+                        device_class: temperature
+                      # No trend graphs: they'd make this quadrant taller
+                      # than a camera feed and push the screen into scrolling.
+                      options: &sensor_tile
+                        type: tile
+                    - area: Chicken Coop
+                      domain: sensor
+                      attributes:
+                        device_class: humidity
+                      options: *sensor_tile
+                sort:
+                  method: name

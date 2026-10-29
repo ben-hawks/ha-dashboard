@@ -60,6 +60,13 @@ lovelace:
       icon: mdi:tablet-dashboard
       show_in_sidebar: true
       require_admin: false
+    chicken-coop:
+      mode: yaml
+      filename: ha-dashboard/dashboard/chicken_coop.yaml
+      title: Chicken Command Center
+      icon: mdi:egg
+      show_in_sidebar: true
+      require_admin: false
 ```
 
 (If you already load themes from another folder, keep that line and copy

@@ -60,6 +60,7 @@ automation:
         data:
           browser_id:
             - wall_tablet
+            - coop_tablet
           theme: Wall Tablet
           dark: "{{ dark_mode | trim }}"
 

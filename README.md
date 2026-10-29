@@ -6,6 +6,7 @@ It's meant to be easy for anyone in the house, not just whoever set it up.
 - **Install:** [docs/install.md](docs/install.md)
 - **Tablet setup:** [docs/tablet-setup.md](docs/tablet-setup.md)
 - **LineageOS on the tablet:** [docs/lineageos.md](docs/lineageos.md)
+- **Chicken Command Center (coop tablet):** [docs/coop-tablet.md](docs/coop-tablet.md)
 - **Adding devices, rooms, tabs and alerts:** [docs/adding-things.md](docs/adding-things.md)
 
 ## Tabs
@@ -35,6 +36,7 @@ It's meant to be easy for anyone in the house, not just whoever set it up.
 ```
 dashboard/dashboard.yaml     tab list + kiosk settings
 dashboard/views/*.yaml       one file per tab
+dashboard/chicken_coop.yaml  Chicken Command Center (coop tablet)
 packages/wall_tablet.yaml    light groups, helpers, alert sensors, theme automation
 themes/wall_tablet.yaml      dark + light theme
 tools/entity_export.jinja    lists your entities (paste into Developer Tools → Template)
