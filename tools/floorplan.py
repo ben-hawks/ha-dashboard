@@ -68,14 +68,16 @@ FLOORS = {
              "light": "light.hallway_lights",
              "temp": "sensor.hallway_temperature", "temp_tap": "climate.hallway",
              "inline": True},
-            # The closet only fills the bottom half of the gap between the
-            # offices; the top half is part of Meg's office.
+            # The gap between the offices is two closets, drawn as part of
+            # their rooms: the top one belongs to the Office, the bottom one
+            # to Meg's office.
             {"name": "Meg's Office", "rect": (0, 392, 160, 660),
-             "points": [(0, 392), (160, 392), (160, 452), (210, 452),
-                        (210, 556), (160, 556), (160, 660), (0, 660)],
+             "points": [(0, 392), (160, 392), (160, 556), (210, 556),
+                        (210, 660), (0, 660)],
              "alarm": "binary_sensor.combination_alarm_4_alarm_status"},
-            {"name": None, "area": "Closet", "rect": (160, 556, 210, 660)},
             {"name": "Office", "rect": (210, 452, 363, 660),
+             "points": [(160, 452), (363, 452), (363, 660), (210, 660),
+                        (210, 556), (160, 556)],
              "light": "light.ben_s_office_lamp",
              "alarm": "binary_sensor.combination_alarm_3_alarm_status",
              "icons": [("light.smart_multicolor_bulb", "mdi:ceiling-fan-light")]},
