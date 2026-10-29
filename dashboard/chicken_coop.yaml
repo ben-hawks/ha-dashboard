@@ -11,8 +11,9 @@
 #   "live" is real video; if the tablet still stutters or runs hot, change it
 #   to "auto": a still that refreshes every 10 seconds, far lighter.
 #
-# Camera entity IDs follow UniFi Protect's naming. If yours differ, check
-# Settings → Entities (search "chicken").
+# Camera entity IDs: Home Assistant prefixes new entities with their area,
+# hence camera.chicken_coop_…; the older motion sensors keep their names. If
+# a feed is blank, check Settings → Entities (search "low resolution").
 
 # One screen, no tabs: hide the header too for the (non-admin) tablet user.
 kiosk_mode:
@@ -34,21 +35,21 @@ views:
           # Tap a feed to open it full screen.
           - type: picture-glance
             title: Coop Cam 1
-            camera_image: camera.chicken_cam_1_low_resolution_channel
+            camera_image: camera.chicken_coop_chicken_cam_1_low_resolution_channel
             camera_view: &camera_view live
             aspect_ratio: "16:9"
             entities:
               - binary_sensor.chicken_cam_1_motion
           - type: picture-glance
             title: Coop Cam 2
-            camera_image: camera.chicken_cam_2_low_resolution_channel
+            camera_image: camera.chicken_coop_chicken_cam_2_low_resolution_channel
             camera_view: *camera_view
             aspect_ratio: "16:9"
             entities:
               - binary_sensor.chicken_cam_2_motion
           - type: picture-glance
             title: Chicken Run
-            camera_image: camera.chicken_run_low_resolution_channel
+            camera_image: camera.chicken_coop_chicken_run_low_resolution_channel
             camera_view: *camera_view
             aspect_ratio: "16:9"
             entities:
