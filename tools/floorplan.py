@@ -38,7 +38,10 @@ METRES_PER_UNIT = 3.962 / 235
 #   name   label drawn on the plan (None = unlabeled closet/hall)
 #   area   Home Assistant area name, if different from the label; NeonPlan
 #          rooms get this name so they link to the right area
-#   rect   (x0, y0, x1, y1); neighbouring rooms share exact edge values
+#   rect   (x0, y0, x1, y1); neighbouring rooms share exact edge values.
+#          Labels, icons and the light glow are placed within it.
+#   points optional outline for non-rectangular rooms (corners in order);
+#          the rect then marks the main part of the room
 #   light  tapping the room toggles this; the room glows while it's on
 #   temp   sensor shown under the label; temp_tap = entity for its more-info
 #   alarm  smoke/CO binary sensor; a red icon appears while it's on
@@ -65,9 +68,13 @@ FLOORS = {
              "light": "light.hallway_lights",
              "temp": "sensor.hallway_temperature", "temp_tap": "climate.hallway",
              "inline": True},
+            # The closet only fills the bottom half of the gap between the
+            # offices; the top half is part of Meg's office.
             {"name": "Meg's Office", "rect": (0, 392, 160, 660),
+             "points": [(0, 392), (160, 392), (160, 452), (210, 452),
+                        (210, 556), (160, 556), (160, 660), (0, 660)],
              "alarm": "binary_sensor.combination_alarm_4_alarm_status"},
-            {"name": None, "area": "Closet", "rect": (160, 452, 210, 660)},
+            {"name": None, "area": "Closet", "rect": (160, 556, 210, 660)},
             {"name": "Office", "rect": (210, 452, 363, 660),
              "light": "light.ben_s_office_lamp",
              "alarm": "binary_sensor.combination_alarm_3_alarm_status",
@@ -128,6 +135,28 @@ FLOORS = {
 }
 
 
+def outline(room):
+    x0, y0, x1, y1 = room["rect"]
+    return list(room.get("points") or [(x0, y0), (x1, y0), (x1, y1), (x0, y1)])
+
+
+def with_shared_corners(room, rooms):
+    """Outline plus any neighbour's corner lying on one of its edges, so rooms
+    that share part of a wall have matching vertices (NeonPlan joins them)."""
+    pts = outline(room)
+    others = {p for r in rooms if r is not room for p in outline(r)}
+    out = []
+    for i, (ax, ay) in enumerate(pts):
+        bx, by = pts[(i + 1) % len(pts)]
+        out.append((ax, ay))
+        between = [p for p in others if p not in pts and (
+            (ax == bx == p[0] and min(ay, by) < p[1] < max(ay, by)) or
+            (ay == by == p[1] and min(ax, bx) < p[0] < max(ax, bx)))]
+        between.sort(key=lambda p: abs(p[0] - ax) + abs(p[1] - ay))
+        out.extend(between)
+    return out
+
+
 def svg_for(floor):
     rooms = floor["rooms"]
     xs = [r["rect"][0] for r in rooms] + [r["rect"][2] for r in rooms]
@@ -138,9 +167,8 @@ def svg_for(floor):
         f'<g fill="none" stroke="{WALL}" stroke-linejoin="round">',
     ]
     for r in rooms:
-        x0, y0, x1, y1 = r["rect"]
-        parts.append(f'<rect x="{x0}" y="{y0}" width="{x1 - x0}" '
-                     f'height="{y1 - y0}" stroke-width="3"/>')
+        pts = " ".join(f"{x},{y}" for x, y in outline(r))
+        parts.append(f'<polygon points="{pts}" stroke-width="3"/>')
     # Thicker outline around the whole floor.
     parts.append(f'<rect x="{min(xs)}" y="{min(ys)}" width="{max(xs) - min(xs)}" '
                  f'height="{max(ys) - min(ys)}" stroke-width="7"/>')
@@ -256,10 +284,8 @@ def neonplan_import():
             "elevation": floor["elevation"],
             "height": 2.4,
             "rooms": [{"name": r.get("area") or r["name"],
-                       "points": [pt(r["rect"][0], r["rect"][1]),
-                                  pt(r["rect"][2], r["rect"][1]),
-                                  pt(r["rect"][2], r["rect"][3]),
-                                  pt(r["rect"][0], r["rect"][3])]}
+                       "points": [pt(x, y) for x, y in
+                                  with_shared_corners(r, floor["rooms"])]}
                       for r in floor["rooms"]],
             "doors": [{"at": pt(x, y), "width": w} for x, y, w in floor["doors"]],
             "windows": [{"at": pt(x, y), "width": w, "height": 1.2, "sill": 0.9}
