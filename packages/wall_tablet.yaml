@@ -70,9 +70,10 @@ automation:
     alias: "Hallway lights: white by day, dim and warm at night"
     description: >-
       Switches the hallway lights on at sunrise (100%, neutral white) and
-      sunset (25%, warm). Whenever they're turned on in between, including
-      the bulbs coming back after the wall switch, they come on with the
-      right setting. After a restart, they're corrected only if already on.
+      sunset (25%, warm) while someone's home, and when the first person
+      gets home. Whenever they're turned on in between, including the bulbs
+      coming back after the wall switch, they come on with the right
+      setting. After a restart, they're corrected only if already on.
     mode: restart
     triggers:
       - trigger: sun
@@ -80,6 +81,12 @@ automation:
         id: switch_on
       - trigger: sun
         event: sunset
+        id: switch_on
+      # First person home again: restore the lights the away automation
+      # turned off.
+      - trigger: state
+        entity_id: zone.home
+        from: "0"
         id: switch_on
       - trigger: state
         entity_id: light.hallway_lights
@@ -89,9 +96,12 @@ automation:
         event: start
         id: correct_if_on
     conditions:
+      # Don't switch them on at sunrise/sunset while nobody's home, and after
+      # a restart only correct them if they're already on.
       - condition: template
         value_template: >-
-          {{ trigger.id != 'correct_if_on' or is_state('light.hallway_lights', 'on') }}
+          {{ (trigger.id != 'switch_on' or states('zone.home') | int(0) > 0)
+             and (trigger.id != 'correct_if_on' or is_state('light.hallway_lights', 'on')) }}
     actions:
       - variables:
           night: "{{ is_state('sun.sun', 'below_horizon') }}"
