@@ -245,6 +245,32 @@
           "height": 1.2,
           "sill": 0.9
         }
+      ],
+      "furniture": [
+        {
+          "type": "stairs",
+          "at": [
+            6.592,
+            5.901
+          ],
+          "width": 0.944,
+          "depth": 1.686,
+          "height": 1.2,
+          "elevation": 0,
+          "rotation": 180
+        },
+        {
+          "type": "stairs",
+          "at": [
+            7.536,
+            5.901
+          ],
+          "width": 0.944,
+          "depth": 1.686,
+          "height": 1.2,
+          "elevation": 1.2,
+          "rotation": 0
+        }
       ]
     },
     {
@@ -670,7 +696,8 @@
           "height": 1.2,
           "sill": 0.9
         }
-      ]
+      ],
+      "furniture": []
     }
   ]
 }

@@ -40,6 +40,7 @@ METRES_PER_UNIT = 3.962 / 235
 #          rooms get this name so they link to the right area
 #   rect   (x0, y0, x1, y1); neighbouring rooms share exact edge values.
 #          Labels, icons and the light glow are placed within it.
+#   label_y  optional label position (default: near the top of the room)
 #   points optional outline for non-rectangular rooms (corners in order);
 #          the rect then marks the main part of the room
 #   light  tapping the room toggles this; the room glows while it's on
@@ -50,6 +51,9 @@ METRES_PER_UNIT = 3.962 / 235
 #   elevation  metres above the lowest floor
 #   doors      (x, y, width in metres) on a room edge; wide ones are openings
 #   windows    (x, y, width in metres) on an outside wall
+#   stairs     flights for NeonPlan: (x0, y0, x1, y1, bottom end "south" or
+#              "north", elevation and height in metres above this floor)
+#   treads     rectangles drawn with step lines on the 2D plan
 FLOORS = {
     "upstairs": {
         "title": "Upstairs",
@@ -81,8 +85,8 @@ FLOORS = {
              "light": "light.ben_s_office_lamp",
              "alarm": "binary_sensor.combination_alarm_3_alarm_status",
              "icons": [("light.smart_multicolor_bulb", "mdi:ceiling-fan-light")]},
-            {"name": "Stairs", "area": "Foyer", "rect": (363, 452, 475, 628),
-             "small": True},
+            {"name": "Foyer", "rect": (363, 452, 475, 628), "small": True,
+             "label_y": 607},
             {"name": "Living Room", "rect": (475, 392, 730, 660),
              "alarm": "binary_sensor.combination_alarm_alarm_status",
              "icons": [("media_player.living_room", None),
@@ -105,6 +109,9 @@ FLOORS = {
             (120, 175, 1.8), (300, 175, 0.6), (442, 175, 0.9), (635, 175, 1.8),
             (82, 660, 1.0), (287, 660, 1.0), (582, 660, 1.8),
         ],
+        # Split foyer: from the landing by the front door, the left flight
+        # goes down and the right flight goes up (3D: see downstairs).
+        "treads": [(363, 475, 419, 575), (419, 475, 475, 575)],
     },
     "downstairs": {
         "title": "Downstairs",
@@ -117,7 +124,8 @@ FLOORS = {
             {"name": "Game Room", "rect": (495, 175, 730, 470),
              "light": "light.basement_lights"},
             {"name": None, "area": "Hall", "rect": (343, 397, 495, 470)},
-            {"name": "Stairs", "rect": (343, 470, 425, 628), "small": True},
+            {"name": "Stairs", "rect": (343, 470, 425, 628), "small": True,
+             "label_y": 607},
             {"name": None, "area": "Closet", "rect": (425, 470, 480, 628)},
             {"name": "Work Office", "rect": (480, 470, 730, 628),
              "alarm": "binary_sensor.work_office_base_station_alarm_status",
@@ -133,6 +141,14 @@ FLOORS = {
         "windows": [
             (417, 175, 0.6), (647, 175, 2.0), (610, 628, 1.6),
         ],
+        # Both foyer flights, placed on this floor so heights stay positive.
+        # The entry landing is half a storey up (1.2 m): the down flight runs
+        # from it to this floor's hall, the up flight from it to upstairs.
+        "stairs": [
+            (363, 475, 419, 575, "north", 0, 1.2),    # down: landing → hall
+            (419, 475, 475, 575, "south", 1.2, 1.2),  # up: landing → upstairs
+        ],
+        "treads": [(343, 475, 425, 575)],
     },
 }
 
@@ -171,6 +187,14 @@ def svg_for(floor):
     for r in rooms:
         pts = " ".join(f"{x},{y}" for x, y in outline(r))
         parts.append(f'<polygon points="{pts}" stroke-width="3"/>')
+    for x0, y0, x1, y1 in floor.get("treads", []):
+        parts.append(f'<rect x="{x0}" y="{y0}" width="{x1 - x0}" '
+                     f'height="{y1 - y0}" stroke-width="2"/>')
+        steps = 7
+        for i in range(1, steps):
+            y = y0 + (y1 - y0) * i / steps
+            parts.append(f'<line x1="{x0}" y1="{y:.1f}" x2="{x1}" y2="{y:.1f}" '
+                         f'stroke-width="1.5"/>')
     # Thicker outline around the whole floor.
     parts.append(f'<rect x="{min(xs)}" y="{min(ys)}" width="{max(xs) - min(xs)}" '
                  f'height="{max(ys) - min(ys)}" stroke-width="7"/>')
@@ -187,7 +211,7 @@ def svg_for(floor):
             parts.append(f'<text x="{x0 + 50}" y="{(y0 + y1) / 2 + 6}" '
                          f'font-size="{size}">{r["name"]}</text>')
         else:
-            parts.append(f'<text x="{(x0 + x1) / 2}" y="{y0 + 26}" '
+            parts.append(f'<text x="{(x0 + x1) / 2}" y="{r.get("label_y", y0 + 26)}" '
                          f'font-size="{size}">{r["name"].replace("&", "&amp;")}</text>')
     parts.append("</g></svg>")
     return "".join(parts)
@@ -292,6 +316,14 @@ def neonplan_import():
             "doors": [{"at": pt(x, y), "width": w} for x, y, w in floor["doors"]],
             "windows": [{"at": pt(x, y), "width": w, "height": 1.2, "sill": 0.9}
                         for x, y, w in floor["windows"]],
+            # Rotation 0 puts the front (bottom step) facing down the plan.
+            "furniture": [{"type": "stairs",
+                           "at": pt((x0 + x1) / 2, (y0 + y1) / 2),
+                           "width": m(x1 - x0), "depth": m(y1 - y0),
+                           "height": height, "elevation": elevation,
+                           "rotation": 0 if bottom == "south" else 180}
+                          for x0, y0, x1, y1, bottom, elevation, height
+                          in floor.get("stairs", [])],
         })
     return {"format": "neonplan-import", "units": "m", "rooms_at": "centre",
             "floors": floors}

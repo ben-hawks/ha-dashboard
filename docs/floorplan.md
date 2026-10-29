@@ -28,9 +28,13 @@ line).
    Laundry Room, Work Office, Garage). In the editor, check each room's
    area, then use its option to add the area's devices, which places your
    lights, sensors and speakers.
-5. **Tidy up in the editor:** the outline is simplified (rectangular rooms,
-   approximate doors and windows). Adjust anything that looks off, add
-   furniture if you like, and check the stairs.
+5. **Tidy up in the editor:** the outline is simplified (straight walls,
+   approximate doors and windows). Adjust anything that looks off and add
+   furniture if you like.
+6. **Check the split-foyer stairs:** the file includes both flights from the
+   entry landing (down to the downstairs hall, up to the upstairs hallway),
+   placed on the Downstairs floor with the landing half a storey up. If a
+   flight points the wrong way in 3D, rotate it 180° in the editor.
 
 After that, refresh the wall tablet. The Floor Plan tab shows the 3D house.
 
