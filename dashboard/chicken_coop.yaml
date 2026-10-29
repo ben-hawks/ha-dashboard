@@ -7,9 +7,11 @@
 #   matches a quarter of the screen. Decoding three full-resolution streams
 #   is what would make the tablet struggle. Enable "Low resolution channel"
 #   on each camera in UniFi Protect (it's off by default).
-# - camera_view is set once, on the first feed, and reused by the others.
-#   "live" is real video; if the tablet still stutters or runs hot, change it
-#   to "auto": a still that refreshes every 10 seconds, far lighter.
+# - Only one feed plays live video at a time: Chicken Run by day, Coop Cam 2
+#   by night (sun below the horizon). The others are stills that refresh
+#   every 10 seconds ("auto"), which cost almost nothing. Tap any feed to
+#   open it live, full screen. Each switching feed exists twice, a live and
+#   a still version, and a conditional card shows the right one.
 #
 # Camera entity IDs: Home Assistant prefixes new entities with their area,
 # hence camera.chicken_coop_…; the older motion sensors keep their names. If
@@ -32,28 +34,61 @@ views:
         columns: 2
         square: false
         cards:
-          # Tap a feed to open it full screen.
+          # Tap a feed to open it live, full screen.
+          # Coop Cam 1: always a still.
           - type: picture-glance
             title: Coop Cam 1
             camera_image: camera.chicken_coop_chicken_cam_1_low_resolution_channel
-            camera_view: &camera_view live
+            camera_view: auto
             aspect_ratio: "16:9"
             entities:
               - binary_sensor.chicken_cam_1_motion
-          - type: picture-glance
-            title: Coop Cam 2
-            camera_image: camera.chicken_coop_chicken_cam_2_low_resolution_channel
-            camera_view: *camera_view
-            aspect_ratio: "16:9"
-            entities:
-              - binary_sensor.chicken_cam_2_motion
-          - type: picture-glance
-            title: Chicken Run
-            camera_image: camera.chicken_coop_chicken_run_low_resolution_channel
-            camera_view: *camera_view
-            aspect_ratio: "16:9"
-            entities:
-              - binary_sensor.chicken_run_motion
+
+          # Coop Cam 2: live at night, a still by day.
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: sun.sun
+                state: below_horizon
+            card: &cam_2
+              type: picture-glance
+              title: Coop Cam 2
+              camera_image: camera.chicken_coop_chicken_cam_2_low_resolution_channel
+              camera_view: live
+              aspect_ratio: "16:9"
+              entities:
+                - binary_sensor.chicken_cam_2_motion
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: sun.sun
+                state_not: below_horizon
+            card:
+              <<: *cam_2
+              camera_view: auto
+
+          # Chicken Run: live by day, a still at night.
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: sun.sun
+                state_not: below_horizon
+            card: &chicken_run
+              type: picture-glance
+              title: Chicken Run
+              camera_image: camera.chicken_coop_chicken_run_low_resolution_channel
+              camera_view: live
+              aspect_ratio: "16:9"
+              entities:
+                - binary_sensor.chicken_run_motion
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: sun.sun
+                state: below_horizon
+            card:
+              <<: *chicken_run
+              camera_view: auto
 
           # Fourth quadrant: controls and sensors. Both lists fill
           # themselves from the "Chicken Coop" area, so the automatic door,

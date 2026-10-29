@@ -9,12 +9,13 @@ A single stacked column of three would only fit about 505×284 per feed.
 
 | Quadrant | Content |
 |----------|---------|
-| Top left | Coop Cam 1 (live), motion icon |
-| Top right | Coop Cam 2 (live), motion icon |
-| Bottom left | Chicken Run (live), motion icon |
+| Top left | Coop Cam 1 (still, refreshed every 10 s), motion icon |
+| Top right | Coop Cam 2 (live at night, still by day), motion icon |
+| Bottom left | Chicken Run (live by day, still at night), motion icon |
 | Bottom right | Outside temperature, then every light, switch, door (cover) and lock in the **Chicken Coop** area, then its temperature and humidity sensors |
 
-Tap a feed to open it full screen. The controls and sensors fill themselves
+Only one feed plays live video at a time, so the tablet decodes a single
+stream. Tap any feed to open it live, full screen. The controls and sensors fill themselves
 in from the area, so when the automatic door or heat lamp is added, put it in
 the **Chicken Coop** area and it appears.
 
@@ -49,10 +50,15 @@ Same base as the wall tablet: follow [tablet-setup.md](tablet-setup.md)
 
 ### Keeping a slow tablet happy
 
-- **Streams:** use the low-resolution channels (step 3 above). If the feeds
-  still stutter or the tablet runs hot, change `camera_view: &camera_view
-  live` to `auto` in `dashboard/chicken_coop.yaml`. The feeds then become
-  stills refreshed every 10 seconds, which costs almost nothing.
+- **Streams:** use the low-resolution channels (step 3 above), and only one
+  plays live: Chicken Run while the sun is up, Coop Cam 2 after sunset. To
+  change which, edit the `conditional` cards in
+  `dashboard/chicken_coop.yaml` (each switching feed has a live and a still
+  version). If even one live feed stutters, set its `camera_view` to `auto`
+  too.
+- **Frame rate:** dropping the cameras to 15 fps in UniFi Protect (camera
+  Settings → Advanced) halves the decoding work. On most models it applies
+  to recordings too.
 - **WebView:** keep it updated (LineageOS updates it with the system; on
   stock Android, update **Android System WebView** in the Play Store).
   Newer versions decode video in hardware more reliably.
