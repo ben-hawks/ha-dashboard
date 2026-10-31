@@ -56,13 +56,20 @@ automation:
             {% if m in ['Dark', 'Light'] %}{{ m | lower }}
             {% else %}{{ 'dark' if is_state('sun.sun', 'below_horizon') else 'light' }}
             {% endif %}
-      - action: browser_mod.set_theme
-        data:
-          browser_id:
+      # One call per tablet: a browser that isn't registered with Browser Mod
+      # (or is offline) mustn't stop the theme reaching the others.
+      - repeat:
+          for_each:
             - wall_tablet
             - coop_tablet
-          theme: Wall Tablet
-          dark: "{{ dark_mode | trim }}"
+          sequence:
+            - action: browser_mod.set_theme
+              continue_on_error: true
+              data:
+                browser_id:
+                  - "{{ repeat.item }}"
+                theme: Wall Tablet
+                dark: "{{ dark_mode | trim }}"
 
   # Day = sun up, night = sun down. To use fixed times instead, swap the two
   # sun triggers for `trigger: time` and change `night` below to match.
