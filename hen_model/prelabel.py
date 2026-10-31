@@ -99,9 +99,12 @@ def main():
           + ", ".join(f"{c['name']} ({'/'.join(c['prompts'])})" for c in classes))
 
     tasks, counts = [], {}
-    paths = [str(data / r) for r in todo]
-    for i, (rel, result) in enumerate(zip(todo, model.predict(paths, stream=True, conf=args.conf, imgsz=args.imgsz,
-                                                               device=args.device, verbose=False))):
+    for i, rel in enumerate(todo):
+        # One frame per call: handing Ultralytics the whole list makes memory
+        # grow with every frame (about 80 MB each with YOLOE), until a night's
+        # batch gets the container killed. Per frame it stays flat.
+        result = model.predict(str(data / rel), conf=args.conf, imgsz=args.imgsz,
+                               device=args.device, verbose=False)[0]
         task = task_for(result, rel, owner, version)
         tasks.append(task)
         for b in task["predictions"][0]["result"]:

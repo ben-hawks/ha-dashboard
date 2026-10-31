@@ -180,7 +180,7 @@ With `LABEL_STUDIO_URL` and `LABEL_STUDIO_TOKEN` set on the harvester
 its guesses on the new frames and they appear in Label Studio's **Hen
 model** project, which is created the first time. It runs on TrueNAS's
 CPU, roughly a few seconds per frame, so a night's frames take a few
-minutes. The first time also downloads YOLOE (a few hundred MB), which is
+minutes, and needs about 1 GB of memory while it runs. The first time also downloads YOLOE (a few hundred MB), which is
 then kept. The harvester's log shows how many boxes of each class it drew.
 
 To run it by hand from the training machine instead (faster on a GPU, with
