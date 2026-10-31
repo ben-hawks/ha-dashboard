@@ -374,8 +374,9 @@ def section():
     return {
         "type": "grid",
         "column_span": 3,
+        # No heading: Weather and Garden together fit on the 1280×800 wall
+        # tablet without scrolling.
         "cards": [
-            {"type": "heading", "heading": "Garden", "icon": "mdi:sprout"},
             {"type": "grid", "columns": min(len(BEDS), 4), "square": False,
              "grid_options": {"columns": "full"},
              "cards": [card_for(b) for b in BEDS]},

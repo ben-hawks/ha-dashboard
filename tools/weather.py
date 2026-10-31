@@ -2,8 +2,9 @@
 """Generate the Weather station section of the Outdoors tab (Ecowitt WS90).
 
 Writes:
-  dashboard/views/weather_station_section.yaml   illustrated current
-                                                 conditions + 24 h graphs
+  dashboard/views/weather_station_section.yaml   the Weather band: illustrated
+                                                 current conditions, forecast
+                                                 and 24 h graphs
   templates/weather_station.yaml                 helper sensors with fixed
                                                  IDs (sensor.station_*),
                                                  included by
@@ -330,15 +331,32 @@ def trend_tile(key, name, hours=24):
 
 
 def section():
+    """The Weather band across the top of Outdoors: station card | forecast |
+    24 h graphs. A grid card keeps the three columns even (grid_options widths
+    in a multi-column section are counted out of 36, not 12)."""
+    forecast = {"type": "weather-forecast", "entity": "weather.forecast_home",
+                "show_current": False, "show_forecast": True}
     return {
         "type": "grid",
+        "column_span": 3,
         "cards": [
-            {"type": "heading", "heading": "Weather station", "icon": "mdi:weather-partly-cloudy"},
-            hero_card(),
-            trend_tile("temperature", "Temperature"),
-            trend_tile("wind_speed", "Wind"),
-            trend_tile("rain_today", "Rain today"),
-            trend_tile("pressure", "Pressure"),
+            # No heading: the band needs to fit above the Garden on the
+            # 1280×800 wall tablet without scrolling.
+            {"type": "grid", "columns": 3, "square": False,
+             "grid_options": {"columns": "full"},
+             "cards": [
+                 {k: v for k, v in hero_card().items() if k != "grid_options"},
+                 {"type": "vertical-stack", "cards": [
+                     {**forecast, "forecast_type": "hourly"},
+                     {**forecast, "forecast_type": "daily"},
+                 ]},
+                 {"type": "grid", "columns": 2, "square": False, "cards": [
+                     trend_tile("temperature", "Temperature"),
+                     trend_tile("wind_speed", "Wind"),
+                     trend_tile("rain_today", "Rain today"),
+                     trend_tile("pressure", "Pressure"),
+                 ]},
+             ]},
         ],
     }
 

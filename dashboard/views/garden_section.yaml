@@ -3,9 +3,6 @@
 type: grid
 column_span: 3
 cards:
-- type: heading
-  heading: Garden
-  icon: mdi:sprout
 - type: grid
   columns: 4
   square: false
