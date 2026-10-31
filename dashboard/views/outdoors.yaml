@@ -125,10 +125,33 @@ sections:
                     entity: sensor.shed_net_power
                     name: Net
                     color: green
-              - type: history-graph
+              # Same style as the weather graphs (mini-graph-card): solar
+              # in as an amber line with a soft fill, draw as a blue line.
+              - type: custom:mini-graph-card
+                name: Solar in vs. draw
+                icon: mdi:solar-power-variant
                 hours_to_show: 24
+                points_per_hour: 2
+                hour24: false
+                height: 80
+                line_width: 3
+                smoothing: true
+                animate: false
+                font_size_header: 12
+                lower_bound: 0
+                show:
+                  icon: true
+                  name: true
+                  state: false
+                  legend: true
+                  labels: false
+                  points: false
+                  fill: fade
                 entities:
                   - entity: sensor.shed_el30v2_el30v22533005590342_photovoltaics_input_power
                     name: Solar in
+                    color: "#ffb347"
                   - entity: sensor.shed_power_draw
                     name: Draw
+                    color: "#6aa9ff"
+                    show_fill: false
