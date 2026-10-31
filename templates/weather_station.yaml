@@ -72,6 +72,14 @@ sensor:
   state: '{{ (states.sensor | map(attribute=''entity_id'') | select(''search'', ''gw3000b_daily_rain(_piezo)?$'') | map(''states'') | select(''is_number'') | list) | first }}'
   unit_of_measurement: in
   device_class: precipitation
+- name: Station Rain This Month
+  unique_id: station_rain_month
+  icon: mdi:calendar-month
+  state_class: total_increasing
+  availability: '{{ (states.sensor | map(attribute=''entity_id'') | select(''search'', ''gw3000b_monthly_rain(_piezo)?$'') | map(''states'') | select(''is_number'') | list) | count > 0 }}'
+  state: '{{ (states.sensor | map(attribute=''entity_id'') | select(''search'', ''gw3000b_monthly_rain(_piezo)?$'') | map(''states'') | select(''is_number'') | list) | first }}'
+  unit_of_measurement: in
+  device_class: precipitation
 - name: Station UV Index
   unique_id: station_uv_index
   icon: mdi:sun-wireless
@@ -102,4 +110,4 @@ sensor:
 - name: Station Sky
   unique_id: station_sky
   icon: mdi:weather-partly-cloudy
-  state: '{% set rain = states(''sensor.station_rain_rate'') | float(0) %}{% set temp = states(''sensor.station_temperature'') | float(99) %}{% set forecast = states(''weather.forecast_home'') %}{% set elev = state_attr(''sun.sun'', ''elevation'') | float(0) %}{% set solar = states(''sensor.station_solar_radiation'') | float(-1) %}{% if (rain > 0 and temp <= 35) or (forecast in [''snowy'', ''snowy-rainy''] and temp <= 37) %}Snow{% elif rain > 0 %}Rain{% elif elev <= 0 %}Night{% elif solar < 0 or elev < 8 %}Partly cloudy{% else %}{% set ratio = solar / (990 * sin(elev * pi / 180)) %}{{ ''Sunny'' if ratio > 0.7 else ''Partly cloudy'' if ratio > 0.35 else ''Cloudy'' }}{% endif %}'
+  state: '{% set rain = states(''sensor.station_rain_rate'') | float(0) %}{% set flag = states.binary_sensor | map(attribute=''entity_id'') | select(''search'', ''gw3000b_rain_state(_piezo)?$'') | select(''is_state'', ''on'') | list | count > 0 %}{% set wet = flag or rain > 0 %}{% set temp = states(''sensor.station_temperature'') | float(99) %}{% set forecast = states(''weather.forecast_home'') %}{% set elev = state_attr(''sun.sun'', ''elevation'') | float(0) %}{% set solar = states(''sensor.station_solar_radiation'') | float(-1) %}{% if (wet and temp <= 35) or (forecast in [''snowy'', ''snowy-rainy''] and temp <= 37) %}Snow{% elif wet %}Rain{% elif elev <= 0 %}Night{% elif solar < 0 or elev < 8 %}Partly cloudy{% else %}{% set ratio = solar / (990 * sin(elev * pi / 180)) %}{{ ''Sunny'' if ratio > 0.7 else ''Partly cloudy'' if ratio > 0.35 else ''Cloudy'' }}{% endif %}'

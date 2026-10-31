@@ -48,6 +48,7 @@ READINGS = {
     "wind_direction": ("Wind Direction", "wind_direction", "°", None, "mdi:compass-outline"),
     "rain_rate": ("Rain Rate", "rain_rate(_piezo)?", "in/h", "precipitation_intensity", "mdi:weather-pouring"),
     "rain_today": ("Rain Today", "daily_rain(_piezo)?", "in", "precipitation", "mdi:weather-rainy"),
+    "rain_month": ("Rain This Month", "monthly_rain(_piezo)?", "in", "precipitation", "mdi:calendar-month"),
     "uv_index": ("UV Index", "uv_index", None, None, "mdi:sun-wireless"),
     "solar_radiation": ("Solar Radiation", "solar_radiation", "W/m²", "irradiance", "mdi:white-balance-sunny"),
     "pressure": ("Pressure", "relative_pressure", "inHg", "atmospheric_pressure", "mdi:gauge"),
@@ -59,8 +60,8 @@ POINTS = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE",
 # Layout (canvas units).
 COMPASS = (85, 204, 50)          # centre x, y, radius
 ROWS = [("Rain today", "rain_today"), ("Rain rate", "rain_rate"),
-        ("UV index", "uv_index"), ("Pressure", "pressure")]
-ROW_Y0, ROW_DY, ROW_X_LABEL, ROW_X_VALUE = 176, 26, 182, 390
+        ("This month", "rain_month"), ("UV index", "uv_index"), ("Pressure", "pressure")]
+ROW_Y0, ROW_DY, ROW_X_LABEL, ROW_X_VALUE = 170, 24, 182, 390
 
 
 def data_uri(svg):
@@ -169,7 +170,8 @@ def base_svg():
         f'<text x="{ROW_X_LABEL}" y="{ROW_Y0 + i * ROW_DY + 5}" font-size="13" '
         f'fill="{LABEL}">{label}</text>'
         for i, (label, _) in enumerate(ROWS))
-    divider = (f'<line x1="172" y1="{ROW_Y0 - 18}" x2="172" y2="{ROW_Y0 + 3 * ROW_DY + 12}" '
+    divider = (f'<line x1="172" y1="{ROW_Y0 - 16}" x2="172" '
+               f'y2="{ROW_Y0 + (len(ROWS) - 1) * ROW_DY + 12}" '
                f'stroke="{LABEL}" stroke-opacity="0.25" stroke-width="1"/>')
     return canvas(f'<g font-family="Roboto, sans-serif">{compass_base()}{rows}</g>{divider}')
 
@@ -262,7 +264,7 @@ def templates():
             s["unit_of_measurement"] = unit
         if device_class:
             s["device_class"] = device_class
-        if key == "rain_today":
+        if key in ("rain_today", "rain_month"):
             s["state_class"] = "total_increasing"
         sensors.append(s)
     sensors.append({
@@ -277,15 +279,21 @@ def templates():
         "name": "Station Sky", "unique_id": "station_sky", "icon": "mdi:weather-partly-cloudy",
         "state": (
             "{% set rain = states('sensor.station_rain_rate') | float(0) %}"
+            # The gateway's own rain flag (binary_sensor.…_rain_state_piezo)
+            # reacts sooner than the rate.
+            "{% set flag = states.binary_sensor | map(attribute='entity_id')"
+            f" | select('search', '{GATEWAY}_rain_state(_piezo)?$') | select('is_state', 'on')"
+            " | list | count > 0 %}"
+            "{% set wet = flag or rain > 0 %}"
             "{% set temp = states('sensor.station_temperature') | float(99) %}"
             # The WS90's piezo rain sensor misses most dry snow, so also trust
             # the forecast's current condition when it's cold enough.
             "{% set forecast = states('weather.forecast_home') %}"
             "{% set elev = state_attr('sun.sun', 'elevation') | float(0) %}"
             "{% set solar = states('sensor.station_solar_radiation') | float(-1) %}"
-            "{% if (rain > 0 and temp <= 35)"
+            "{% if (wet and temp <= 35)"
             " or (forecast in ['snowy', 'snowy-rainy'] and temp <= 37) %}Snow"
-            "{% elif rain > 0 %}Rain"
+            "{% elif wet %}Rain"
             "{% elif elev <= 0 %}Night"
             f"{{% elif solar < 0 or elev < 8 %}}{DEFAULT_SKY}"
             "{% else %}"
