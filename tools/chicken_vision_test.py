@@ -86,6 +86,10 @@ class DoorLine:
             return 0
         return 1 if d > 0 else -1
 
+    def near(self, x, y):
+        """Close enough to the door that she might cross it any moment."""
+        return -0.25 <= self._along(x, y) <= 1.25 and abs(self._distance(x, y)) < 4 * self.margin
+
 
 class CrossingCounter:
     """Counts each tracked hen's crossings of the door line."""
@@ -219,6 +223,23 @@ def cmd_frame(args):
     print("plus one point inside the coop, and pass them as --line x1,y1,x2,y2 --inside x,y.")
 
 
+def track_frames(model, source, live, started, args, **track_args):
+    """Tracking results, frame by frame. A live stream that drops out for
+    longer than Ultralytics will wait is reopened until --max-seconds, keeping
+    the tracker so hens can keep their numbers across a short dropout."""
+    first = True
+    while True:
+        try:
+            yield from model.track(source=source, stream=True, persist=not first, **track_args)
+        except ConnectionError:
+            if not live or first:
+                raise
+        first = False
+        if not live or time.time() - started > args.max_seconds:
+            return
+        time.sleep(1)
+
+
 def run_clip(model, classes, source, args, out_dir):
     cap = open_source(source)
     fps = cap.get(cv2.CAP_PROP_FPS) or 15
@@ -234,7 +255,7 @@ def run_clip(model, classes, source, args, out_dir):
                         args.margin, (w, h))
         counter = CrossingCounter(door)
 
-    stem = "rtsp" if is_stream(source) else Path(source).stem
+    stem = "stream" if is_stream(source) else Path(source).stem
     writer = None
     if not args.no_video:
         video_path = out_dir / f"{stem}_annotated.mp4"
@@ -243,21 +264,39 @@ def run_clip(model, classes, source, args, out_dir):
     csv_path = out_dir / f"{stem}_frames.csv"
 
     counts, per_class, track_ids, infer_ms = [], Counter(), set(), []
+    # Live streams drop out: Ultralytics then hands over black frames while it
+    # reconnects. Those are skipped, and any stretch without a real frame
+    # longer than --gap is logged as a dropout. A dropout while hens were at
+    # the door may have hidden a crossing, so it's flagged.
+    live = is_stream(source)
+    gaps = []  # (seconds, length, hens near the door either side)
+    last_good, near_before = None, 0
     started = time.time()
     print(f"\n{source}: {w}x{h} at {fps:.0f} fps, every {args.vid_stride} frame(s)")
 
     with open(csv_path, "w", newline="") as f:
         rows = csv.writer(f)
         rows.writerow(["frame", "seconds", "count", "track_ids", "classes", "confidences", "crossing"])
-        results = model.track(source=source, stream=True, persist=False, tracker=args.tracker,
-                              classes=classes, conf=args.conf, imgsz=args.imgsz,
-                              device=args.device, vid_stride=args.vid_stride, verbose=False)
+        results = track_frames(model, source, live, started, args, tracker=args.tracker,
+                               classes=classes, conf=args.conf, imgsz=args.imgsz,
+                               device=args.device, vid_stride=args.vid_stride, verbose=False)
         for i, r in enumerate(results):
-            seconds = i * step
+            seconds = time.time() - started if live else i * step
             if args.max_seconds and seconds > args.max_seconds:
                 break
+            if live and not r.orig_img.any():
+                continue  # placeholder frame while the stream reconnects
             boxes = r.boxes
             ids = boxes.id.int().tolist() if boxes.id is not None else [None] * len(boxes)
+            centres = [((x1 + x2) / 2, y2 if args.anchor == "bottom" else (y1 + y2) / 2)
+                       for x1, y1, x2, y2 in boxes.xyxy.tolist()]
+            near_now = sum(counter.door.near(x, y) for x, y in centres) if counter else 0
+            if live and last_good is not None and seconds - last_good > args.gap:
+                busy = max(near_before, near_now)
+                gaps.append((last_good, seconds - last_good, busy))
+                warn = f", {busy} hen(s) at the door: a crossing may be missed" if busy else ""
+                print(f"  {clock(last_good)}  stream dropped for {seconds - last_good:.1f} s{warn}")
+            last_good, near_before = seconds, near_now
             names = [r.names[c] for c in boxes.cls.int().tolist()]
             confs = [round(c, 2) for c in boxes.conf.tolist()]
             counts.append(len(boxes))
@@ -267,16 +306,15 @@ def run_clip(model, classes, source, args, out_dir):
 
             crossed = []
             if counter:
-                for t, (x1, y1, x2, y2) in zip(ids, boxes.xyxy.tolist()):
+                for t, (x, y) in zip(ids, centres):
                     if t is None:
                         continue
-                    y = y2 if args.anchor == "bottom" else (y1 + y2) / 2
-                    way = counter.update(seconds, t, (x1 + x2) / 2, y)
+                    way = counter.update(seconds, t, x, y)
                     if way:
                         crossed.append(f"{t}:{way}")
                         print(f"  {clock(seconds)}  hen #{t} went {way.upper()}")
 
-            rows.writerow([i * args.vid_stride, round(seconds, 2), len(boxes),
+            rows.writerow([i * args.vid_stride if not live else i, round(seconds, 2), len(boxes),
                            " ".join(str(t) for t in ids), " ".join(names),
                            " ".join(str(c) for c in confs), " ".join(crossed)])
 
@@ -298,7 +336,7 @@ def run_clip(model, classes, source, args, out_dir):
     seen = [c for c in counts if c]
     summary = {
         "clip": stem,
-        "seconds": round(len(counts) * step, 1),
+        "seconds": round(seconds if live else len(counts) * step, 1),
         "frames": len(counts),
         "frames_with_hens_pct": round(100 * len(seen) / len(counts), 1),
         "max_seen": max(counts),
@@ -311,6 +349,9 @@ def run_clip(model, classes, source, args, out_dir):
         "in": counter.ins if counter else "",
         "out": counter.outs if counter else "",
         "net_in": counter.ins - counter.outs if counter else "",
+        "dropouts": len(gaps) if live else "",
+        "dropout_seconds": round(sum(g[1] for g in gaps), 1) if live else "",
+        "dropouts_at_door": sum(1 for g in gaps if g[2]) if live else "",
     }
 
     print(f"  frames with a hen seen  {summary['frames_with_hens_pct']}%")
@@ -322,6 +363,11 @@ def run_clip(model, classes, source, args, out_dir):
           "  (far more than the hens that appeared = tracks breaking up)")
     if counter:
         print(f"  door crossings          in {counter.ins}, out {counter.outs}, net {summary['net_in']:+d}")
+    if live:
+        lost = summary["dropout_seconds"]
+        print(f"  stream dropouts         {len(gaps)}, {lost} s in all"
+              f" ({100 * lost / max(seconds, 1):.1f}% of the time)"
+              + (f", {summary['dropouts_at_door']} with hens at the door" if counter else ""))
     print(f"  speed                   {summary['inference_ms']} ms per frame to detect,"
           f" {summary['processing_fps']} frames/s overall on {args.device}")
     if writer:
@@ -382,6 +428,8 @@ def main():
                    help="point of the box that crosses the line: center (default, cameras looking down) "
                         "or bottom (feet, cameras looking across)")
     r.add_argument("--max-seconds", type=float, help="stop after this much video (needed for live streams)")
+    r.add_argument("--gap", type=float, default=2,
+                   help="live streams: log a dropout when no real frame arrives for this many seconds (default 2)")
     r.add_argument("--no-video", action="store_true", help="skip the annotated video (faster)")
     r.add_argument("--out", default="chicken_test", help="output folder (default chicken_test)")
     r.set_defaults(func=cmd_run)

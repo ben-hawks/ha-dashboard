@@ -143,4 +143,45 @@ which is the form this script needs:
 ~/chicken-test/bin/python chicken_vision_test.py run rtsp://192.168.1.10:7447/AbCdEf123 --max-seconds 900 --line ... --inside ... --device intel:gpu
 ```
 
+## When the cameras drop out
+
+On a live stream the script also measures how spotty the connection is.
+When the stream drops it keeps trying to reconnect until `--max-seconds`.
+It keeps the tracker between attempts, so a hen can keep her number across
+a short drop. Every stretch with no picture longer than `--gap` seconds
+(default 2) is logged:
+
+```
+  12:04.1  stream dropped for 6.2 s, 1 hen(s) at the door: a crossing may be missed
+```
+
+The summary gives the number of dropouts, the time lost, and how many
+happened while hens were at the door. Those are the ones that matter: a
+dropout with nobody near the door can't hide a crossing. Run it across a
+few bedtimes to see how often that happens.
+
+How the real system will cope with dropouts:
+
+1. **Fix the weak link first.** Protect shows each camera's signal and
+   uptime. A Wi-Fi camera on a weak signal is often the cause, and a closer
+   access point or a PoE run fixes it at the source. Frigate pulls the
+   streams from Protect, not from the cameras directly, so a dropout between
+   Protect and the server is a different problem from a camera dropping off
+   Wi-Fi.
+2. **Know when it doesn't know.** Every dropout is logged. One that
+   overlaps activity at the door turns the flock status to "Uncertain,
+   check" instead of a confident wrong number. The bedtime check needs the
+   run cameras to have been online and empty for the whole 10 minutes. "No
+   birds seen" while a camera was offline isn't evidence.
+3. **Count from positions, not just crossings.** When the picture comes
+   back, which side of the door each hen near it is on tells you what
+   happened during the gap. The daily reset at the morning let-out stops a
+   missed crossing from carrying over to the next day.
+4. **A second witness at the door.** The inside camera can see the door
+   from the other side, and a two-beam IR break-beam on an ESP32 (ESPHome,
+   like the coop fan) counts ins and outs with no video at all. The ESP32
+   keeps running totals itself and reports them when Wi-Fi comes back,
+   so a Wi-Fi blip loses no counts. Comparing it against the camera count
+   shows when either one has gone wrong.
+
 Ultralytics is AGPL-licensed, which is fine for home use like this.
