@@ -50,5 +50,5 @@ tools/weather.py             weather station card + its helper sensors (template
 
 ## Requirements
 
-Home Assistant (current), HACS with **auto-entities** and **Kiosk Mode**,
+Home Assistant (current), HACS with **auto-entities**, **Kiosk Mode** and **mini-graph-card**,
 **NeonPlan 3D** for the Floor Plan tab, and Fully Kiosk Browser (Plus) on the tablet, running LineageOS.

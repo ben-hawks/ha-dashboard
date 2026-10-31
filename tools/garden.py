@@ -311,6 +311,36 @@ def bar_svg(level):
 BAR_IMAGES = {str(level): data_uri(bar_svg(level)) for level in range(21)}
 
 
+def moisture_graph(moisture):
+    """3-day moisture history (mini-graph-card, HACS): a smooth line that
+    shades from amber (dry) through green to blue (wet) over a soft fill, on
+    a fixed 0–100% scale. The colour breaks use the default plant's levels;
+    the Dry/Good/Wet badge above follows the bed's chosen plant."""
+    dry, wet = PLANT_TYPES[DEFAULT_PLANT][1:]
+    return {
+        "type": "custom:mini-graph-card",
+        "entities": [{"entity": moisture, "name": "Moisture · 3 days"}],
+        "hours_to_show": 72,
+        "points_per_hour": 1,
+        "hour24": False,
+        "height": 70,
+        "line_width": 3,
+        "smoothing": True,
+        "animate": False,          # no redraw animation on the slow tablet
+        "lower_bound": 0,
+        "upper_bound": 100,
+        "font_size_header": 13,
+        "show": {"icon": False, "state": False, "legend": False, "labels": False,
+                 "points": False, "fill": "fade", "name": True},
+        "color_thresholds": [
+            {"value": 0, "color": GLOW_COLORS["Dry"]},
+            {"value": dry, "color": GLOW_COLORS["Good"]},
+            {"value": wet, "color": GLOW_COLORS["Wet"]},
+        ],
+        "color_thresholds_transition": "smooth",
+    }
+
+
 def card_for(bed):
     c = bed["channel"]
     plant = f"input_select.garden_{c}_plant"
@@ -360,9 +390,7 @@ def card_for(bed):
         "type": "vertical-stack",
         "cards": [
             {"type": "picture-elements", "image": data_uri(BLANK_SVG), "elements": elements},
-            {"type": "tile", "entity": moisture, "name": "Moisture, last 3 days",
-             "icon": "mdi:water-percent", "color": "blue", "hide_state": True,
-             "features": [{"type": "trend-graph", "hours_to_show": 72}]},
+            moisture_graph(moisture),
         ],
     }
 

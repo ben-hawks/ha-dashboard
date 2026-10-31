@@ -171,15 +171,36 @@ cards:
             top: 13.8%
             color: '#e0533d'
             --mdc-icon-size: 22px
-    - type: tile
-      entity: sensor.garden_1_moisture
-      name: Moisture, last 3 days
-      icon: mdi:water-percent
-      color: blue
-      hide_state: true
-      features:
-      - type: trend-graph
-        hours_to_show: 72
+    - type: custom:mini-graph-card
+      entities:
+      - entity: sensor.garden_1_moisture
+        name: Moisture · 3 days
+      hours_to_show: 72
+      points_per_hour: 1
+      hour24: false
+      height: 70
+      line_width: 3
+      smoothing: true
+      animate: false
+      lower_bound: 0
+      upper_bound: 100
+      font_size_header: 13
+      show:
+        icon: false
+        state: false
+        legend: false
+        labels: false
+        points: false
+        fill: fade
+        name: true
+      color_thresholds:
+      - value: 0
+        color: '#ffb347'
+      - value: 30
+        color: '#6fdc8c'
+      - value: 70
+        color: '#6aa9ff'
+      color_thresholds_transition: smooth
   - type: vertical-stack
     cards:
     - type: picture-elements
@@ -305,15 +326,36 @@ cards:
             top: 13.8%
             color: '#e0533d'
             --mdc-icon-size: 22px
-    - type: tile
-      entity: sensor.garden_2_moisture
-      name: Moisture, last 3 days
-      icon: mdi:water-percent
-      color: blue
-      hide_state: true
-      features:
-      - type: trend-graph
-        hours_to_show: 72
+    - type: custom:mini-graph-card
+      entities:
+      - entity: sensor.garden_2_moisture
+        name: Moisture · 3 days
+      hours_to_show: 72
+      points_per_hour: 1
+      hour24: false
+      height: 70
+      line_width: 3
+      smoothing: true
+      animate: false
+      lower_bound: 0
+      upper_bound: 100
+      font_size_header: 13
+      show:
+        icon: false
+        state: false
+        legend: false
+        labels: false
+        points: false
+        fill: fade
+        name: true
+      color_thresholds:
+      - value: 0
+        color: '#ffb347'
+      - value: 30
+        color: '#6fdc8c'
+      - value: 70
+        color: '#6aa9ff'
+      color_thresholds_transition: smooth
   - type: vertical-stack
     cards:
     - type: picture-elements
@@ -439,15 +481,36 @@ cards:
             top: 13.8%
             color: '#e0533d'
             --mdc-icon-size: 22px
-    - type: tile
-      entity: sensor.garden_3_moisture
-      name: Moisture, last 3 days
-      icon: mdi:water-percent
-      color: blue
-      hide_state: true
-      features:
-      - type: trend-graph
-        hours_to_show: 72
+    - type: custom:mini-graph-card
+      entities:
+      - entity: sensor.garden_3_moisture
+        name: Moisture · 3 days
+      hours_to_show: 72
+      points_per_hour: 1
+      hour24: false
+      height: 70
+      line_width: 3
+      smoothing: true
+      animate: false
+      lower_bound: 0
+      upper_bound: 100
+      font_size_header: 13
+      show:
+        icon: false
+        state: false
+        legend: false
+        labels: false
+        points: false
+        fill: fade
+        name: true
+      color_thresholds:
+      - value: 0
+        color: '#ffb347'
+      - value: 30
+        color: '#6fdc8c'
+      - value: 70
+        color: '#6aa9ff'
+      color_thresholds_transition: smooth
   - type: vertical-stack
     cards:
     - type: picture-elements
@@ -573,12 +636,33 @@ cards:
             top: 13.8%
             color: '#e0533d'
             --mdc-icon-size: 22px
-    - type: tile
-      entity: sensor.garden_4_moisture
-      name: Moisture, last 3 days
-      icon: mdi:water-percent
-      color: blue
-      hide_state: true
-      features:
-      - type: trend-graph
-        hours_to_show: 72
+    - type: custom:mini-graph-card
+      entities:
+      - entity: sensor.garden_4_moisture
+        name: Moisture · 3 days
+      hours_to_show: 72
+      points_per_hour: 1
+      hour24: false
+      height: 70
+      line_width: 3
+      smoothing: true
+      animate: false
+      lower_bound: 0
+      upper_bound: 100
+      font_size_header: 13
+      show:
+        icon: false
+        state: false
+        legend: false
+        labels: false
+        points: false
+        fill: fade
+        name: true
+      color_thresholds:
+      - value: 0
+        color: '#ffb347'
+      - value: 30
+        color: '#6fdc8c'
+      - value: 70
+        color: '#6aa9ff'
+      color_thresholds_transition: smooth

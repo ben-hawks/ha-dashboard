@@ -10,6 +10,7 @@ In **HACS**, search for and download:
 |------|------|-----|
 | **auto-entities** | Dashboard | Lists that fill themselves (low batteries, soil sensors, what's playing) |
 | **Kiosk Mode** | Dashboard | Hides the sidebar and menus on the tablet |
+| **mini-graph-card** | Dashboard | The garden beds' colour-shaded moisture graphs |
 
 Restart Home Assistant. (Browser Mod is no longer needed: light/dark
 switching uses Home Assistant's own default theme. If you installed it
