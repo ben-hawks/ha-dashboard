@@ -1,0 +1,33 @@
+# The hen harvester: copies training frames out of Frigate every night,
+# before Frigate's 3 days of continuous footage expire.
+# Source: github.com/ben-hawks/ha-dashboard, hen_model/harvester/
+#
+# In Portainer: Stacks > Add stack > Repository, with
+#   Repository URL   https://github.com/ben-hawks/ha-dashboard
+#   Compose path     hen_model/harvester/docker-compose.yml
+# and the environment variables below. Portainer builds the image from the
+# repo. See docs/hen-model.md.
+
+services:
+  hen-harvester:
+    container_name: hen-harvester
+    build:
+      context: ..
+      dockerfile: harvester/Dockerfile
+    image: hen-harvester:local
+    restart: unless-stopped
+    # Frigate is on the same server, at 127.0.0.1:8971 from the host network.
+    network_mode: host
+    # Run as the owner of the hens folder, so the frames stay editable over
+    # SMB. Find it with: ls -ln /mnt/tank (the two numbers by "hens").
+    user: ${HENS_OWNER:?is missing, set it to the hens folder's uid and gid as uid:gid}
+    volumes:
+      - ${HENS_PATH:?is missing, set it to the shared hen-model folder}:/hens
+      - /etc/localtime:/etc/localtime:ro # HARVEST_AT and --busy are in TrueNAS's time zone
+    environment:
+      FRIGATE_URL: ${FRIGATE_URL:-http://127.0.0.1:8971}
+      FRIGATE_USER: ${FRIGATE_USER:?is missing, set it to a Frigate viewer login}
+      FRIGATE_PASSWORD: ${FRIGATE_PASSWORD:?is missing, set it to that login's password}
+      HARVEST_AT: ${HARVEST_AT:-23:30}
+      HARVEST_ARGS: ${HARVEST_ARGS:-}
+      RUN_ON_START: ${RUN_ON_START:-yes}

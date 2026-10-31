@@ -77,34 +77,45 @@ The loop, each round:
    switched off, so it has to be this kind.
 5. **A Frigate user for harvesting**: in Frigate, **Settings → Users → Add**,
    role **viewer**.
-6. **The daily harvest.** Copy `hen_model/` to the server, e.g.
-   `/mnt/tank/apps/hens/hen_model`. Next to it, create a login file
-   `/mnt/tank/apps/hens/frigate-login` holding the user from step 5:
-
-   ```
-   FRIGATE_USER=hens
-   FRIGATE_PASSWORD=the-password
-   ```
-
-   Then make it readable by root only:
+6. **The harvester in Portainer.** It's a small container that copies
+   frames out of Frigate every night. Find the `hens` folder's owner (the
+   two numbers by `hens`, e.g. `3000 3000`):
 
    ```bash
-   sudo chmod 600 /mnt/tank/apps/hens/frigate-login
+   ls -ln /mnt/tank
    ```
 
-   Then **System → Advanced Settings → Cron Jobs → Add**: run as **root**,
-   schedule **daily** (any time; late evening catches the day's bedtime),
-   command:
+   Then **Stacks → Add stack → Repository**:
 
-   ```
-   bash /mnt/tank/apps/hens/hen_model/harvest-truenas.sh /mnt/tank/hens /mnt/tank/apps/hens/frigate-login --busy 06:30-08:30,17:00-19:30
-   ```
+   | Field | Value |
+   |-------|-------|
+   | Repository URL | `https://github.com/ben-hawks/ha-dashboard` |
+   | Repository reference | `refs/heads/main` |
+   | Compose path | `hen_model/harvester/docker-compose.yml` |
 
-   Change `--busy` to your let-out and bedtime windows, in TrueNAS's time
-   zone. Start it once by hand from the Cron Jobs list to check it:
-   `/mnt/tank/hens/harvest.log`
-   shows how it went. It runs `harvest.py` in a throwaway Python container,
-   as the share's owner, so the files stay editable over SMB.
+   and add the environment variables:
+
+   | Variable | Example | |
+   |----------|---------|-|
+   | `HENS_PATH` | `/mnt/tank/hens` | the shared folder |
+   | `HENS_OWNER` | `3000:3000` | its owner, from `ls -ln` |
+   | `FRIGATE_USER` | `hens` | the login from step 5 |
+   | `FRIGATE_PASSWORD` | | its password |
+   | `HARVEST_AT` | `23:30` | when to run each day, in TrueNAS's time zone; several are fine, e.g. `12:00,23:30` |
+   | `HARVEST_ARGS` | `--busy 06:30-08:30,17:00-19:30` | your let-out and bedtime windows, sampled more often |
+
+   Deploy. Portainer builds the image from the repo, which takes a minute
+   the first time. The harvester runs once straight away, so
+   **Containers → hen-harvester → Logs** shows within a few minutes whether
+   it reached Frigate and how many frames it added, then the time of the
+   next run.
+
+   Each run looks back to the last one that worked (plus two hours of
+   overlap), up to the 3 days Frigate keeps, so if the server was off for a
+   day the next run catches up. To pick up changes to the code later, open
+   the stack and **Pull and redeploy**. To have Portainer do that by itself,
+   turn on **GitOps updates** on the stack (**Automatic updates** in older
+   Portainer versions).
 
 ### On the training machine
 
@@ -136,7 +147,7 @@ read -s LABEL_STUDIO_TOKEN && export LABEL_STUDIO_TOKEN
 
 ### 1. Harvest frames
 
-This happens by itself every night on TrueNAS (setup step 6). Each run
+The harvester container does this every night on TrueNAS (setup step 6). Each run
 samples each camera's recordings every 30 minutes, and every 5 minutes in
 the busy windows: let-out and bedtime, when the light changes and the hens
 crowd the door. It also takes the snapshot of every bird, person, cat and
@@ -277,7 +288,7 @@ and the model spends its effort on Flickr photos rather than our coop.
 |------|--------------|
 | `hen_model/classes.yaml` | the classes, YOLOE's prompts for each, matching Open Images classes |
 | `hen_model/harvest.py` | pulls frames out of Frigate into the share |
-| `hen_model/harvest-truenas.sh` | runs harvest.py daily on TrueNAS, from a cron job |
+| `hen_model/harvester/` | the harvester container for Portainer: Dockerfile, compose file, daily schedule |
 | `hen_model/public.py` | downloads boxed predator photos from Open Images |
 | `hen_model/prelabel.py` | YOLOE's first-guess boxes, sent to Label Studio |
 | `hen_model/dataset.py` | Label Studio labels → YOLO training set |
