@@ -351,7 +351,7 @@ template:
              | selectattr('state', 'is_number')
              | map(attribute='state') | first }}
 
-      # Battery time left as hours:minutes (2748 min → 45:48).
+      # Battery time left in words (2748 min → 45 hours, 48 minutes).
       - name: Shed Battery Time Left
         unique_id: shed_battery_time_left
         icon: mdi:timer-sand
@@ -363,7 +363,10 @@ template:
                 | selectattr('entity_id', 'search', 'el30v22533005590342.*(battery_time|time_remaining|remaining_time)')
                 | selectattr('state', 'is_number')
                 | map(attribute='state') | first | int(0) %}
-          {{ '%d:%02d' % (m // 60, m % 60) }}
+          {%- set h, mm = m // 60, m % 60 %}
+          {%- set hours = h ~ (' hour' if h == 1 else ' hours') %}
+          {%- set minutes = mm ~ (' minute' if mm == 1 else ' minutes') %}
+          {{ (hours ~ ', ' ~ minutes) if h else minutes }}
 
       # Battery sensors below 20%. Phones and power stations are left out
       # by name; tag anything else with the "Hide from tablet" label in
