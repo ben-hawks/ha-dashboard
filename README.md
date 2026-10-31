@@ -9,6 +9,7 @@ It's meant to be easy for anyone in the house, not just whoever set it up.
 - **Floor Plan tab (NeonPlan 3D):** [docs/floorplan.md](docs/floorplan.md)
 - **Chicken Command Center (coop tablet):** [docs/coop-tablet.md](docs/coop-tablet.md)
 - **Chicken counting feasibility test:** [docs/chicken-vision-test.md](docs/chicken-vision-test.md)
+- **Frigate for the chicken cameras (Arc server):** [docs/frigate.md](docs/frigate.md)
 - **Adding devices, rooms, tabs and alerts:** [docs/adding-things.md](docs/adding-things.md)
 
 ## Tabs
@@ -49,6 +50,7 @@ tools/garden.py              garden bed cards + their package (plant dropdowns, 
 tools/weather.py             weather station card + its helper sensors (templates/weather_station.yaml)
 tools/coop.py                coop screen's animated scene, chicken comfort + helpers (templates/coop.yaml)
 tools/chicken_vision_test.py hen detection/door-counting test on exported camera clips (not part of HA)
+frigate/                     Frigate NVR for the chicken cameras: docker compose + config (runs on the Arc server)
 ```
 
 ## Requirements

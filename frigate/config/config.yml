@@ -1,0 +1,152 @@
+# Frigate 0.18 config for the chicken cameras.
+# Source: github.com/ben-hawks/ha-dashboard, frigate/config/config.yml
+#
+# Anything written {FRIGATE_...} comes from .env, so this file holds no
+# addresses or passwords. Frigate's Settings pages also edit this file; copy
+# changes worth keeping back into the repo.
+
+mqtt:
+  enabled: true
+  host: "{FRIGATE_MQTT_HOST}"
+  user: "{FRIGATE_MQTT_USER}"
+  password: "{FRIGATE_MQTT_PASSWORD}"
+
+# Home Assistant connects over plain HTTP on the LAN (port 8971 still needs a
+# login). With TLS on, HA would refuse Frigate's self-signed certificate.
+tls:
+  enabled: false
+
+# Object detection on the Arc. The model is the small one built into Frigate,
+# so this works on day one; docs/frigate.md has the step up to YOLOv9.
+detectors:
+  arc:
+    type: openvino
+    device: GPU # GPU.1 if the server also has an integrated GPU (docs/frigate.md)
+
+model:
+  width: 300
+  height: 300
+  input_tensor: nhwc
+  input_pixel_format: bgr
+  path: /openvino-model/ssdlite_mobilenet_v2.xml
+  labelmap_path: /openvino-model/coco_91cl_bkgr.txt
+
+# Video decoding on the Arc. Protect streams are H.264 unless a camera has
+# "Enhanced encoding" on: then use preset-intel-qsv-h265 for it.
+# preset-record-ubiquiti fixes Protect's audio for recording.
+ffmpeg:
+  hwaccel_args: preset-intel-qsv-h264
+  output_args:
+    record: preset-record-ubiquiti
+
+# One connection per Protect stream; Frigate, the web UI and Home Assistant's
+# live view all share it. Protect needs rtspx:// (its rtsps:// address with
+# the scheme changed and "?enableSrtp" removed).
+go2rtc:
+  streams:
+    chicken_cam_1:
+      - rtspx://{FRIGATE_PROTECT_HOST}:7441/{FRIGATE_CAM1_HIGH}
+    chicken_cam_1_detect:
+      - rtspx://{FRIGATE_PROTECT_HOST}:7441/{FRIGATE_CAM1_MEDIUM}
+    chicken_cam_2:
+      - rtspx://{FRIGATE_PROTECT_HOST}:7441/{FRIGATE_CAM2_HIGH}
+    chicken_cam_2_detect:
+      - rtspx://{FRIGATE_PROTECT_HOST}:7441/{FRIGATE_CAM2_MEDIUM}
+    chicken_run:
+      - rtspx://{FRIGATE_PROTECT_HOST}:7441/{FRIGATE_RUN_HIGH}
+    chicken_run_detect:
+      - rtspx://{FRIGATE_PROTECT_HOST}:7441/{FRIGATE_RUN_MEDIUM}
+
+# Hens show up as "bird", and now and then as a cat or dog. Tracking cat and
+# dog shows how often that happens, and catches real ones near the flock.
+objects:
+  track:
+    - bird
+    - cat
+    - dog
+    - person
+  filters:
+    bird:
+      min_score: 0.4 # dusk and night vision give lower scores
+      threshold: 0.6
+
+detect:
+  enabled: true
+  # 5 is plenty for "are there hens in the run". Give the camera that sees
+  # the pop door its own "detect: fps: 10" below, to follow hens through it.
+  fps: 5
+
+motion:
+  enabled: true
+
+# Alerts are for people at the coop; hens (and cats/dogs) go under
+# detections, so the review page isn't nine hens all day.
+review:
+  alerts:
+    labels:
+      - person
+  detections:
+    labels:
+      - bird
+      - cat
+      - dog
+
+# Recording to build up footage for testing and, later, for training a
+# chicken model. Continuous for 3 days, motion for 2 weeks, anything with a
+# detection for a month. Sizes: docs/frigate.md.
+record:
+  enabled: true
+  continuous:
+    days: 3
+  motion:
+    days: 14
+  alerts:
+    retain:
+      days: 30
+  detections:
+    retain:
+      days: 30
+
+snapshots:
+  enabled: true
+  retain:
+    default: 30
+
+cameras:
+  chicken_cam_1:
+    ffmpeg:
+      inputs:
+        - path: rtsp://127.0.0.1:8554/chicken_cam_1
+          input_args: preset-rtsp-restream
+          roles:
+            - record
+        - path: rtsp://127.0.0.1:8554/chicken_cam_1_detect
+          input_args: preset-rtsp-restream
+          roles:
+            - detect
+
+  chicken_cam_2:
+    ffmpeg:
+      inputs:
+        - path: rtsp://127.0.0.1:8554/chicken_cam_2
+          input_args: preset-rtsp-restream
+          roles:
+            - record
+        - path: rtsp://127.0.0.1:8554/chicken_cam_2_detect
+          input_args: preset-rtsp-restream
+          roles:
+            - detect
+
+  chicken_run:
+    ffmpeg:
+      inputs:
+        - path: rtsp://127.0.0.1:8554/chicken_run
+          input_args: preset-rtsp-restream
+          roles:
+            - record
+        - path: rtsp://127.0.0.1:8554/chicken_run_detect
+          input_args: preset-rtsp-restream
+          roles:
+            - detect
+
+version: 0.18-0

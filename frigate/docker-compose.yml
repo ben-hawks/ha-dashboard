@@ -1,0 +1,36 @@
+# Frigate NVR for the chicken cameras, on the server with the Intel Arc card.
+# Source: github.com/ben-hawks/ha-dashboard, frigate/
+#
+# Copy this folder to the server, fill in .env (from .env.example), then:
+#   docker compose up -d
+# Web UI: https://<server>:8971 (the admin password is in the log on first
+# start: docker compose logs frigate | grep -i password). See docs/frigate.md.
+
+services:
+  frigate:
+    container_name: frigate
+    image: ghcr.io/blakeblackshear/frigate:0.18.2
+    restart: unless-stopped
+    stop_grace_period: 30s
+    # Frigate's frame cache. Their formula gives about 40 MB per 720p camera
+    # plus 50 MB for logs; 256 MB leaves room. "Bus error" in the log means
+    # raise it.
+    shm_size: "256mb"
+    devices:
+      # All GPUs, so the Arc is in there even if the server also has an
+      # integrated GPU (then the Arc is usually renderD129, not renderD128).
+      - /dev/dri:/dev/dri
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ./config:/config
+      - ${STORAGE_PATH:-./storage}:/media/frigate
+      - type: tmpfs # recording segments are cached in memory before they're written
+        target: /tmp/cache
+        tmpfs:
+          size: 1000000000
+    ports:
+      - "8971:8971" # web UI and API, logs in
+      - "8554:8554" # camera restreams (Home Assistant's live view uses these)
+      - "8555:8555/tcp" # WebRTC live view
+      - "8555:8555/udp"
+    env_file: .env

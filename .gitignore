@@ -2,3 +2,7 @@ __pycache__/
 chicken_test/
 *.pt
 *_openvino_model/
+frigate/.env
+frigate/storage/
+frigate/config/*
+!frigate/config/config.yml
