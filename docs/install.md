@@ -102,3 +102,10 @@ cd /config/ha-dashboard && git pull
 - Package changes (`packages/`): **Developer Tools → YAML → All YAML
   configuration**, or restart.
 - Theme changes (`themes/`): **Developer Tools → YAML → Themes**.
+
+## Weather radar location
+
+The radar on **Outdoors** is centred by `RADAR` near the top of
+`tools/weather.py`. Set your rough latitude/longitude there (two decimals is
+plenty), run `python3 tools/weather.py`, and commit. Which forecast
+conditions bring it up on their own is the `STORMY` list just below.

@@ -30,6 +30,14 @@ input_select:
       - Auto
       - Light
 
+# ---------------------------------------------------------------------------
+# Weather radar on Outdoors: swaps in for the forecast while this is on.
+# ---------------------------------------------------------------------------
+input_boolean:
+  outdoors_radar:
+    name: Show weather radar
+    icon: mdi:radar
+
 automation:
   - id: wall_tablet_apply_theme
     alias: "Dashboards: apply light/dark theme"
@@ -187,6 +195,49 @@ automation:
       - action: scene.delete
         target:
           entity_id: scene.away_lights_snapshot
+
+  - id: outdoors_radar_auto
+    alias: "Outdoors: show the radar in stormy weather"
+    description: >-
+      Brings up the radar in place of the forecast when rain, snow or storms
+      are here or due within a few hours (binary_sensor.stormy_weather), and
+      puts the forecast back 10 minutes after it clears. A radar opened by
+      tapping the forecast closes itself after 10 minutes in dry weather.
+      Closing it during a storm keeps it closed until the next storm.
+    mode: queued
+    triggers:
+      - trigger: state
+        entity_id: binary_sensor.stormy_weather
+        from: "off"
+        to: "on"
+        id: storm
+      - trigger: state
+        entity_id: binary_sensor.stormy_weather
+        to: "off"
+        for: "00:10:00"
+        id: clear
+      - trigger: state
+        entity_id: input_boolean.outdoors_radar
+        to: "on"
+        for: "00:10:00"
+        id: timeout
+    actions:
+      - choose:
+          - conditions:
+              - condition: trigger
+                id: storm
+            sequence:
+              - action: input_boolean.turn_on
+                target:
+                  entity_id: input_boolean.outdoors_radar
+          - conditions:
+              - condition: state
+                entity_id: binary_sensor.stormy_weather
+                state: "off"
+            sequence:
+              - action: input_boolean.turn_off
+                target:
+                  entity_id: input_boolean.outdoors_radar
 
 # ---------------------------------------------------------------------------
 # Light groups (one tile controls a whole room)

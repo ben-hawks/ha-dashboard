@@ -20,6 +20,12 @@ Sunny /
 Partly cloudy / Cloudy from how much sunlight reaches the WS90 compared
 with a clear sky at the sun's current height.
 
+Weather radar: tapping the forecast swaps it for a live radar map (Windy),
+and it swaps in by itself while binary_sensor.stormy_weather is on (rain,
+snow or storms now, at the station, or in the next few hours). The switch is
+input_boolean.outdoors_radar; the automations that flip it are in
+packages/wall_tablet.yaml. Set the map's centre in RADAR below.
+
 Run:  python3 tools/weather.py
 """
 
@@ -35,6 +41,18 @@ ROOT = Path(__file__).resolve().parent.parent
 GATEWAY = "gw3000b"
 
 W, H = 400, 292
+
+# Radar map centre. Two decimals (about 1 km) is plenty; zoom 7 shows roughly
+# 300 km across, enough to see storms coming.
+RADAR = dict(lat=39.83, lon=-98.58, zoom=7)
+
+# Forecast conditions that bring up the radar on their own, now or in the
+# next STORM_HOURS hours. Drop "rainy" and "snowy" to only show it for the
+# heavier stuff.
+STORMY = ["rainy", "pouring", "lightning", "lightning-rainy", "hail",
+          "snowy", "snowy-rainy", "exceptional"]
+STORM_HOURS = 3
+RADAR_SWITCH = "input_boolean.outdoors_radar"
 LABEL = "#9aa3b2"
 ACCENT = "#5b9cf6"
 
@@ -441,15 +459,19 @@ def forecast_card():
     the labels (see forecast_templates)."""
     primary = {"color": "var(--primary-text-color)", "white-space": "nowrap"}
     secondary = {"color": "var(--secondary-text-color)", "white-space": "nowrap"}
-    elements = []
+    tap = radar_action("turn_on")
+    # A clear layer over the whole card, so a tap between the icons counts too.
+    elements = [{"type": "image", "image": data_uri(canvas("")), "tap_action": tap,
+                 "hold_action": {"action": "none"},
+                 "style": {**at(W / 2, H / 2), "width": "100%"}}]
 
     def slot(entity, cx, rows, icon_y, icon_w):
         elements.append({"type": "image", "entity": entity, "image": FORECAST_ICONS[DEFAULT_SKY],
-                         "state_image": FORECAST_ICONS, "tap_action": {"action": "none"},
+                         "state_image": FORECAST_ICONS, "tap_action": tap,
                          "style": {**at(cx, icon_y), "width": f"{icon_w / W * 100:.1f}%"}})
         for attribute, y, style in rows:
             elements.append({"type": "state-label", "entity": entity, "attribute": attribute,
-                             "tap_action": {"action": "none"}, "style": {**at(cx, y), **style}})
+                             "tap_action": tap, "style": {**at(cx, y), **style}})
 
     hour_w = W / HOURS_SHOWN
     for i in range(HOURS_SHOWN):
@@ -472,6 +494,32 @@ def forecast_card():
     return {"type": "picture-elements", "image": data_uri(forecast_base()), "elements": elements}
 
 
+def radar_action(service):
+    return {"action": "perform-action", "perform_action": f"input_boolean.{service}",
+            "target": {"entity_id": RADAR_SWITCH}}
+
+
+def radar_url():
+    return ("https://embed.windy.com/embed.html?type=map&location=coordinates"
+            "&metricRain=in&metricTemp=%C2%B0F&metricWind=mph"
+            f"&zoom={RADAR['zoom']}&overlay=radar&product=radar&level=surface"
+            f"&lat={RADAR['lat']}&lon={RADAR['lon']}&marker=true&message=true")
+
+
+def radar_card():
+    """Live radar, the same size as the forecast it replaces. Tap the heading
+    (or the ✕) to go back to the forecast."""
+    back = radar_action("turn_off")
+    return {"type": "vertical-stack", "cards": [
+        {"type": "heading", "heading": "Weather radar", "icon": "mdi:radar",
+         "heading_style": "subtitle", "tap_action": back,
+         "badges": [{"type": "entity", "entity": RADAR_SWITCH, "icon": "mdi:close",
+                     "show_state": False, "tap_action": back}]},
+        # About 60% as tall as wide + the heading ≈ the forecast's 400×292.
+        {"type": "iframe", "url": radar_url(), "aspect_ratio": "60%"},
+    ]}
+
+
 def section():
     """The Weather band across the top of Outdoors: station card | forecast |
     24 h graphs. A grid card keeps the three columns even (grid_options widths
@@ -486,7 +534,12 @@ def section():
              "grid_options": {"columns": "full"},
              "cards": [
                  {k: v for k, v in hero_card().items() if k != "grid_options"},
-                 forecast_card(),
+                 # Forecast, or the radar while the switch is on. Only one
+                 # shows, so the grid keeps three columns.
+                 {"type": "conditional", "card": forecast_card(), "conditions": [
+                     {"condition": "state", "entity": RADAR_SWITCH, "state_not": "on"}]},
+                 {"type": "conditional", "card": radar_card(), "conditions": [
+                     {"condition": "state", "entity": RADAR_SWITCH, "state": "on"}]},
                  {"type": "grid", "columns": 2, "square": False, "cards": weather_graphs()},
              ]},
         ],
@@ -601,6 +654,9 @@ def forecast_templates():
             {"trigger": "time_pattern", "minutes": "/30"},
             {"trigger": "homeassistant", "event": "start"},
             {"trigger": "event", "event_type": "event_template_reloaded"},
+            # Re-check storms as soon as the weather or the station's sky changes.
+            {"trigger": "state", "entity_id": ["weather.forecast_home", "sensor.station_sky"],
+             "to": None},  # state changes only, not every attribute update
         ],
         "actions": [
             {"action": "weather.get_forecasts", "target": {"entity_id": "weather.forecast_home"},
@@ -608,6 +664,19 @@ def forecast_templates():
             for kind in ("hourly", "daily")
         ],
         "sensor": [hour(i) for i in range(HOURS_SHOWN)] + [day(i) for i in range(DAYS_SHOWN)],
+        "binary_sensor": [{
+            "name": "Stormy Weather", "unique_id": "stormy_weather", "icon": "mdi:weather-lightning-rainy",
+            "state": (f"{{% set stormy = {STORMY} %}}"
+                      "{% set soon = hourly['weather.forecast_home'].forecast"
+                      f"[:{STORM_HOURS}] | map(attribute='condition') | list %}}"
+                      "{{ states('weather.forecast_home') in stormy"
+                      " or states('sensor.station_sky') in ['Rain', 'Snow']"
+                      " or soon | select('in', stormy) | list | count > 0 }}"),
+            "attributes": {
+                "next_hours": "{{ hourly['weather.forecast_home'].forecast"
+                              f"[:{STORM_HOURS}] | map(attribute='condition') | join(', ') }}}}",
+            },
+        }],
     }]
 
 

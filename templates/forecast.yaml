@@ -7,6 +7,11 @@ triggers:
   event: start
 - trigger: event
   event_type: event_template_reloaded
+- trigger: state
+  entity_id:
+  - weather.forecast_home
+  - sensor.station_sky
+  to: null
 actions:
 - action: weather.get_forecasts
   target:
@@ -109,3 +114,10 @@ sensor:
     day: '{% set t = as_local(as_datetime(daily[''weather.forecast_home''].forecast[4].datetime)) %}{{ ''Today'' if t.date() == now().date() else t.strftime(''%a'') }}'
     high: '{{ daily[''weather.forecast_home''].forecast[4].temperature | round(0) | int }}°'
     low: '{{ (daily[''weather.forecast_home''].forecast[4].templow | round(0) | int) ~ ''°'' if daily[''weather.forecast_home''].forecast[4].templow is defined else '''' }}'
+binary_sensor:
+- name: Stormy Weather
+  unique_id: stormy_weather
+  icon: mdi:weather-lightning-rainy
+  state: '{% set stormy = [''rainy'', ''pouring'', ''lightning'', ''lightning-rainy'', ''hail'', ''snowy'', ''snowy-rainy'', ''exceptional''] %}{% set soon = hourly[''weather.forecast_home''].forecast[:3] | map(attribute=''condition'') | list %}{{ states(''weather.forecast_home'') in stormy or states(''sensor.station_sky'') in [''Rain'', ''Snow''] or soon | select(''in'', stormy) | list | count > 0 }}'
+  attributes:
+    next_hours: '{{ hourly[''weather.forecast_home''].forecast[:3] | map(attribute=''condition'') | join('', '') }}'
