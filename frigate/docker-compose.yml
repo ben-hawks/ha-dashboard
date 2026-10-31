@@ -3,8 +3,9 @@
 #
 # Copy this folder to the server, fill in .env (from .env.example), then:
 #   docker compose up -d
-# Web UI: https://<server>:8971 (the admin password is in the log on first
-# start: docker compose logs frigate | grep -i password). See docs/frigate.md.
+# Web UI: http://<server>:8971, plain http as TLS is off in config.yml (the
+# admin password is in the log on first start: docker compose logs frigate |
+# grep -i password). See docs/frigate.md.
 
 services:
   frigate:

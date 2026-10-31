@@ -66,10 +66,21 @@ docker compose logs frigate | grep -i password
 ```
 
 That prints the admin password, created on first start. Open
-`https://<server>:8971`. The browser warns about the certificate the first
-time, because Frigate makes its own. Log in as `admin`, change the
+`http://<server>:8971`: plain http, because TLS is off in the config so
+Home Assistant can connect (step 6). Log in as `admin`, change the
 password (**Settings → Users**), and the three cameras should be live
 within a minute.
+
+**`SSL_ERROR_RX_RECORD_TOO_LONG` or a similar SSL error** means the
+browser is using https. Check the address starts with `http://`. If the
+browser keeps switching it back to https, it's remembering an instruction
+Frigate sent while TLS was on: Frigate tells browsers to use only https for
+that server for two years. Clear it (Firefox: **History → Manage History**,
+right-click the server → **Forget About This Site**; Chrome or Edge:
+`chrome://net-internals/#hsts` → **Delete domain security policies**), or
+use the server's IP address, which browsers don't apply this to. It
+applies to the whole server name, so other plain-http services on that
+server are affected too until you clear it.
 
 If a camera stays black, check **Settings → System → Logs → go2rtc**. A
 literal `{FRIGATE_…}` in an address means that variable is missing from
