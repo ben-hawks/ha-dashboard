@@ -41,7 +41,7 @@ dashboard/views/*.yaml       one file per tab
 dashboard/chicken_coop.yaml  Chicken Command Center (coop tablet)
 packages/wall_tablet.yaml    light groups, helpers, alert sensors, theme + hallway automations
 packages/garden.yaml         garden plant dropdowns + soil helper sensors (generated)
-themes/wall_tablet.yaml      dark + light theme
+themes/wall_tablet.yaml      Aurora Dark + Aurora Light themes
 tools/entity_export.jinja    lists your entities (paste into Developer Tools → Template)
 tools/floorplan.py           traced house layout → 2D Floor Plan tab + NeonPlan 3D import file
 tools/garden.py              garden bed cards + their package (plant dropdowns, helper sensors)
@@ -50,5 +50,5 @@ tools/weather.py             weather station card + its helper sensors (template
 
 ## Requirements
 
-Home Assistant (current), HACS with **auto-entities**, **Kiosk Mode** and
-**Browser Mod** (plus **NeonPlan 3D** for the Floor Plan tab), and Fully Kiosk Browser (Plus) on the tablet, running LineageOS.
+Home Assistant (current), HACS with **auto-entities** and **Kiosk Mode**,
+**NeonPlan 3D** for the Floor Plan tab, and Fully Kiosk Browser (Plus) on the tablet, running LineageOS.

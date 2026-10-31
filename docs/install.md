@@ -10,10 +10,10 @@ In **HACS**, search for and download:
 |------|------|-----|
 | **auto-entities** | Dashboard | Lists that fill themselves (low batteries, soil sensors, what's playing) |
 | **Kiosk Mode** | Dashboard | Hides the sidebar and menus on the tablet |
-| **Browser Mod** | Integration | Lets Home Assistant switch the tablet between light and dark |
 
-Restart Home Assistant. Then go to **Settings → Devices & services →
-Add integration → Browser Mod**.
+Restart Home Assistant. (Browser Mod is no longer needed: light/dark
+switching uses Home Assistant's own default theme. If you installed it
+earlier, you can remove it.)
 
 ## 2. Make sure there's a weather entity
 

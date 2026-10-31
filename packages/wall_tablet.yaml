@@ -32,10 +32,12 @@ input_select:
 
 automation:
   - id: wall_tablet_apply_theme
-    alias: "Wall tablet: apply light/dark theme"
+    alias: "Dashboards: apply light/dark theme"
     description: >-
-      Auto = light while the sun is up, dark after sunset. Re-applied every
-      30 minutes in case the tablet was offline when something changed.
+      Makes Aurora Dark or Aurora Light Home Assistant's default theme. Auto =
+      light while the sun is up, dark after sunset. Every screen that uses
+      the default theme (both tablets, unless a user picked their own theme
+      in their profile) switches at once.
     mode: restart
     triggers:
       - trigger: state
@@ -47,29 +49,23 @@ automation:
           - below_horizon
       - trigger: homeassistant
         event: start
-      - trigger: time_pattern
-        minutes: "/30"
     actions:
       - variables:
-          dark_mode: >-
+          theme: >-
             {% set m = states('input_select.wall_tablet_theme_mode') %}
-            {% if m in ['Dark', 'Light'] %}{{ m | lower }}
-            {% else %}{{ 'dark' if is_state('sun.sun', 'below_horizon') else 'light' }}
-            {% endif %}
-      # One call per tablet: a browser that isn't registered with Browser Mod
-      # (or is offline) mustn't stop the theme reaching the others.
-      - repeat:
-          for_each:
-            - wall_tablet
-            - coop_tablet
-          sequence:
-            - action: browser_mod.set_theme
-              continue_on_error: true
-              data:
-                browser_id:
-                  - "{{ repeat.item }}"
-                theme: Wall Tablet
-                dark: "{{ dark_mode | trim }}"
+            {% set dark = m == 'Dark' or (m not in ['Dark', 'Light']
+                                          and is_state('sun.sun', 'below_horizon')) %}
+            {{ 'Aurora Dark' if dark else 'Aurora Light' }}
+      # Set it as both the light-mode and dark-mode default, so it applies
+      # whatever the device's own dark-mode setting is.
+      - action: frontend.set_theme
+        data:
+          name: "{{ theme }}"
+          mode: light
+      - action: frontend.set_theme
+        data:
+          name: "{{ theme }}"
+          mode: dark
 
   # Day = sun up, night = sun down. To use fixed times instead, swap the two
   # sun triggers for `trigger: time` and change `night` below to match.

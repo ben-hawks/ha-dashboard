@@ -50,14 +50,13 @@ Optional: **Motion Detection** → turn the screen on when someone walks up
 If tiles look cramped or too big, adjust **Web Zoom and Scaling → Initial
 scale** (try 90–110%).
 
-## 3. Log in and register the tablet
+## 3. Log in
 
 1. On the tablet, log in as the **Wall Tablet** user and tick
    **Keep me logged in**.
-2. Go to `http://<your-HA-IP>:8123/browser-mod`, tick **Register**, and
-   set **Browser ID** to `wall_tablet` exactly. The light/dark automation
-   targets this ID.
-3. Go back to the start URL.
+2. Leave that user's profile theme on **Use default theme** (it is by
+   default). The light/dark switch changes Home Assistant's default theme,
+   so a screen with its own theme picked won't follow it.
 
 ## 4. Connect Fully Kiosk to Home Assistant
 

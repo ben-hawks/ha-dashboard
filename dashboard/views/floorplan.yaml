@@ -3,7 +3,6 @@
 title: Floor Plan
 path: floorplan
 type: panel
-theme: Wall Tablet
 cards:
 - type: horizontal-stack
   cards:

@@ -1,71 +1,75 @@
-# Wall tablet theme, "Aurora": soft blue / purple / teal glows behind
-# see-through cards with a fine highlight edge. Dark and light share the same
-# shapes; the automation in packages/wall_tablet.yaml picks the mode.
+# "Aurora" themes: soft blue / purple / teal glows behind see-through cards
+# with a fine highlight edge. Two plain themes, one per mode; the automation
+# in packages/wall_tablet.yaml makes one of them Home Assistant's default
+# theme (frontend.set_theme), so every screen using the default follows it.
 #
 # Cards are translucent via ha-card-background only. card-background-color
 # (used by pop-up dialogs and menus) stays solid so those remain readable.
 # No blur: backdrop-filter is too heavy for the wall tablet.
-Wall Tablet:
-  ha-card-border-radius: "22px"
-  ha-card-border-width: "1px"
-  ha-badge-border-radius: "999px"
+Aurora Dark:
+  <<: &aurora_shape
+    ha-card-border-radius: "22px"
+    ha-card-border-width: "1px"
+    ha-badge-border-radius: "999px"
+  # dark colours
+  lovelace-background: >-
+    radial-gradient(1100px 600px at 12% -10%, rgba(64, 140, 255, 0.30),
+    transparent 60%),
+    radial-gradient(900px 600px at 95% 10%, rgba(160, 90, 255, 0.25),
+    transparent 60%),
+    radial-gradient(900px 700px at 60% 120%, rgba(0, 190, 170, 0.22),
+    transparent 60%),
+    #0b0f1a
+  primary-background-color: "#0b0f1a"
+  secondary-background-color: "#131a2a"
+  card-background-color: "#141a2a"
+  ha-card-background: "rgba(255, 255, 255, 0.065)"
+  ha-card-border-color: "rgba(255, 255, 255, 0.10)"
+  ha-card-box-shadow: "0 10px 30px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.08)"
+  ha-dialog-surface-background: "#141a2a"
+  mdc-theme-surface: "#141a2a"
+  mdc-dialog-scrim-color: "rgba(5, 8, 16, 0.7)"
+  primary-color: "#7aa8ff"
+  accent-color: "#ffc164"
+  primary-text-color: "#eef2ff"
+  secondary-text-color: "#a5adc6"
+  disabled-text-color: "#5f6782"
+  divider-color: "rgba(255, 255, 255, 0.08)"
+  state-icon-color: "#a5adc6"
+  state-light-active-color: "#ffc164"
+  app-header-background-color: "rgba(10, 14, 25, 0.55)"
+  app-header-text-color: "#eef2ff"
+  app-header-selection-bar-color: "#7aa8ff"
+  app-header-border-bottom: "1px solid rgba(255, 255, 255, 0.06)"
 
-  modes:
-    dark:
-      lovelace-background: >-
-        radial-gradient(1100px 600px at 12% -10%, rgba(64, 140, 255, 0.30), transparent 60%),
-        radial-gradient(900px 600px at 95% 10%, rgba(160, 90, 255, 0.25), transparent 60%),
-        radial-gradient(900px 700px at 60% 120%, rgba(0, 190, 170, 0.22), transparent 60%),
-        #0b0f1a
-      primary-background-color: "#0b0f1a"
-      secondary-background-color: "#131a2a"
-      card-background-color: "#141a2a"
-      ha-card-background: "rgba(255, 255, 255, 0.065)"
-      ha-card-border-color: "rgba(255, 255, 255, 0.10)"
-      ha-card-box-shadow: "0 10px 30px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.08)"
-      ha-dialog-surface-background: "#141a2a"
-      mdc-theme-surface: "#141a2a"
-      mdc-dialog-scrim-color: "rgba(5, 8, 16, 0.7)"
-
-      primary-color: "#7aa8ff"
-      accent-color: "#ffc164"
-      primary-text-color: "#eef2ff"
-      secondary-text-color: "#a5adc6"
-      disabled-text-color: "#5f6782"
-      divider-color: "rgba(255, 255, 255, 0.08)"
-      state-icon-color: "#a5adc6"
-      state-light-active-color: "#ffc164"
-
-      app-header-background-color: "rgba(10, 14, 25, 0.55)"
-      app-header-text-color: "#eef2ff"
-      app-header-selection-bar-color: "#7aa8ff"
-      app-header-border-bottom: "1px solid rgba(255, 255, 255, 0.06)"
-
-    light:
-      lovelace-background: >-
-        radial-gradient(1100px 600px at 12% -10%, rgba(90, 140, 255, 0.28), transparent 60%),
-        radial-gradient(900px 600px at 95% 10%, rgba(170, 120, 255, 0.22), transparent 60%),
-        radial-gradient(900px 700px at 60% 120%, rgba(40, 200, 170, 0.20), transparent 60%),
-        #eef2fb
-      primary-background-color: "#eef2fb"
-      secondary-background-color: "#e3e9f6"
-      card-background-color: "#ffffff"
-      ha-card-background: "rgba(255, 255, 255, 0.72)"
-      ha-card-border-color: "rgba(255, 255, 255, 0.95)"
-      ha-card-box-shadow: "0 10px 30px rgba(40, 60, 110, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.9)"
-      ha-dialog-surface-background: "#ffffff"
-      mdc-theme-surface: "#ffffff"
-
-      primary-color: "#3d6fe0"
-      accent-color: "#e69b2a"
-      primary-text-color: "#1a2033"
-      secondary-text-color: "#5b6582"
-      disabled-text-color: "#a4acc2"
-      divider-color: "rgba(20, 30, 60, 0.08)"
-      state-icon-color: "#5b6582"
-      state-light-active-color: "#e69b2a"
-
-      app-header-background-color: "rgba(255, 255, 255, 0.55)"
-      app-header-text-color: "#1a2033"
-      app-header-selection-bar-color: "#3d6fe0"
-      app-header-border-bottom: "1px solid rgba(20, 30, 60, 0.06)"
+Aurora Light:
+  <<: *aurora_shape
+  # light colours
+  lovelace-background: >-
+    radial-gradient(1100px 600px at 12% -10%, rgba(90, 140, 255, 0.28),
+    transparent 60%),
+    radial-gradient(900px 600px at 95% 10%, rgba(170, 120, 255, 0.22),
+    transparent 60%),
+    radial-gradient(900px 700px at 60% 120%, rgba(40, 200, 170, 0.20),
+    transparent 60%),
+    #eef2fb
+  primary-background-color: "#eef2fb"
+  secondary-background-color: "#e3e9f6"
+  card-background-color: "#ffffff"
+  ha-card-background: "rgba(255, 255, 255, 0.72)"
+  ha-card-border-color: "rgba(255, 255, 255, 0.95)"
+  ha-card-box-shadow: "0 10px 30px rgba(40, 60, 110, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.9)"
+  ha-dialog-surface-background: "#ffffff"
+  mdc-theme-surface: "#ffffff"
+  primary-color: "#3d6fe0"
+  accent-color: "#e69b2a"
+  primary-text-color: "#1a2033"
+  secondary-text-color: "#5b6582"
+  disabled-text-color: "#a4acc2"
+  divider-color: "rgba(20, 30, 60, 0.08)"
+  state-icon-color: "#5b6582"
+  state-light-active-color: "#e69b2a"
+  app-header-background-color: "rgba(255, 255, 255, 0.55)"
+  app-header-text-color: "#1a2033"
+  app-header-selection-bar-color: "#3d6fe0"
+  app-header-border-bottom: "1px solid rgba(20, 30, 60, 0.06)"

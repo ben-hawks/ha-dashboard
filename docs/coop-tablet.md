@@ -42,7 +42,6 @@ Same base as the wall tablet: follow [tablet-setup.md](tablet-setup.md)
 | Setting | Value |
 |---------|-------|
 | Web Content → **Start URL** | `http://<HA-IP>:8123/chicken-coop/coop` |
-| Browser Mod **Browser ID** | `coop_tablet` (the theme automation targets it) |
 | Device Management → **Keep Screen On** | On |
 | Device Management → **Launch on Boot** | On |
 | Web Auto Reload → **Auto Reload on Network Reconnect** | On |
@@ -118,8 +117,7 @@ kernel.
 sudo useradd -m kiosk
 sudo tee /usr/local/bin/coop-kiosk >/dev/null <<'SH'
 #!/bin/sh
-# First run: set URL to http://<HA-IP>:8123/browser-mod, log in and register
-# the browser, then change it back.
+# First run: log in once (Type Cover attached), ticking "Keep me logged in".
 URL="http://<HA-IP>:8123/chicken-coop/coop"
 while true; do
   chromium --kiosk "$URL" \
@@ -173,17 +171,12 @@ printf '[Login]\nHandleLidSwitch=ignore\nHandleLidSwitchExternalPower=ignore\nHa
 The lid switch matters: folding the Type Cover over the screen counts as
 closing a lid.
 
-### 6. First boot: log in and register
+### 6. First boot: log in
 
-1. In `/usr/local/bin/coop-kiosk`, temporarily set
-   `URL="http://<HA-IP>:8123/browser-mod"`, then reboot.
-2. With the Type Cover attached, log in as the tablet user (tick **Keep me
-   logged in**). Set Browser ID to `coop_tablet` and tick **Register**.
-3. Switch to another console (**Ctrl+Alt+F2**), log in as yourself, put the
-   URL back to `/chicken-coop/coop`, and reboot.
-
-Chromium keeps the login and the Browser Mod ID in `/home/kiosk`, so they
-survive reboots.
+With the Type Cover attached, log in as the tablet user and tick **Keep me
+logged in**. Chromium keeps the login in `/home/kiosk`, so it survives
+reboots. The light/dark theme follows Home Assistant's default theme, so
+there's nothing else to register.
 
 ### Day to day
 

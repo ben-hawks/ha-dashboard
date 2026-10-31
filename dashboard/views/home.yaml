@@ -3,7 +3,6 @@
 title: Home
 path: home
 type: sections
-theme: Wall Tablet
 max_columns: 3
 dense_section_placement: true
 

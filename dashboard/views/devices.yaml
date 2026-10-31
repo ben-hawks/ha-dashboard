@@ -2,7 +2,6 @@
 title: Devices
 path: devices
 type: sections
-theme: Wall Tablet
 max_columns: 3
 dense_section_placement: true
 

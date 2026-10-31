@@ -28,7 +28,6 @@ views:
   - title: Coop
     path: coop
     type: panel
-    theme: Wall Tablet
     cards:
       - type: grid
         columns: 2
