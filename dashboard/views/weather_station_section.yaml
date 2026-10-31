@@ -704,7 +704,7 @@ cards:
           show_state: false
           tap_action: *id003
       - type: iframe
-        url: /local/radar.html?zoom=9&v=2
+        url: /local/radar.html?zoom=10&v=3
         aspect_ratio: 60%
         disable_sandbox: true
     conditions:

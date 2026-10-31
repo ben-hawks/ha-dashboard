@@ -43,10 +43,10 @@ GATEWAY = "gw3000b"
 
 W, H = 400, 292
 
-# Radar map zoom. Each step doubles the scale: on the wall tablet 9 shows
-# about 90 km across (your town and its neighbours), 8 about 180 km, 7 about
-# 350 km. The map centres on zone.home (www/radar.html reads it).
-RADAR_ZOOM = 9
+# Radar map zoom. Each step doubles the scale: on the wall tablet 11 shows
+# about 22 km across, 10 about 45 km (your town and its edges), 9 about 90 km.
+# The map centres on zone.home (www/radar.html reads it).
+RADAR_ZOOM = 10
 
 # Forecast conditions that bring up the radar on their own, now or in the
 # next STORM_HOURS hours. Drop "rainy" and "snowy" to only show it for the
@@ -504,7 +504,7 @@ def radar_action(service):
 def radar_url():
     # Served by Home Assistant from /config/www/radar.html. ?v= makes the
     # tablet fetch a fresh copy when the page changes.
-    return f"/local/radar.html?zoom={RADAR_ZOOM}&v=2"
+    return f"/local/radar.html?zoom={RADAR_ZOOM}&v=3"
 
 
 def radar_card():
