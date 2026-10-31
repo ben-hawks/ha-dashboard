@@ -19,7 +19,8 @@ themes/wall_tablet.yaml        colours
   corner to mark the bed indoors or outdoors (all start indoors). The levels
   follow the season: indoors by day length (shorter days, drier target),
   outdoors by the last 24 hours' average temperature (dormant when cold,
-  wetter in a heat wave). The status line shows this season's target, e.g.
+  wetter in a heat wave), and by each bed's soil temperature (cold soil,
+  slow roots). The status line shows this season's target, e.g.
   "Good · aim 30–56%". A dry bed shows in the Home alert banner ("Tomatoes
   needs water"), except an outdoor bed while rain is forecast within 6 hours;
   a probe reading exactly 0% is treated as not in the ground and ignored.

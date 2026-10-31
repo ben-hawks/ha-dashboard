@@ -21,7 +21,8 @@ say whether that bed is indoors or outdoors.
 The thresholds also follow the season (see SEASON below): plants need less
 water when they're growing slowly. Indoors that's set by day length (short
 winter days, slow growth); outdoors by the last 24 hours' average
-temperature (dormant in the cold, thirstier in a heat wave). Outdoor beds
+temperature (dormant in the cold, thirstier in a heat wave). Each bed's
+soil temperature counts too: cold soil means slow roots. Outdoor beds
 also don't raise the "needs water" alert while rain is forecast in the next
 few hours.
 
@@ -272,6 +273,10 @@ SEASON = {
     # Outdoors, by 24 h average temperature (°F): dormant in the cold,
     # normal when mild, wetter in the heat.
     "outdoor_temperature": [(40, 0.6), (60, 1.0), (80, 1.0), (95, 1.2)],
+    # Each bed's own soil temperature (°F): roots slow down in cold soil.
+    # Outdoors the colder of air and soil decides; indoors this trims the
+    # daylight factor (a cold windowsill), and does nothing above 60 °F.
+    "soil_temperature": [(45, 0.6), (60, 1.0)],
     # Forecast pictures (sensor.forecast_hour_1…6) that count as rain coming.
     "rain_pictures": ["Rain", "Storm"],
     "rain_hours": 6,
@@ -524,6 +529,10 @@ def limits(c):
             f"{{%- set where = 'outdoor' if is_state('input_boolean.garden_{c}_outdoors', 'on')"
             " else 'indoor' %}"
             "{%- set f = states('sensor.garden_' ~ where ~ '_season') | float(1) %}"
+            + lerp(SEASON["soil_temperature"],
+                   f"states('sensor.garden_{c}_soil_temperature') | float(70)")
+            + "{%- set f = (f if f > 1 else [f, ns.y] | min) if where == 'outdoor'"
+              " else f * ns.y %}"
             "{%- set dry = (base[0] * f) | round(0) | int %}"
             "{%- set wet = [[(base[1] * f) | round(0) | int, 95] | min, dry + 15] | max %}"
             f"{{%- set m = states('sensor.garden_{c}_moisture') | float(0) %}}")
