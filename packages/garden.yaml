@@ -128,6 +128,11 @@ template:
     unique_id: garden_1_title
     icon: mdi:sprout
     state: '{{ states(''sensor.garden_1_name'') }} · {{ states(''input_select.garden_1_plant'') }}'
+  - name: Garden 1 Level
+    unique_id: garden_1_level
+    icon: mdi:water-percent
+    availability: '{{ has_value(''sensor.garden_1_moisture'') }}'
+    state: '{{ [(states(''sensor.garden_1_moisture'') | float(0) / 5) | round(0) | int, 20] | min }}'
   - name: Garden 1 Status
     unique_id: garden_1_status
     icon: mdi:sprout
@@ -173,6 +178,11 @@ template:
     unique_id: garden_2_title
     icon: mdi:sprout
     state: '{{ states(''sensor.garden_2_name'') }} · {{ states(''input_select.garden_2_plant'') }}'
+  - name: Garden 2 Level
+    unique_id: garden_2_level
+    icon: mdi:water-percent
+    availability: '{{ has_value(''sensor.garden_2_moisture'') }}'
+    state: '{{ [(states(''sensor.garden_2_moisture'') | float(0) / 5) | round(0) | int, 20] | min }}'
   - name: Garden 2 Status
     unique_id: garden_2_status
     icon: mdi:sprout
@@ -218,6 +228,11 @@ template:
     unique_id: garden_3_title
     icon: mdi:sprout
     state: '{{ states(''sensor.garden_3_name'') }} · {{ states(''input_select.garden_3_plant'') }}'
+  - name: Garden 3 Level
+    unique_id: garden_3_level
+    icon: mdi:water-percent
+    availability: '{{ has_value(''sensor.garden_3_moisture'') }}'
+    state: '{{ [(states(''sensor.garden_3_moisture'') | float(0) / 5) | round(0) | int, 20] | min }}'
   - name: Garden 3 Status
     unique_id: garden_3_status
     icon: mdi:sprout
@@ -263,6 +278,11 @@ template:
     unique_id: garden_4_title
     icon: mdi:sprout
     state: '{{ states(''sensor.garden_4_name'') }} · {{ states(''input_select.garden_4_plant'') }}'
+  - name: Garden 4 Level
+    unique_id: garden_4_level
+    icon: mdi:water-percent
+    availability: '{{ has_value(''sensor.garden_4_moisture'') }}'
+    state: '{{ [(states(''sensor.garden_4_moisture'') | float(0) / 5) | round(0) | int, 20] | min }}'
   - name: Garden 4 Status
     unique_id: garden_4_status
     icon: mdi:sprout

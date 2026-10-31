@@ -135,6 +135,28 @@ SKIES = {
 DEFAULT_SKY = "Partly cloudy"
 
 
+def backdrop(stops):
+    """Tinted light across the top of the card: (cx, cy, r, colour, opacity)."""
+    defs = "".join(
+        f'<radialGradient id="r{i}" cx="{cx}" cy="{cy}" r="{r}" gradientUnits="userSpaceOnUse">'
+        f'<stop offset="0" stop-color="{c}" stop-opacity="{o}"/>'
+        f'<stop offset="1" stop-color="{c}" stop-opacity="0"/></radialGradient>'
+        for i, (cx, cy, r, c, o) in enumerate(stops))
+    rects = "".join(f'<rect width="{W}" height="{H}" fill="url(#r{i})"/>' for i in range(len(stops)))
+    return canvas(f"<defs>{defs}</defs>{rects}")
+
+
+# One backdrop per sky picture, behind everything else on the card.
+BACKDROPS = {
+    "Sunny": backdrop([(72, 58, 150, "#ffb84d", 0.45), (330, 20, 220, "#5aa0ff", 0.18)]),
+    "Partly cloudy": backdrop([(88, 46, 130, "#ffc46b", 0.30), (300, 30, 240, "#6f9cff", 0.20)]),
+    "Cloudy": backdrop([(80, 60, 200, "#9aa6bd", 0.30), (320, 40, 220, "#7c8aa6", 0.15)]),
+    "Rain": backdrop([(80, 70, 200, "#4f74b8", 0.40), (330, 30, 220, "#3d5a8f", 0.25)]),
+    "Snow": backdrop([(80, 70, 200, "#bfe3ff", 0.40), (320, 30, 220, "#d9e8ff", 0.25)]),
+    "Night": backdrop([(62, 56, 160, "#6c5cff", 0.40), (330, 40, 220, "#2b3f8f", 0.30)]),
+}
+
+
 # ---------------------------------------------------------------------------
 # Wind compass
 # ---------------------------------------------------------------------------
@@ -152,7 +174,11 @@ def compass_base():
         f'y="{cy - (r + 9) * math.cos(math.radians(a)) + 4:.1f}" font-size="11" '
         f'fill="{LABEL}" text-anchor="middle">{t}</text>'
         for a, t in [(0, "N"), (90, "E"), (180, "S"), (270, "W")])
-    return (f'<circle cx="{cx}" cy="{cy}" r="{r}" fill="none" stroke="{LABEL}" '
+    face = (f'<defs><radialGradient id="face" cx="{cx}" cy="{cy - r * 0.35}" r="{r * 1.2}" '
+            f'gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="{ACCENT}" '
+            f'stop-opacity="0.22"/><stop offset="1" stop-color="{ACCENT}" stop-opacity="0.02"/>'
+            f'</radialGradient></defs><circle cx="{cx}" cy="{cy}" r="{r}" fill="url(#face)"/>')
+    return (face + f'<circle cx="{cx}" cy="{cy}" r="{r}" fill="none" stroke="{LABEL}" '
             f'stroke-opacity="0.5" stroke-width="2"/>' + ticks + letters)
 
 
@@ -160,7 +186,11 @@ def wind_pointer(point):
     """A pointer on the ring where the wind comes FROM, aimed at the centre."""
     cx, cy, r = COMPASS
     a = POINTS.index(point) * 22.5
-    return canvas(f'<g transform="rotate({a} {cx} {cy})">'
+    return canvas(f'<defs><filter id="glow" x="-1" y="-1" width="3" height="3">'
+                  f'<feGaussianBlur stdDeviation="4"/></filter></defs>'
+                  f'<g transform="rotate({a} {cx} {cy})">'
+                  f'<circle cx="{cx}" cy="{cy - r + 4}" r="10" fill="{ACCENT}" opacity="0.6" '
+                  f'filter="url(#glow)"/>'
                   f'<path d="M{cx} {cy - r + 15} L{cx - 9} {cy - r - 3} L{cx + 9} {cy - r - 3} Z" '
                   f'fill="{ACCENT}" stroke="#fff" stroke-width="1.5" stroke-linejoin="round"/></g>')
 
@@ -186,6 +216,11 @@ def hero_card():
     big = {"color": "var(--primary-text-color)", "white-space": "nowrap"}
     right = {"transform": "translate(-100%, -50%)"}
     elements = [
+        {"type": "image", "entity": "sensor.station_sky",
+         "image": data_uri(BACKDROPS[DEFAULT_SKY]),
+         "state_image": {k: data_uri(v) for k, v in BACKDROPS.items()},
+         "tap_action": {"action": "none"},
+         "style": {"left": "50%", "top": "50%", "width": "100%"}},
         {"type": "image", "entity": "sensor.station_sky",
          "image": data_uri(canvas(SKIES[DEFAULT_SKY])),
          "state_image": {k: data_uri(canvas(v)) for k, v in SKIES.items()},

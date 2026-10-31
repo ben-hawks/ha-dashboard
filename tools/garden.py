@@ -276,6 +276,40 @@ def at(x, y):
 # Shared by every bed's card; yaml.dump turns the repeats into anchors.
 PLANT_IMAGES = {kind: data_uri(plant_svg(kind)) for kind in PLANT_TYPES}
 
+# A soft glow behind the plant, coloured by the bed's status.
+GLOW_COLORS = {"Dry": "#ffb347", "Good": "#6fdc8c", "Wet": "#6aa9ff"}
+
+
+def glow_svg(color):
+    return ('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 160">'
+            f'<defs><radialGradient id="g" cx="65" cy="82" r="78" gradientUnits="userSpaceOnUse">'
+            f'<stop offset="0" stop-color="{color}" stop-opacity="0.42"/>'
+            f'<stop offset="0.55" stop-color="{color}" stop-opacity="0.12"/>'
+            f'<stop offset="1" stop-color="{color}" stop-opacity="0"/></radialGradient></defs>'
+            '<rect width="300" height="160" fill="url(#g)"/></svg>')
+
+
+GLOW_IMAGES = {status: data_uri(glow_svg(color)) for status, color in GLOW_COLORS.items()}
+
+# Moisture bar under the reading, in 5% steps (sensor.garden_N_level, 0–20).
+BAR_X, BAR_Y, BAR_W, BAR_H = 150, 121, 124, 6
+
+
+def bar_svg(level):
+    fill = BAR_W * level / 20
+    return ('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 160">'
+            '<defs><linearGradient id="b" x1="0" x2="1">'
+            '<stop offset="0" stop-color="#46d0c0"/><stop offset="1" stop-color="#6aa9ff"/>'
+            '</linearGradient></defs>'
+            f'<rect x="{BAR_X}" y="{BAR_Y}" width="{BAR_W}" height="{BAR_H}" rx="3" '
+            'fill="#8a96b8" fill-opacity="0.25"/>'
+            + (f'<rect x="{BAR_X}" y="{BAR_Y}" width="{fill:.1f}" height="{BAR_H}" rx="3" '
+               'fill="url(#b)"/>' if level else "")
+            + '</svg>')
+
+
+BAR_IMAGES = {str(level): data_uri(bar_svg(level)) for level in range(21)}
+
 
 def card_for(bed):
     c = bed["channel"]
@@ -283,11 +317,15 @@ def card_for(bed):
     moisture = f"sensor.garden_{c}_moisture"
     status = f"sensor.garden_{c}_status"
     small = {"font-size": "13px", "color": "var(--secondary-text-color)"}
+    full = {"left": "50%", "top": "50%", "width": "100%"}
     elements = [
+        {"type": "image", "entity": status, "image": data_uri(BLANK_SVG),
+         "state_image": GLOW_IMAGES, "tap_action": {"action": "none"}, "style": full},
+        {"type": "image", "entity": f"sensor.garden_{c}_level", "image": BAR_IMAGES["0"],
+         "state_image": BAR_IMAGES, "tap_action": {"action": "none"}, "style": full},
         # The plant picture follows the bed's dropdown; tap it to change.
         {"type": "image", "entity": plant, "image": PLANT_IMAGES[DEFAULT_PLANT],
-         "state_image": PLANT_IMAGES, "tap_action": {"action": "more-info"},
-         "style": {"left": "50%", "top": "50%", "width": "100%"}},
+         "state_image": PLANT_IMAGES, "tap_action": {"action": "more-info"}, "style": full},
         # "<name> · <plant>"; tap it to rename the bed.
         {"type": "state-label", "entity": f"sensor.garden_{c}_title",
          "tap_action": {"action": "more-info", "entity": f"input_text.garden_{c}_name"},
@@ -296,7 +334,7 @@ def card_for(bed):
         {"type": "state-label", "entity": moisture,
          "style": {**at(212, 72), "font-size": "34px", "font-weight": "600",
                    "color": "var(--primary-text-color)"}},
-        {"type": "state-label", "entity": status, "style": {**at(212, 104), **small}},
+        {"type": "state-label", "entity": status, "style": {**at(212, 103), **small}},
         {"type": "state-label", "entity": f"sensor.garden_{c}_soil_temperature",
          "style": {**at(170, 140), **small}},
         {"type": "state-label", "entity": f"sensor.garden_{c}_conductivity",
@@ -408,6 +446,14 @@ def package():
                 "icon": "mdi:sprout",
                 "state": (f"{{{{ states('sensor.garden_{c}_name') }}}} · "
                           f"{{{{ states('input_select.garden_{c}_plant') }}}}"),
+            },
+            {
+                "name": f"Garden {c} Level",
+                "unique_id": f"garden_{c}_level",
+                "icon": "mdi:water-percent",
+                "availability": f"{{{{ has_value('sensor.garden_{c}_moisture') }}}}",
+                "state": (f"{{{{ [(states('sensor.garden_{c}_moisture') | float(0) / 5) "
+                          "| round(0) | int, 20] | min }}"),
             },
             {
                 "name": f"Garden {c} Status",
