@@ -6,13 +6,16 @@ Writes:
                                         illustration, moisture, status,
                                         soil temperature, EC and a 3-day
                                         moisture graph
-  packages/garden.yaml                  per bed: a plant-type dropdown
-                                        (input_select.garden_1_plant, ...)
+  packages/garden.yaml                  per bed: a name box
+                                        (input_text.garden_1_name), a plant
+                                        dropdown (input_select.garden_1_plant)
                                         and helper sensors with fixed IDs
-                                        (sensor.garden_1_moisture, ...)
+                                        (sensor.garden_1_moisture, ...), plus
+                                        sensor.garden_needs_water for alerts
 
 The plant is chosen on the dashboard: tap a bed's picture and pick from the
-list. The picture and the Dry/Good/Wet thresholds follow the choice.
+list. The picture and the Dry/Good/Wet thresholds follow the choice. Tap the
+bed's title to rename it.
 
 The helper sensors find each probe's readings by channel number at the end
 of the Ecowitt entity ID (…soil_moisture_1, …soil_temperature_1, …), so
@@ -285,8 +288,9 @@ def card_for(bed):
         {"type": "image", "entity": plant, "image": PLANT_IMAGES[DEFAULT_PLANT],
          "state_image": PLANT_IMAGES, "tap_action": {"action": "more-info"},
          "style": {"left": "50%", "top": "50%", "width": "100%"}},
-        {"type": "state-label", "entity": plant, "prefix": f'{bed["name"]} · ',
-         "tap_action": {"action": "more-info"},
+        # "<name> · <plant>"; tap it to rename the bed.
+        {"type": "state-label", "entity": f"sensor.garden_{c}_title",
+         "tap_action": {"action": "more-info", "entity": f"input_text.garden_{c}_name"},
          "style": {**at(210, 26), "font-size": "15px", "font-weight": "500",
                    "color": "var(--secondary-text-color)", "white-space": "nowrap"}},
         {"type": "state-label", "entity": moisture,
@@ -336,7 +340,7 @@ def section():
 
 
 # ---------------------------------------------------------------------------
-# Package: plant dropdowns and helper sensors
+# Package: name boxes, plant dropdowns and helper sensors
 # ---------------------------------------------------------------------------
 
 def find(suffix):
@@ -360,11 +364,17 @@ def mirror(c, key, label, suffix, unit, device_class, icon):
 
 def package():
     thresholds = {kind: [dry, wet] for kind, (_, dry, wet) in PLANT_TYPES.items()}
-    selects, sensors, binaries = {}, [], []
+    texts, selects, sensors, binaries = {}, {}, [], []
     for b in BEDS:
         c = b["channel"]
+        # Empty until renamed on the dashboard; the card then shows b["name"].
+        texts[f"garden_{c}_name"] = {
+            "name": f"Garden {c} name",
+            "icon": "mdi:rename-outline",
+            "max": 24,
+        }
         selects[f"garden_{c}_plant"] = {
-            "name": f'{b["name"]} plant',
+            "name": f"Garden {c} plant",
             "icon": "mdi:sprout",
             # The first option is the default until a plant is picked.
             "options": [DEFAULT_PLANT] + [k for k in PLANT_TYPES if k != DEFAULT_PLANT],
@@ -379,6 +389,20 @@ def package():
                    "conductivity", "mdi:flash-outline"),
             mirror(c, "battery", "Battery", f"soil_battery_{c}", "V",
                    "voltage", "mdi:battery"),
+            {
+                "name": f"Garden {c} Name",
+                "unique_id": f"garden_{c}_name",
+                "icon": "mdi:sprout",
+                "state": (f"{{% set n = states('input_text.garden_{c}_name') | trim %}}"
+                          f"{{{{ n if n not in ['', 'unknown', 'unavailable'] else '{b['name']}' }}}}"),
+            },
+            {
+                "name": f"Garden {c} Title",
+                "unique_id": f"garden_{c}_title",
+                "icon": "mdi:sprout",
+                "state": (f"{{{{ states('sensor.garden_{c}_name') }}}} · "
+                          f"{{{{ states('input_select.garden_{c}_plant') }}}}"),
+            },
             {
                 "name": f"Garden {c} Status",
                 "unique_id": f"garden_{c}_status",
@@ -397,7 +421,26 @@ def package():
             "availability": f"{{{{ has_value('sensor.garden_{c}_battery') }}}}",
             "state": f"{{{{ states('sensor.garden_{c}_battery') | float(9) < {BATTERY_LOW_V} }}}}",
         })
-    return {"input_select": selects,
+    # One line for the Home alert banner. A probe reading exactly 0% is
+    # taken to be out of the ground (or not set up yet), not a dry bed.
+    channels = [b["channel"] for b in BEDS]
+    sensors.append({
+        "name": "Garden Needs Water",
+        "unique_id": "garden_needs_water",
+        "icon": "mdi:watering-can",
+        "state": (
+            "{%- set ns = namespace(beds=[]) %}"
+            f"{{%- for c in {channels} %}}"
+            "{%- if is_state('sensor.garden_' ~ c ~ '_status', 'Dry')"
+            " and states('sensor.garden_' ~ c ~ '_moisture') | float(0) > 0 %}"
+            "{%- set ns.beds = ns.beds + [states('sensor.garden_' ~ c ~ '_name')] %}"
+            "{%- endif %}{%- endfor %}"
+            "{%- if not ns.beds %}OK"
+            "{%- elif ns.beds | count == 1 %}{{ ns.beds[0] }} needs water"
+            "{%- else %}{{ ns.beds[:-1] | join(', ') }} and {{ ns.beds[-1] }} need water"
+            "{%- endif %}"),
+    })
+    return {"input_text": texts, "input_select": selects,
             "template": [{"sensor": sensors, "binary_sensor": binaries}]}
 
 

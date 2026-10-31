@@ -14,8 +14,10 @@ themes/wall_tablet.yaml        colours
 - **Garden beds**: one card per soil probe on **Outdoors**. Tap a bed's
   picture to choose what's planted (Seedling, Lettuce, Tomato, Pepper,
   Carrot, Herbs, Cucumber, Strawberry, Blueberry, Raspberry, Sunflower,
-  Flowers, Succulent); the picture and the Dry/Wet levels follow. To rename
-  a bed, add a probe, or add a plant type or change its levels, edit
+  Flowers, Succulent); the picture and the Dry/Wet levels follow. Tap the
+  bed's title to rename it. A dry bed shows in the Home alert banner ("Tomatoes
+  needs water"); a probe reading exactly 0% is treated as not in the ground
+  and ignored. To add a probe, or add a plant type or change its levels, edit
   `BEDS` / `PLANT_TYPES` in `tools/garden.py` and run
   `python3 tools/garden.py` (`--gallery out.html` previews every picture).
 - **Low batteries**: any battery sensor under 20% shows up in the alert

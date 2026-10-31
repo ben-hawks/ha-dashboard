@@ -351,6 +351,11 @@ template:
           {%- if is_state('vacuum.acearchr_gmail_com', 'error') %}
             {%- set ns.a = ns.a + ['Vacuum is stuck'] %}
           {%- endif %}
+          {#- Dry garden beds, e.g. "Tomatoes needs water" (packages/garden.yaml). #}
+          {%- set water = states('sensor.garden_needs_water') %}
+          {%- if water not in ['OK', 'unknown', 'unavailable'] %}
+            {%- set ns.a = ns.a + [water] %}
+          {%- endif %}
           {%- if states('sensor.dockstream_2_smart_cordless_fountain_remaining_water_2') | float(100) < 25 %}
             {%- set ns.a = ns.a + ['Cat fountain needs water'] %}
           {%- endif %}

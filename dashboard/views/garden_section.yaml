@@ -37,10 +37,10 @@ cards:
         top: 50%
         width: 100%
     - type: state-label
-      entity: input_select.garden_1_plant
-      prefix: 'Bed 1 · '
+      entity: sensor.garden_1_title
       tap_action:
         action: more-info
+        entity: input_text.garden_1_name
       style:
         left: 70.0%
         top: 16.2%
@@ -159,10 +159,10 @@ cards:
         top: 50%
         width: 100%
     - type: state-label
-      entity: input_select.garden_2_plant
-      prefix: 'Bed 2 · '
+      entity: sensor.garden_2_title
       tap_action:
         action: more-info
+        entity: input_text.garden_2_name
       style:
         left: 70.0%
         top: 16.2%
@@ -281,10 +281,10 @@ cards:
         top: 50%
         width: 100%
     - type: state-label
-      entity: input_select.garden_3_plant
-      prefix: 'Bed 3 · '
+      entity: sensor.garden_3_title
       tap_action:
         action: more-info
+        entity: input_text.garden_3_name
       style:
         left: 70.0%
         top: 16.2%
@@ -403,10 +403,10 @@ cards:
         top: 50%
         width: 100%
     - type: state-label
-      entity: input_select.garden_4_plant
-      prefix: 'Bed 4 · '
+      entity: sensor.garden_4_title
       tap_action:
         action: more-info
+        entity: input_text.garden_4_name
       style:
         left: 70.0%
         top: 16.2%

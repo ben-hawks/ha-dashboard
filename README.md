@@ -18,7 +18,7 @@ It's meant to be easy for anyone in the house, not just whoever set it up.
 | **Floor Plan** | 3D model of both floors (NeonPlan 3D): rooms light up with their lights, tap a room for its devices, smoke/CO alerts on the plan. A flat 2D version is kept as a fallback |
 | **Rooms** | Every light and speaker, grouped by room |
 | **Climate** | Thermostat, hallway temperature/humidity, Airthings air quality |
-| **Outdoors** | Forecast, a card per garden bed (pick the plant on the dashboard from 13 illustrations incl. berries; moisture with plant-specific Dry/Good/Wet, soil temperature, EC, 3-day moisture graph), Ecowitt weather station once connected, chicken coop, shed power station |
+| **Outdoors** | Forecast, a card per garden bed (rename it and pick the plant on the dashboard from 13 illustrations incl. berries; dry beds raise a Home alert; moisture with plant-specific Dry/Good/Wet, soil temperature, EC, 3-day moisture graph), Ecowitt weather station once connected, chicken coop, shed power station |
 | **Safety** | Smoke/CO status per room, alarm hub; "Silence all alarms" appears only while one is going off |
 | **Devices** | Alerts, low batteries, offline devices, vacuum parts, cats, litter box and water fountain, backup power, shopping list, light/dark setting |
 
