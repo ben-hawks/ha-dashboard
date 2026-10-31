@@ -331,6 +331,40 @@ template:
              | selectattr('state', 'eq', 'on')
              | list | count }}
 
+      # The shed power station (Bluetti EL30V2). Its entity IDs change when
+      # the device is re-added, so these find its readings by serial number
+      # and give the dashboard fixed IDs.
+      - name: Shed Battery
+        unique_id: shed_battery
+        unit_of_measurement: "%"
+        device_class: battery
+        state_class: measurement
+        availability: >-
+          {{ states.sensor | selectattr('entity_id', 'search', 'el30v22533005590342')
+             | selectattr('attributes.device_class', 'defined')
+             | selectattr('attributes.device_class', 'eq', 'battery')
+             | selectattr('state', 'is_number') | list | count > 0 }}
+        state: >-
+          {{ states.sensor | selectattr('entity_id', 'search', 'el30v22533005590342')
+             | selectattr('attributes.device_class', 'defined')
+             | selectattr('attributes.device_class', 'eq', 'battery')
+             | selectattr('state', 'is_number')
+             | map(attribute='state') | first }}
+
+      # Battery time left as hours:minutes (2748 min → 45:48).
+      - name: Shed Battery Time Left
+        unique_id: shed_battery_time_left
+        icon: mdi:timer-sand
+        availability: >-
+          {{ states.sensor | selectattr('entity_id', 'search', 'el30v22533005590342.*(battery_time|time_remaining|remaining_time)')
+             | selectattr('state', 'is_number') | list | count > 0 }}
+        state: >-
+          {%- set m = states.sensor
+                | selectattr('entity_id', 'search', 'el30v22533005590342.*(battery_time|time_remaining|remaining_time)')
+                | selectattr('state', 'is_number')
+                | map(attribute='state') | first | int(0) %}
+          {{ '%d:%02d' % (m // 60, m % 60) }}
+
       # Battery sensors below 20%. Phones and power stations are left out
       # by name; tag anything else with the "Hide from tablet" label in
       # Home Assistant to leave it out too.
@@ -342,7 +376,7 @@ template:
           {{ states.sensor
              | selectattr('attributes.device_class', 'defined')
              | selectattr('attributes.device_class', 'eq', 'battery')
-             | rejectattr('entity_id', 'search', 'pixel|xperia|ecoflow|el30v|meshtastic')
+             | rejectattr('entity_id', 'search', 'pixel|xperia|ecoflow|el30v|shed_battery|meshtastic')
              | rejectattr('entity_id', 'in', hidden)
              | selectattr('state', 'is_number')
              | map(attribute='state') | map('float')
@@ -355,7 +389,7 @@ template:
             {%- for s in states.sensor
                  | selectattr('attributes.device_class', 'defined')
                  | selectattr('attributes.device_class', 'eq', 'battery')
-                 | rejectattr('entity_id', 'search', 'pixel|xperia|ecoflow|el30v|meshtastic')
+                 | rejectattr('entity_id', 'search', 'pixel|xperia|ecoflow|el30v|shed_battery|meshtastic')
                  | rejectattr('entity_id', 'in', hidden)
                  if s.state | is_number and s.state | float < 20 %}
               {%- set ns.found = ns.found + [s.entity_id] %}

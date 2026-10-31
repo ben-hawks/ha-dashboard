@@ -70,23 +70,36 @@ sections:
                 columns: 2
                 square: false
                 cards:
+                  # Fixed-ID helpers from packages/wall_tablet.yaml.
                   - type: tile
-                    entity: sensor.shed_el30v2_el30v22533005590342_battery_level
+                    entity: sensor.shed_battery
                     name: Battery
                     features:
                       - type: bar-gauge
                   - type: tile
-                    entity: sensor.shed_el30v2_el30v22533005590342_battery_time_in_minutes
+                    entity: sensor.shed_battery_time_left
                     name: Time left
-                    icon: mdi:timer-sand
-                  - type: tile
-                    entity: switch.shed_el30v2_el30v22533005590342_ac
-                    name: AC outlets
-                    icon: mdi:power-socket-us
-                  - type: tile
-                    entity: switch.shed_el30v2_el30v22533005590342_dc
-                    name: DC outlets
-                    icon: mdi:usb-port
+              # The AC and DC outlet switches, found by the power station's
+              # serial number so a re-added device doesn't break them.
+              - type: custom:auto-entities
+                show_empty: false
+                card:
+                  type: grid
+                  columns: 2
+                  square: false
+                card_param: cards
+                filter:
+                  include:
+                    - entity_id: "switch.*el30v22533005590342*_ac*"
+                      options:
+                        type: tile
+                        name: AC outlets
+                        icon: mdi:power-socket-us
+                    - entity_id: "switch.*el30v22533005590342*_dc*"
+                      options:
+                        type: tile
+                        name: DC outlets
+                        icon: mdi:usb-port
               # Solar coming in, with the last 24 hours behind it.
               - type: tile
                 entity: sensor.shed_el30v2_el30v22533005590342_photovoltaics_input_power
