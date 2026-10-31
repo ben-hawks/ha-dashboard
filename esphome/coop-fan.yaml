@@ -1,4 +1,4 @@
-# Coop exhaust fan: ESP32-WROOM-32E 4-relay board + DHT22.
+# Coop exhaust fan: ESP32-WROOM-32E 4-relay board + SHT40 probe.
 # Source: github.com/ben-hawks/ha-dashboard, esphome/coop-fan.yaml
 #
 # The fan decides for itself, on the board, so it keeps working if Wi-Fi or
@@ -8,8 +8,9 @@
 #                Damp air in a cold coop is what causes frostbite on combs.
 #   - Too cold:  it won't run for dampness below "Don't vent below" (default
 #                15 °F), so it doesn't pull freezing drafts over the hens.
-#   - Sensor problem: it falls back to the last good temperature: on if that
-#                was hot, otherwise off. "Sensor problem" turns on in HA.
+#   - Sensor problem (no reading for 2 minutes): it falls back to the last
+#                good temperature: on if that was hot, otherwise off.
+#                "Sensor problem" turns on in HA.
 #
 # Home Assistant gets temperature, humidity, the fan, why it's on or off
 # ("Fan status"), a mode (Auto / On / Off) and the thresholds. Switching the
@@ -20,9 +21,11 @@
 #   Relay 1 (GPIO32)  exhaust fan: fan + to NO1, supply + to COM1, both minus
 #                     wires straight together. Relays 2-4 (GPIO33, 25, 26)
 #                     are spare and hidden in HA until enabled.
-#   DHT22             + to 3V3, - to GND, data to GPIO27 on the pin header,
-#                     with a 10 kΩ resistor from data to 3V3 (bare DHT22s
-#                     need it; the 3-pin modules have one already).
+#   SHT40 probe       VCC to 3V3 (not 5V), GND to GND, SDA to GPIO21, SCL to
+#                     GPIO22 on the pin header. Check the probe's wire
+#                     colours against its label; cheap probes vary. Mount it
+#                     tip-down, out of pecking reach, and leave the vent hole
+#                     in the tip open.
 #   Power             The 7-30V input can share the fan's 12 V or 24 V supply.
 #                     Use either that or N/L mains, not both.
 #
@@ -69,6 +72,10 @@ wifi:
 captive_portal:
 
 globals:
+  # When the sensor last reported, to notice if it stops.
+  - id: last_reading
+    type: uint32_t
+    initial_value: "0"
   # When the mode last left Auto, for "Manual mode lasts".
   - id: manual_since
     type: uint32_t
@@ -121,19 +128,39 @@ switch:
 # ---------------------------------------------------------------------------
 # Sensors
 # ---------------------------------------------------------------------------
+i2c:
+  sda: GPIO21
+  scl: GPIO22
+
 sensor:
-  - platform: dht
-    pin: GPIO27
-    model: DHT22
+  - platform: sht4x
     update_interval: 30s
+    # The built-in heater dries the sensor after condensation (a cold coop
+    # full of warm, damp hen breath). It pulses on a fixed schedule; kept
+    # gentle: low power, 1 s at a time, about 1% of the time. Readings just
+    # after a pulse run warm/dry, so the median of the last three is used.
+    heater_power: Low
+    heater_time: Long
+    heater_max_duty: 0.01
     temperature:
       id: coop_temp
       name: Temperature
+      filters:
+        - median:
+            window_size: 3
+            send_every: 1
+            send_first_at: 1
       on_value:
+        - lambda: id(last_reading) = millis();
         - script.execute: evaluate
     humidity:
       id: coop_humidity
       name: Humidity
+      filters:
+        - median:
+            window_size: 3
+            send_every: 1
+            send_first_at: 1
       on_value:
         - script.execute: evaluate
 
@@ -147,7 +174,10 @@ binary_sensor:
   - platform: template
     name: Sensor problem
     device_class: problem
-    lambda: return isnan(id(coop_temp).state) || isnan(id(coop_humidity).state);
+    # No reading for 2 minutes (4 missed updates), or never since boot.
+    lambda: |-
+      return id(last_reading) == 0 || millis() - id(last_reading) > 120000 ||
+             isnan(id(coop_temp).state) || isnan(id(coop_humidity).state);
 
 text_sensor:
   - platform: template
@@ -268,7 +298,8 @@ script:
           } else if (mode == 2) {
             want = false;
             why = "Off (manual)";
-          } else if (isnan(c) || isnan(rh)) {
+          } else if (id(last_reading) == 0 || millis() - id(last_reading) > 120000 ||
+                     isnan(c) || isnan(rh)) {
             // No reading: run only if it was hot when we last knew.
             float f = id(last_good_f);
             want = !isnan(f) && f >= id(hot_on).state - ${hot_hysteresis_f};
