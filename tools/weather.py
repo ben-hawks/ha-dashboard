@@ -24,7 +24,8 @@ Weather radar: tapping the forecast swaps it for a live radar map (Windy),
 and it swaps in by itself while binary_sensor.stormy_weather is on (rain,
 snow or storms now, at the station, or in the next few hours). The switch is
 input_boolean.outdoors_radar; the automations that flip it are in
-packages/wall_tablet.yaml. Set the map's centre in RADAR below.
+packages/wall_tablet.yaml. The map centres on zone.home: www/radar.html
+(copied to /config/www/) reads it and opens Windy there.
 
 Run:  python3 tools/weather.py
 """
@@ -42,9 +43,9 @@ GATEWAY = "gw3000b"
 
 W, H = 400, 292
 
-# Radar map centre. Two decimals (about 1 km) is plenty; zoom 7 shows roughly
-# 300 km across, enough to see storms coming.
-RADAR = dict(lat=39.83, lon=-98.58, zoom=7)
+# Radar map zoom; 7 shows roughly 300 km across, enough to see storms
+# coming. The map centres on zone.home (www/radar.html reads it).
+RADAR_ZOOM = 7
 
 # Forecast conditions that bring up the radar on their own, now or in the
 # next STORM_HOURS hours. Drop "rainy" and "snowy" to only show it for the
@@ -500,10 +501,9 @@ def radar_action(service):
 
 
 def radar_url():
-    return ("https://embed.windy.com/embed.html?type=map&location=coordinates"
-            "&metricRain=in&metricTemp=%C2%B0F&metricWind=mph"
-            f"&zoom={RADAR['zoom']}&overlay=radar&product=radar&level=surface"
-            f"&lat={RADAR['lat']}&lon={RADAR['lon']}&marker=true&message=true")
+    # Served by Home Assistant from /config/www/radar.html. ?v= makes the
+    # tablet fetch a fresh copy when the page changes.
+    return f"/local/radar.html?zoom={RADAR_ZOOM}&v=1"
 
 
 def radar_card():
@@ -516,7 +516,9 @@ def radar_card():
          "badges": [{"type": "entity", "entity": RADAR_SWITCH, "icon": "mdi:close",
                      "show_state": False, "tap_action": back}]},
         # About 60% as tall as wide + the heading ≈ the forecast's 400×292.
-        {"type": "iframe", "url": radar_url(), "aspect_ratio": "60%"},
+        # No sandbox: the page reads zone.home from the dashboard around it.
+        {"type": "iframe", "url": radar_url(), "aspect_ratio": "60%",
+         "disable_sandbox": True},
     ]}
 
 

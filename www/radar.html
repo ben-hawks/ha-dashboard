@@ -1,0 +1,54 @@
+<!doctype html>
+<!-- Weather radar for the Outdoors tab. Served by Home Assistant as
+     /local/radar.html (copy this file to /config/www/), so it shares the
+     dashboard's origin and can read zone.home's location from the page that
+     embeds it, then opens Windy's radar map there.
+     Options: ?zoom=7 (default 7, about 300 km across). -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Weather radar</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #1b2030; color: #9aa3b2;
+               font: 14px system-ui, sans-serif; }
+  body { display: flex; align-items: center; justify-content: center;
+         text-align: center; padding: 0 16px; box-sizing: border-box; }
+</style>
+<body>Loading radar…</body>
+<script>
+  const params = new URLSearchParams(location.search);
+  const zoom = params.get("zoom") || "7";
+
+  function hass() {
+    try {
+      return window.parent.document.querySelector("home-assistant").hass;
+    } catch (e) {
+      return null;  // not embedded in the dashboard
+    }
+  }
+
+  function open(h) {
+    const home = h.states["zone.home"];
+    const lat = home ? home.attributes.latitude : h.config.latitude;
+    const lon = home ? home.attributes.longitude : h.config.longitude;
+    const imperial = /F/.test(h.config.unit_system.temperature);
+    const q = new URLSearchParams({
+      type: "map", location: "coordinates", lat: lat.toFixed(2), lon: lon.toFixed(2),
+      zoom, overlay: "radar", product: "radar", level: "surface",
+      metricRain: imperial ? "in" : "mm", metricTemp: imperial ? "°F" : "°C",
+      metricWind: imperial ? "mph" : "km/h", marker: "true", message: "true",
+    });
+    location.replace("https://embed.windy.com/embed.html?" + q);
+  }
+
+  let tries = 0;
+  (function wait() {
+    const h = hass();
+    if (h && h.states && h.config) return open(h);
+    if (++tries > 50) {
+      document.body.textContent =
+        "Couldn't find the Home zone. Open this from the dashboard.";
+      return;
+    }
+    setTimeout(wait, 200);
+  })();
+</script>

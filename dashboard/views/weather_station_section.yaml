@@ -704,8 +704,9 @@ cards:
           show_state: false
           tap_action: *id003
       - type: iframe
-        url: https://embed.windy.com/embed.html?type=map&location=coordinates&metricRain=in&metricTemp=%C2%B0F&metricWind=mph&zoom=7&overlay=radar&product=radar&level=surface&lat=39.83&lon=-98.58&marker=true&message=true
+        url: /local/radar.html?zoom=7&v=1
         aspect_ratio: 60%
+        disable_sandbox: true
     conditions:
     - condition: state
       entity: input_boolean.outdoors_radar

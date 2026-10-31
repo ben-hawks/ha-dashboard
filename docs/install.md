@@ -103,9 +103,17 @@ cd /config/ha-dashboard && git pull
   configuration**, or restart.
 - Theme changes (`themes/`): **Developer Tools → YAML → Themes**.
 
-## Weather radar location
+## Weather radar
 
-The radar on **Outdoors** is centred by `RADAR` near the top of
-`tools/weather.py`. Set your rough latitude/longitude there (two decimals is
-plenty), run `python3 tools/weather.py`, and commit. Which forecast
-conditions bring it up on their own is the `STORMY` list just below.
+The radar on **Outdoors** is a small page, `www/radar.html`, that centres
+Windy's radar map on your **Home** zone. Home Assistant only serves files
+from `/config/www`, so copy it there once (and again if it ever changes):
+
+```sh
+mkdir -p /config/www && cp /config/ha-dashboard/www/radar.html /config/www/
+```
+
+If `/config/www` didn't exist before, restart Home Assistant once so it
+starts serving the folder. Map zoom and which forecast conditions bring the
+radar up by themselves are `RADAR_ZOOM` and `STORMY` near the top of
+`tools/weather.py`.
