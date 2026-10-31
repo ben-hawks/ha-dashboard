@@ -28,11 +28,11 @@ badges:
     name: Megan
     show_name: true
     show_entity_picture: true
+  # The backyard weather station's reading, not the forecast's.
   - type: entity
-    entity: weather.forecast_home
+    entity: sensor.station_temperature
     name: Outside
     show_name: true
-    state_content: temperature
   - type: entity
     entity: sensor.hallway_temperature
     name: Inside
