@@ -80,57 +80,123 @@ def at(x, y):
 # Sky pictures (top-left corner of the card)
 # ---------------------------------------------------------------------------
 
+_ids = iter(range(10_000))
+
+
+def uid(prefix):
+    """Unique gradient/filter IDs within one picture."""
+    return f"{prefix}{next(_ids)}"
+
+
 def sun(cx, cy, r):
-    rays = "".join(
-        f'<line x1="{cx + (r + 6) * math.cos(math.radians(a)):.1f}" '
-        f'y1="{cy + (r + 6) * math.sin(math.radians(a)):.1f}" '
-        f'x2="{cx + (r + 15) * math.cos(math.radians(a)):.1f}" '
-        f'y2="{cy + (r + 15) * math.sin(math.radians(a)):.1f}" '
-        f'stroke="#f6c431" stroke-width="5" stroke-linecap="round"/>'
-        for a in range(0, 360, 45))
-    return rays + f'<circle cx="{cx}" cy="{cy}" r="{r}" fill="#f6c431"/>'
+    """Glowing sun: soft halo, tapered rays of two lengths, a shaded core."""
+    halo, core, ray = uid("halo"), uid("core"), uid("ray")
+    rays = ""
+    for i, a in enumerate(range(0, 360, 30)):
+        length = r * (0.75 if i % 2 else 0.5)
+        rays += (f'<path transform="translate({cx} {cy}) rotate({a})" '
+                 f'd="M-3.2 {-r - 4} L0 {-r - 4 - length:.1f} L3.2 {-r - 4} Z" '
+                 f'fill="url(#{ray})"/>')
+    return (f'<defs>'
+            f'<radialGradient id="{halo}"><stop offset="0" stop-color="#ffd25e" stop-opacity="0.55"/>'
+            f'<stop offset="1" stop-color="#ffd25e" stop-opacity="0"/></radialGradient>'
+            f'<radialGradient id="{core}" cx="0.38" cy="0.35" r="0.75">'
+            f'<stop offset="0" stop-color="#fff7c2"/><stop offset="0.45" stop-color="#ffd047"/>'
+            f'<stop offset="1" stop-color="#ff9c2e"/></radialGradient>'
+            f'<linearGradient id="{ray}" x1="0" y1="1" x2="0" y2="0">'
+            f'<stop offset="0" stop-color="#ffc23d"/><stop offset="1" stop-color="#ffe08a"/>'
+            f'</linearGradient></defs>'
+            f'<circle cx="{cx}" cy="{cy}" r="{r * 2.3:.1f}" fill="url(#{halo})"/>'
+            + rays
+            + f'<circle cx="{cx}" cy="{cy}" r="{r}" fill="url(#{core})"/>'
+            f'<circle cx="{cx - r * 0.35:.1f}" cy="{cy - r * 0.38:.1f}" r="{r * 0.22:.1f}" '
+            f'fill="#fff" fill-opacity="0.45"/>')
 
 
-def cloud(x, y, s, fill="#d5dbe4", stroke="#9aa3b2"):
-    """A cloud whose bottom-left corner is near (x, y), scale s."""
-    return (f'<g transform="translate({x} {y}) scale({s})">'
-            f'<path d="M10 0 H90 A20 20 0 0 0 78 -36 A28 28 0 0 0 30 -40 '
-            f'A22 22 0 0 0 10 0 Z" fill="{fill}" stroke="{stroke}" stroke-width="2.5" '
-            f'stroke-linejoin="round"/></g>')
+CLOUD_PATH = ("M16 0 H96 A20 20 0 0 0 99 -39 A24 24 0 0 0 70 -55 A30 30 0 0 0 22 -42 "
+              "A21 21 0 0 0 16 0 Z")
+
+
+def cloud(x, y, s, top="#ffffff", bottom="#c3ccdb", rim="#8f9bb3"):
+    """A shaded cloud whose bottom-left corner is near (x, y), scale s."""
+    fill, shade = uid("cloud"), uid("shadow")
+    return (f'<defs><linearGradient id="{fill}" x1="0" y1="0" x2="0" y2="1">'
+            f'<stop offset="0" stop-color="{top}"/><stop offset="1" stop-color="{bottom}"/>'
+            f'</linearGradient><filter id="{shade}" x="-0.2" y="-0.2" width="1.4" height="1.6">'
+            f'<feGaussianBlur stdDeviation="3"/></filter></defs>'
+            f'<g transform="translate({x} {y}) scale({s})">'
+            f'<path d="{CLOUD_PATH}" transform="translate(3 6)" fill="#0b1020" '
+            f'fill-opacity="0.28" filter="url(#{shade})"/>'
+            f'<path d="{CLOUD_PATH}" fill="url(#{fill})" stroke="{rim}" stroke-opacity="0.55" '
+            f'stroke-width="1.5" stroke-linejoin="round"/>'
+            # A highlight along the top of the biggest puff.
+            f'<path d="M36 -44 A26 26 0 0 1 68 -50" fill="none" stroke="#fff" '
+            f'stroke-opacity="0.7" stroke-width="2.5" stroke-linecap="round"/></g>')
 
 
 def moon(cx, cy, r):
-    return (f'<path d="M{cx + r * 0.3} {cy - r} A{r} {r} 0 1 0 {cx + r} {cy + r * 0.35} '
-            f'A{r * 0.8} {r * 0.8} 0 1 1 {cx + r * 0.3} {cy - r} Z" fill="#f2e3a3"/>')
+    """A glowing crescent with faint craters."""
+    glow, body, clip = uid("mglow"), uid("moon"), uid("mclip")
+    crescent = (f'M{cx + r * 0.3} {cy - r} A{r} {r} 0 1 0 {cx + r} {cy + r * 0.35} '
+                f'A{r * 0.8} {r * 0.8} 0 1 1 {cx + r * 0.3} {cy - r} Z')
+    craters = "".join(f'<circle cx="{cx + dx * r:.1f}" cy="{cy + dy * r:.1f}" r="{rr * r:.1f}" '
+                      f'fill="#c9b46a" fill-opacity="0.45"/>'
+                      for dx, dy, rr in [(-0.55, -0.1, 0.16), (-0.3, 0.45, 0.11), (-0.7, 0.35, 0.08)])
+    return (f'<defs><radialGradient id="{glow}"><stop offset="0" stop-color="#cdbcff" '
+            f'stop-opacity="0.45"/><stop offset="1" stop-color="#cdbcff" stop-opacity="0"/>'
+            f'</radialGradient><linearGradient id="{body}" x1="0" y1="0" x2="1" y2="1">'
+            f'<stop offset="0" stop-color="#fffbe6"/><stop offset="1" stop-color="#e6cf7a"/>'
+            f'</linearGradient><clipPath id="{clip}"><path d="{crescent}"/></clipPath></defs>'
+            f'<circle cx="{cx}" cy="{cy}" r="{r * 2.1:.1f}" fill="url(#{glow})"/>'
+            f'<path d="{crescent}" fill="url(#{body})"/>'
+            f'<g clip-path="url(#{clip})">{craters}</g>')
 
 
 def stars():
-    return "".join(f'<circle cx="{x}" cy="{y}" r="{r}" fill="#f2e3a3"/>'
-                   for x, y, r in [(110, 26, 2), (128, 52, 1.5), (96, 70, 1.5), (30, 30, 1.5)])
+    """Four-point sparkles of a few sizes."""
+    sparkle = "M0 -6 L1.4 -1.4 L6 0 L1.4 1.4 L0 6 L-1.4 1.4 L-6 0 L-1.4 -1.4 Z"
+    return "".join(f'<path transform="translate({x} {y}) scale({k})" d="{sparkle}" '
+                   f'fill="#fff4cc" fill-opacity="{o}"/>'
+                   for x, y, k, o in [(112, 26, 1.0, 0.95), (132, 56, 0.7, 0.8), (100, 78, 0.55, 0.7),
+                                      (24, 26, 0.6, 0.75), (138, 92, 0.45, 0.6)])
 
 
 def drops():
-    return "".join(f'<line x1="{x}" y1="{y}" x2="{x - 5}" y2="{y + 13}" stroke="{ACCENT}" '
-                   f'stroke-width="4" stroke-linecap="round"/>'
-                   for x, y in [(42, 96), (66, 100), (90, 96), (114, 100)])
+    """Slanted teardrop raindrops."""
+    g = uid("drop")
+    drop = "M0 -10 C3 -4 5.5 -0.5 5.5 2.5 A5.5 5.5 0 0 1 -5.5 2.5 C-5.5 -0.5 -3 -4 0 -10 Z"
+    return (f'<defs><linearGradient id="{g}" x1="0" y1="0" x2="0" y2="1">'
+            f'<stop offset="0" stop-color="#b6d6ff"/><stop offset="1" stop-color="#3f7fe6"/>'
+            f'</linearGradient></defs>'
+            + "".join(f'<path transform="translate({x} {y}) rotate(18)" d="{drop}" fill="url(#{g})"/>'
+                      for x, y in [(42, 100), (66, 106), (90, 100), (114, 106)]))
 
 
 def flakes():
-    flake = lambda x, y, r: "".join(
-        f'<line x1="{x - r * math.cos(math.radians(a)):.1f}" y1="{y - r * math.sin(math.radians(a)):.1f}" '
-        f'x2="{x + r * math.cos(math.radians(a)):.1f}" y2="{y + r * math.sin(math.radians(a)):.1f}" '
-        f'stroke="#7aa7ee" stroke-width="2.2" stroke-linecap="round"/>'
-        for a in (90, 30, 150))
-    return "".join(flake(x, y, 6) for x, y in [(40, 100), (66, 108), (92, 100), (116, 108)])
+    """Six-armed snowflakes with little branches."""
+    def flake(x, y, r):
+        arm = (f'<line x1="0" y1="0" x2="0" y2="{-r}"/>'
+               f'<line x1="0" y1="{-r * 0.55:.1f}" x2="{r * 0.3:.1f}" y2="{-r * 0.8:.1f}"/>'
+               f'<line x1="0" y1="{-r * 0.55:.1f}" x2="{-r * 0.3:.1f}" y2="{-r * 0.8:.1f}"/>')
+        return (f'<g transform="translate({x} {y})" stroke="#e8f3ff" stroke-width="1.8" '
+                f'stroke-linecap="round">'
+                + "".join(f'<g transform="rotate({a})">{arm}</g>' for a in range(0, 360, 60))
+                + '</g>'
+                f'<g transform="translate({x} {y})" stroke="#6f9fe8" stroke-width="0.8" '
+                f'stroke-opacity="0.8" stroke-linecap="round">'
+                + "".join(f'<g transform="rotate({a})">{arm}</g>' for a in range(0, 360, 60))
+                + '</g>')
+    return "".join(flake(x, y, r) for x, y, r in
+                   [(42, 100, 7), (68, 108, 6), (94, 100, 7), (118, 108, 6)])
 
 
 SKIES = {
-    "Sunny": sun(72, 58, 26),
-    "Partly cloudy": sun(88, 46, 20) + cloud(20, 100, 1.05),
-    "Cloudy": cloud(50, 72, 0.85, "#b8c0cc") + cloud(14, 100, 1.1),
-    "Rain": cloud(16, 82, 1.1, "#aeb7c4") + drops(),
-    "Snow": cloud(16, 82, 1.1, "#c3cad5") + flakes(),
-    "Night": moon(62, 56, 26) + stars(),
+    "Sunny": sun(72, 58, 24),
+    "Partly cloudy": sun(92, 44, 19) + cloud(14, 104, 1.0),
+    "Cloudy": cloud(52, 74, 0.8, "#e9edf3", "#a9b3c4") + cloud(12, 104, 1.05),
+    "Rain": cloud(12, 88, 1.08, "#c9d1de", "#7d8aa3", "#5f6b82") + drops(),
+    "Snow": cloud(12, 88, 1.08, "#ffffff", "#cdd8ea") + flakes(),
+    "Night": moon(64, 56, 26) + stars(),
 }
 DEFAULT_SKY = "Partly cloudy"
 
