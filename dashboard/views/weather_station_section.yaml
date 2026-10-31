@@ -713,27 +713,117 @@ cards:
     columns: 2
     square: false
     cards:
-    - type: tile
-      entity: sensor.station_temperature
+    - type: custom:mini-graph-card
       name: Temperature
-      features:
-      - type: trend-graph
-        hours_to_show: 24
-    - type: tile
-      entity: sensor.station_wind_speed
+      icon: mdi:thermometer
+      entities:
+      - entity: sensor.station_temperature
+      hours_to_show: 24
+      points_per_hour: 2
+      hour24: false
+      height: 64
+      line_width: 3
+      smoothing: true
+      animate: false
+      font_size: 70
+      font_size_header: 12
+      show:
+        icon: true
+        name: true
+        state: true
+        legend: false
+        labels: false
+        points: false
+        fill: fade
+      color_thresholds:
+      - value: 20
+        color: '#b7d7ff'
+      - value: 35
+        color: '#6aa9ff'
+      - value: 55
+        color: '#6fdc8c'
+      - value: 75
+        color: '#ffb347'
+      - value: 90
+        color: '#ff6b5e'
+      color_thresholds_transition: smooth
+    - type: custom:mini-graph-card
       name: Wind
-      features:
-      - type: trend-graph
-        hours_to_show: 24
-    - type: tile
-      entity: sensor.station_rain_today
-      name: Rain today
-      features:
-      - type: trend-graph
-        hours_to_show: 24
-    - type: tile
-      entity: sensor.station_pressure
+      icon: mdi:weather-windy
+      entities:
+      - entity: sensor.station_wind_speed
+        color: '#46d0c0'
+      - entity: sensor.station_wind_gust
+        color: '#7aa8ff'
+        show_fill: false
+        show_state: false
+      hours_to_show: 24
+      points_per_hour: 2
+      hour24: false
+      height: 64
+      line_width: 3
+      smoothing: true
+      animate: false
+      font_size: 70
+      font_size_header: 12
+      show:
+        icon: true
+        name: true
+        state: true
+        legend: false
+        labels: false
+        points: false
+        fill: fade
+      lower_bound: 0
+    - type: custom:mini-graph-card
+      name: Rain
+      icon: mdi:weather-rainy
+      entities:
+      - entity: sensor.station_rain_today
+        show_graph: false
+      - entity: sensor.station_rain_rate
+        color: '#6aa9ff'
+        show_state: false
+      hours_to_show: 24
+      points_per_hour: 1
+      hour24: false
+      height: 64
+      line_width: 3
+      smoothing: true
+      animate: false
+      font_size: 70
+      font_size_header: 12
+      show:
+        icon: true
+        name: true
+        state: true
+        legend: false
+        labels: false
+        points: false
+        graph: bar
+      aggregate_func: max
+      group_by: hour
+      lower_bound: 0
+    - type: custom:mini-graph-card
       name: Pressure
-      features:
-      - type: trend-graph
-        hours_to_show: 24
+      icon: mdi:gauge
+      entities:
+      - entity: sensor.station_pressure
+        color: '#a78bfa'
+      hours_to_show: 48
+      points_per_hour: 1
+      hour24: false
+      height: 64
+      line_width: 3
+      smoothing: true
+      animate: false
+      font_size: 70
+      font_size_header: 12
+      show:
+        icon: true
+        name: true
+        state: true
+        legend: false
+        labels: false
+        points: false
+        fill: fade

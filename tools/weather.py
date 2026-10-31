@@ -350,9 +350,61 @@ def hero_card():
             "elements": elements, "grid_options": {"columns": "full"}}
 
 
-def trend_tile(key, name, hours=24):
-    return {"type": "tile", "entity": f"sensor.station_{key}", "name": name,
-            "features": [{"type": "trend-graph", "hours_to_show": hours}]}
+def history_graph(name, icon, entities, hours=24, **extra):
+    """A compact history graph (mini-graph-card, HACS) in the dashboard's
+    style: name, icon and current reading on top, a smooth graph with a soft
+    fill below. Small enough that four fit beside the station card."""
+    card = {
+        "type": "custom:mini-graph-card",
+        "name": name,
+        "icon": icon,
+        "entities": entities,
+        "hours_to_show": hours,
+        "points_per_hour": 2,
+        "hour24": False,
+        "height": 64,
+        "line_width": 3,
+        "smoothing": True,
+        "animate": False,          # no redraw animation on the slow tablet
+        "font_size": 70,
+        "font_size_header": 12,
+        "show": {"icon": True, "name": True, "state": True, "legend": False,
+                 "labels": False, "points": False, "fill": "fade"},
+    }
+    card.update(extra)
+    return card
+
+
+def weather_graphs():
+    return [
+        # Line colour follows the temperature: icy, cold, mild, warm, hot (°F).
+        history_graph("Temperature", "mdi:thermometer",
+                      [{"entity": "sensor.station_temperature"}],
+                      color_thresholds=[
+                          {"value": 20, "color": "#b7d7ff"}, {"value": 35, "color": "#6aa9ff"},
+                          {"value": 55, "color": "#6fdc8c"}, {"value": 75, "color": "#ffb347"},
+                          {"value": 90, "color": "#ff6b5e"}],
+                      color_thresholds_transition="smooth"),
+        # Speed as the main line, gusts as a fainter line without fill.
+        history_graph("Wind", "mdi:weather-windy",
+                      [{"entity": "sensor.station_wind_speed", "color": "#46d0c0"},
+                       {"entity": "sensor.station_wind_gust", "color": "#7aa8ff",
+                        "show_fill": False, "show_state": False}],
+                      lower_bound=0),
+        # Today's total in the corner; bars for how hard it rained each hour.
+        history_graph("Rain", "mdi:weather-rainy",
+                      [{"entity": "sensor.station_rain_today", "show_graph": False},
+                       {"entity": "sensor.station_rain_rate", "color": "#6aa9ff",
+                        "show_state": False}],
+                      points_per_hour=1, aggregate_func="max", group_by="hour",
+                      lower_bound=0,
+                      show={"icon": True, "name": True, "state": True, "legend": False,
+                            "labels": False, "points": False, "graph": "bar"}),
+        # 48 hours: the pressure trend is what hints at a change in weather.
+        history_graph("Pressure", "mdi:gauge",
+                      [{"entity": "sensor.station_pressure", "color": "#a78bfa"}],
+                      hours=48, points_per_hour=1),
+    ]
 
 
 HOURS_SHOWN, DAYS_SHOWN = 6, 5
@@ -435,12 +487,7 @@ def section():
              "cards": [
                  {k: v for k, v in hero_card().items() if k != "grid_options"},
                  forecast_card(),
-                 {"type": "grid", "columns": 2, "square": False, "cards": [
-                     trend_tile("temperature", "Temperature"),
-                     trend_tile("wind_speed", "Wind"),
-                     trend_tile("rain_today", "Rain today"),
-                     trend_tile("pressure", "Pressure"),
-                 ]},
+                 {"type": "grid", "columns": 2, "square": False, "cards": weather_graphs()},
              ]},
         ],
     }
