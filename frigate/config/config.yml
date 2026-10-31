@@ -32,7 +32,9 @@ model:
   labelmap_path: /openvino-model/coco_91cl_bkgr.txt
 
 # Video decoding on the Arc. Protect streams are H.264 unless a camera has
-# "Enhanced encoding" on: then use preset-intel-qsv-h265 for it.
+# "Enhanced encoding" on, like Chicken Run: that camera gets
+# preset-intel-qsv-h265 in its own ffmpeg section below. A camera that shows
+# offline in Frigate but plays when clicked is usually this.
 # preset-record-ubiquiti fixes Protect's audio for recording.
 ffmpeg:
   hwaccel_args: preset-intel-qsv-h264
@@ -139,6 +141,7 @@ cameras:
 
   chicken_run:
     ffmpeg:
+      hwaccel_args: preset-intel-qsv-h265 # this camera sends H.265 (Enhanced encoding)
       inputs:
         - path: rtsp://127.0.0.1:8554/chicken_run
           input_args: preset-rtsp-restream
