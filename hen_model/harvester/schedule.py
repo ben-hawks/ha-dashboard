@@ -18,6 +18,7 @@ good run is kept in /hens/.harvest-last.
 import os
 import shlex
 import signal
+import stat
 import subprocess
 import sys
 import time
@@ -87,12 +88,48 @@ def harvest():
         log(f"harvest failed (exit {result.returncode}); the next run will cover this period too")
 
 
+def check_writable():
+    """Stop with an explanation if /hens can't be written to, saying what
+    the container sees, since the fix depends on why."""
+    probe = HENS / ".harvest-write-test"
+    try:
+        probe.write_text("ok")
+        probe.unlink()
+        return
+    except OSError as e:
+        error = e.strerror
+    st = HENS.stat()
+    me = f"{os.getuid()}:{os.getgid()}"
+    owner = f"{st.st_uid}:{st.st_gid}"
+    try:
+        empty = not any(HENS.iterdir())
+    except OSError:  # can't even look inside
+        empty = False
+    lines = [f"Can't write to the hens folder ({error}).",
+             f"  It's owned by {owner}, permissions {stat.filemode(st.st_mode)}"
+             f"{', and empty' if empty else ''}; this container runs as {me} (HENS_OWNER)."]
+    if empty and owner == "0:0":
+        lines.append("  An empty folder owned by root usually means HENS_PATH doesn't exist on the server,"
+                     " so Docker made an empty one. Check the path (ls /mnt/<pool>).")
+    elif st.st_uid == 0:
+        lines.append("  It's owned by root, which on TrueNAS usually means an ACL (normal for SMB datasets)"
+                     " decides who can write. In TrueNAS: Datasets > the hens dataset > Permissions > Edit,"
+                     f" add the user with uid {os.getuid()} with Modify, applied recursively, and save."
+                     " Or set HENS_OWNER to the uid:gid of a user who already has write access.")
+    elif owner != me:
+        lines.append(f"  Set HENS_OWNER to {owner} and update the stack.")
+    else:
+        lines.append("  The owner matches, so the folder's permissions don't let its owner write, or an ACL"
+                     " (usual on SMB datasets) decides who can. In TrueNAS: Datasets > the hens dataset >"
+                     " Permissions > Edit, and give this user Modify, applied recursively.")
+    sys.exit("\n".join(lines))
+
+
 def main():
     for name in ("FRIGATE_USER", "FRIGATE_PASSWORD"):
         if not os.environ.get(name):
             sys.exit(f"{name} isn't set: add it to the stack's environment variables")
-    if not os.access(HENS, os.W_OK):
-        sys.exit(f"Can't write to {HENS}: check HENS_PATH, and that HENS_OWNER is its owner (ls -ln)")
+    check_writable()
     times = parse_times(os.environ.get("HARVEST_AT", "23:30"))
     signal.signal(signal.SIGTERM, stop)
     signal.signal(signal.SIGINT, stop)

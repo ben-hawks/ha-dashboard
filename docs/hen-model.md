@@ -110,6 +110,14 @@ The loop, each round:
    it reached Frigate and how many frames it added, then the time of the
    next run.
 
+   **"Can't write to the hens folder"** in the logs comes with what the
+   container saw and what to change. Most often on TrueNAS, the dataset
+   belongs to root and an ACL decides who can write, which is normal for SMB
+   datasets. In that case **Datasets →** the hens dataset **→ Permissions →
+   Edit**, add the user whose uid is in `HENS_OWNER` (e.g. your own user,
+   3000) with **Modify**, tick **Apply permissions recursively**, and save.
+   Then restart the container.
+
    Each run looks back to the last one that worked (plus two hours of
    overlap), up to the 3 days Frigate keeps, so if the server was off for a
    day the next run catches up. To pick up changes to the code later, open
