@@ -45,8 +45,8 @@ existing one rather than creating a second.
 
 ```yaml
 homeassistant:
-  packages:
-    wall_tablet: !include ha-dashboard/packages/wall_tablet.yaml
+  # Every file in ha-dashboard/packages/ (wall_tablet.yaml, garden.yaml, …).
+  packages: !include_dir_named ha-dashboard/packages
 
 frontend:
   themes: !include_dir_merge_named ha-dashboard/themes
