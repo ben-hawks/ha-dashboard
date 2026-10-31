@@ -24,8 +24,9 @@ themes/wall_tablet.yaml        colours
   "Good · aim 30–56%". A dry bed shows in the Home alert banner ("Tomatoes
   needs water"), except an outdoor bed while rain is forecast within 6 hours;
   a probe reading exactly 0% is treated as not in the ground and ignored.
-  The season settings are `SEASON` in `tools/garden.py`. To add a probe, or add a plant type or change its levels, edit
-  `BEDS` / `PLANT_TYPES` in `tools/garden.py` and run
+  The season settings are `SEASON` in `tools/garden.py`. To add a probe,
+  or add a plant type or change its levels, edit `BEDS` / `PLANT_TYPES` in
+  `tools/garden.py` and run
   `python3 tools/garden.py` (`--gallery out.html` previews every picture).
 - **Low batteries**: any battery sensor under 20% shows up in the alert
   banner and on **Devices**. To leave a device out, give its battery entity
