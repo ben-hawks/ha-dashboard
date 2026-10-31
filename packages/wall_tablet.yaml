@@ -559,6 +559,13 @@ template:
           {%- if states('sensor.turd_gobbler_9001_waste_drawer') | float(0) >= 80 %}
             {%- set ns.a = ns.a + ['Litter box drawer is full'] %}
           {%- endif %}
+          {#- Finished loads nobody has emptied yet (packages/laundry.yaml). #}
+          {%- if is_state('input_select.washer_state', 'Done') %}
+            {%- set ns.a = ns.a + ['Washer is done'] %}
+          {%- endif %}
+          {%- if is_state('input_select.dryer_state', 'Done') %}
+            {%- set ns.a = ns.a + ['Dryer is done'] %}
+          {%- endif %}
           {%- if is_state('vacuum.acearchr_gmail_com', 'error') %}
             {%- set ns.a = ns.a + ['Vacuum is stuck'] %}
           {%- endif %}

@@ -1,0 +1,291 @@
+# Laundry: washer and dryer cycle detection from Athom smart plug power
+# readings (esphome/laundry-washer.yaml, esphome/laundry-dryer.yaml), plus
+# push notifications when a cycle finishes. See docs/laundry.md.
+#
+# Safe to install before the plugs exist: without sensor.washer_power /
+# sensor.dryer_power the "running" sensors stay unavailable, the states stay
+# Idle, nothing is sent and the dashboard hides the laundry cards.
+#
+# Thresholds/delays are STARTING GUESSES. Tune them with
+# tools/laundry_profile.py after one normal cycle on each machine.
+
+# ---------- Who gets the push notifications ----------
+# One entry per phone running the Home Assistant Companion app. The names are
+# under Developer Tools → Actions: search "mobile_app" and drop the
+# "notify." prefix. Everything below sends to notify.laundry, so this is the
+# only place to edit.
+notify:
+  - platform: group
+    name: laundry
+    services:
+      - action: mobile_app_ben_phone    # TODO: Ben's phone
+      - action: mobile_app_megan_phone  # TODO: Megan's phone
+
+input_select:
+  washer_state:
+    name: Washer state
+    icon: mdi:washing-machine
+    options: [Idle, Running, Done]
+  dryer_state:
+    name: Dryer state
+    icon: mdi:tumble-dryer
+    options: [Idle, Running, Done]
+
+input_datetime:
+  washer_cycle_start:
+    name: Washer cycle start
+    has_date: true
+    has_time: true
+  dryer_cycle_start:
+    name: Dryer cycle start
+    has_date: true
+    has_time: true
+
+template:
+  - binary_sensor:
+      # Hysteresis: must exceed the ON threshold to start, falls back to OFF only below the
+      # lower threshold. The self-reference keeps the current state between the two.
+      - name: Washer running
+        unique_id: laundry_washer_running
+        device_class: running
+        state: >
+          {% set p = states('sensor.washer_power') | float(0) %}
+          {% if is_state('binary_sensor.washer_running', 'on') %}
+            {{ p > 3 }}
+          {% else %}
+            {{ p > 10 }}
+          {% endif %}
+        availability: "{{ has_value('sensor.washer_power') }}"
+        delay_on: "00:00:30"
+        # Soaks and fills sit near 0 W for minutes; don't call it done during those.
+        delay_off: "00:05:00"
+
+      - name: Dryer running
+        unique_id: laundry_dryer_running
+        device_class: running
+        state: >
+          {% set p = states('sensor.dryer_power') | float(0) %}
+          {% if is_state('binary_sensor.dryer_running', 'on') %}
+            {{ p > 15 }}
+          {% else %}
+            {{ p > 50 }}
+          {% endif %}
+        availability: "{{ has_value('sensor.dryer_power') }}"
+        # Wrinkle-guard tumbles are short bursts after the cycle; a real cycle runs far longer.
+        delay_on: "00:02:00"
+        delay_off: "00:01:30"
+
+script:
+  laundry_notify:
+    alias: Laundry notify
+    mode: queued
+    fields:
+      appliance:
+        description: washer or dryer
+      message:
+        description: Notification body
+    sequence:
+      # Same tag per appliance, so a reminder replaces the "done" notification
+      # instead of stacking up, and clearing removes it everywhere.
+      - action: notify.laundry
+        data:
+          title: "{{ appliance | capitalize }}"
+          message: "{{ message }}"
+          data:
+            tag: "laundry_{{ appliance }}"
+            group: laundry
+            channel: Laundry          # Android: own channel, so it can have its own sound
+            importance: high
+            push:
+              interruption-level: time-sensitive   # iOS
+            actions:
+              - action: "LAUNDRY_{{ appliance | upper }}_EMPTIED"
+                title: Emptied
+
+  # The "Emptied" button on the phones and on the wall tablet both end here.
+  laundry_emptied:
+    alias: Laundry emptied
+    icon: mdi:basket-check-outline
+    mode: queued
+    fields:
+      appliance:
+        description: washer or dryer
+    sequence:
+      - action: input_select.select_option
+        target:
+          entity_id: "input_select.{{ appliance }}_state"
+        data: { option: Idle }
+
+automation:
+  # ---------- Washer ----------
+  # Explicit from: "off" / from: "on" so the plug dropping offline
+  # (unavailable) never fakes a start or a finish.
+  - id: laundry_washer_started
+    alias: Laundry - washer started
+    triggers:
+      - trigger: state
+        entity_id: binary_sensor.washer_running
+        from: "off"
+        to: "on"
+    actions:
+      - action: input_select.select_option
+        target: { entity_id: input_select.washer_state }
+        data: { option: Running }
+      - action: input_datetime.set_datetime
+        target: { entity_id: input_datetime.washer_cycle_start }
+        data: { timestamp: "{{ now().timestamp() }}" }
+
+  - id: laundry_washer_finished
+    alias: Laundry - washer finished
+    triggers:
+      - trigger: state
+        entity_id: binary_sensor.washer_running
+        from: "on"
+        to: "off"
+    conditions:
+      - condition: state
+        entity_id: input_select.washer_state
+        state: Running
+    actions:
+      - action: input_select.select_option
+        target: { entity_id: input_select.washer_state }
+        data: { option: Done }
+      - action: script.laundry_notify
+        data:
+          appliance: washer
+          message: >
+            Washer is done
+            ({{ ((now() - states('input_datetime.washer_cycle_start') | as_datetime | as_local)
+                 .total_seconds() / 60) | round(0) | int }} min).
+
+  - id: laundry_washer_reminder
+    alias: Laundry - washer reminder
+    triggers:
+      - trigger: state
+        entity_id: input_select.washer_state
+        to: Done
+        for: "00:30:00"
+      - trigger: state
+        entity_id: input_select.washer_state
+        to: Done
+        for: "01:30:00"
+    actions:
+      - action: script.laundry_notify
+        data:
+          appliance: washer
+          message: "Wet clothes are still in the washer."
+
+  - id: laundry_washer_timeout
+    alias: Laundry - washer done timeout
+    triggers:
+      - trigger: state
+        entity_id: input_select.washer_state
+        to: Done
+        for: "06:00:00"
+    actions:
+      - action: input_select.select_option
+        target: { entity_id: input_select.washer_state }
+        data: { option: Idle }
+
+  # ---------- Dryer ----------
+  - id: laundry_dryer_started
+    alias: Laundry - dryer started
+    triggers:
+      - trigger: state
+        entity_id: binary_sensor.dryer_running
+        from: "off"
+        to: "on"
+    actions:
+      - action: input_select.select_option
+        target: { entity_id: input_select.dryer_state }
+        data: { option: Running }
+      - action: input_datetime.set_datetime
+        target: { entity_id: input_datetime.dryer_cycle_start }
+        data: { timestamp: "{{ now().timestamp() }}" }
+
+  - id: laundry_dryer_finished
+    alias: Laundry - dryer finished
+    triggers:
+      - trigger: state
+        entity_id: binary_sensor.dryer_running
+        from: "on"
+        to: "off"
+    conditions:
+      - condition: state
+        entity_id: input_select.dryer_state
+        state: Running
+    actions:
+      - action: input_select.select_option
+        target: { entity_id: input_select.dryer_state }
+        data: { option: Done }
+      - action: script.laundry_notify
+        data:
+          appliance: dryer
+          message: >
+            Dryer is done
+            ({{ ((now() - states('input_datetime.dryer_cycle_start') | as_datetime | as_local)
+                 .total_seconds() / 60) | round(0) | int }} min).
+
+  - id: laundry_dryer_reminder
+    alias: Laundry - dryer reminder
+    triggers:
+      - trigger: state
+        entity_id: input_select.dryer_state
+        to: Done
+        for: "00:45:00"
+    actions:
+      - action: script.laundry_notify
+        data:
+          appliance: dryer
+          message: "Clothes are still in the dryer."
+
+  - id: laundry_dryer_timeout
+    alias: Laundry - dryer done timeout
+    triggers:
+      - trigger: state
+        entity_id: input_select.dryer_state
+        to: Done
+        for: "06:00:00"
+    actions:
+      - action: input_select.select_option
+        target: { entity_id: input_select.dryer_state }
+        data: { option: Idle }
+
+  # ---------- Shared ----------
+  - id: laundry_emptied
+    alias: Laundry - emptied (notification button)
+    triggers:
+      - trigger: event
+        event_type: mobile_app_notification_action
+        event_data: { action: LAUNDRY_WASHER_EMPTIED }
+        id: washer
+      - trigger: event
+        event_type: mobile_app_notification_action
+        event_data: { action: LAUNDRY_DRYER_EMPTIED }
+        id: dryer
+    actions:
+      - action: script.laundry_emptied
+        data:
+          appliance: "{{ trigger.id }}"
+
+  # Once a load is dealt with (button on a phone, the wall tablet, the
+  # 6-hour timeout, or a new cycle starting), take the notification off
+  # every phone.
+  - id: laundry_clear_notification
+    alias: Laundry - clear notification
+    mode: queued
+    triggers:
+      - trigger: state
+        entity_id: input_select.washer_state
+        from: Done
+        id: washer
+      - trigger: state
+        entity_id: input_select.dryer_state
+        from: Done
+        id: dryer
+    actions:
+      - action: notify.laundry
+        data:
+          message: clear_notification
+          data:
+            tag: "laundry_{{ trigger.id }}"

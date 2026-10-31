@@ -52,6 +52,7 @@ homeassistant:
   packages:
     wall_tablet: !include ha-dashboard/packages/wall_tablet.yaml
     garden: !include ha-dashboard/packages/garden.yaml
+    laundry: !include ha-dashboard/packages/laundry.yaml
 
 frontend:
   themes: !include_dir_merge_named ha-dashboard/themes

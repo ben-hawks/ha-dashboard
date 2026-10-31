@@ -209,6 +209,62 @@ sections:
             commands:
               - start_pause
               - return_home
+      # Laundry (packages/laundry.yaml): only while a machine is running or
+      # has a finished load in it. "Done" tiles: tap once it's emptied.
+      - type: tile
+        entity: input_select.washer_state
+        name: Washer
+        icon: mdi:washing-machine
+        color: blue
+        state_content: [state, last_changed]
+        tap_action: &laundry_info
+          action: navigate
+          navigation_path: /wall-tablet/devices
+        visibility:
+          - condition: state
+            entity: input_select.washer_state
+            state: Running
+      - type: tile
+        entity: input_select.washer_state
+        name: Washer done · tap when emptied
+        icon: mdi:washing-machine-alert
+        color: green
+        state_content: last_changed
+        tap_action:
+          action: perform-action
+          perform_action: script.laundry_emptied
+          data:
+            appliance: washer
+        visibility:
+          - condition: state
+            entity: input_select.washer_state
+            state: Done
+      - type: tile
+        entity: input_select.dryer_state
+        name: Dryer
+        icon: mdi:tumble-dryer
+        color: deep-orange
+        state_content: [state, last_changed]
+        tap_action: *laundry_info
+        visibility:
+          - condition: state
+            entity: input_select.dryer_state
+            state: Running
+      - type: tile
+        entity: input_select.dryer_state
+        name: Dryer done · tap when emptied
+        icon: mdi:tumble-dryer-alert
+        color: green
+        state_content: last_changed
+        tap_action:
+          action: perform-action
+          perform_action: script.laundry_emptied
+          data:
+            appliance: dryer
+        visibility:
+          - condition: state
+            entity: input_select.dryer_state
+            state: Done
       - type: tile
         entity: sensor.turd_gobbler_9001_waste_drawer
         name: Litter drawer

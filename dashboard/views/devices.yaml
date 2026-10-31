@@ -168,6 +168,72 @@ sections:
         name: Cleaning due
         icon: mdi:spray-bottle
 
+  # Laundry (packages/laundry.yaml). Hidden until a washer or dryer plug
+  # is reporting power, so it doesn't show empty tiles before they're set up.
+  - type: grid
+    visibility:
+      - condition: or
+        conditions:
+          - condition: numeric_state
+            entity: sensor.washer_power
+            above: -1
+          - condition: numeric_state
+            entity: sensor.dryer_power
+            above: -1
+    cards:
+      - type: heading
+        heading: Laundry
+        icon: mdi:washing-machine
+      - type: tile
+        entity: input_select.washer_state
+        name: Washer
+        icon: mdi:washing-machine
+        state_content: [state, last_changed]
+      - type: tile
+        entity: sensor.washer_power
+        name: Washer power
+        icon: mdi:flash
+      - type: tile
+        entity: input_select.dryer_state
+        name: Dryer
+        icon: mdi:tumble-dryer
+        state_content: [state, last_changed]
+      - type: tile
+        entity: sensor.dryer_power
+        name: Dryer power
+        icon: mdi:flash
+      # Only while a load is waiting; tap once the machine is emptied.
+      - type: tile
+        entity: script.laundry_emptied
+        name: Washer emptied
+        icon: mdi:basket-check-outline
+        color: green
+        hide_state: true
+        tap_action:
+          action: perform-action
+          perform_action: script.laundry_emptied
+          data:
+            appliance: washer
+        visibility:
+          - condition: state
+            entity: input_select.washer_state
+            state: Done
+      - type: tile
+        entity: script.laundry_emptied
+        name: Dryer emptied
+        icon: mdi:basket-check-outline
+        color: green
+        hide_state: true
+        tap_action:
+          action: perform-action
+          perform_action: script.laundry_emptied
+          data:
+            appliance: dryer
+        visibility:
+          - condition: state
+            entity: input_select.dryer_state
+            state: Done
+
   - type: grid
     cards:
       - type: heading

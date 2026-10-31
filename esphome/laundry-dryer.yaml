@@ -1,0 +1,43 @@
+# Mirror of dryer.yaml in the HA ESPHome Device Builder (source of truth is the ESPHome dashboard).
+# Source: github.com/ben-hawks/ha-dashboard, esphome/laundry-dryer.yaml
+# API key omitted here; the dashboard copy has it.
+#
+# Dryer power monitor: Athom ESP32-C3 US smart plug (V3, PG03V3-US16A).
+# Imports Athom's official config and only overrides what laundry use needs.
+# Gas dryer: the plug sees only the drum motor, controls and igniter.
+# Safety: power-on Always On, button child-locked, relay hidden in HA.
+
+substitutions:
+  name: dryer
+  friendly_name: Dryer
+  room: Laundry
+  timezone: America/Chicago
+  power_plug_type: power-socket-us
+  sensor_update_interval: 5s
+
+packages:
+  athom: github://athom-tech/esp32-configs/athom-smart-plug.yaml
+
+esphome:
+  name_add_mac_suffix: false
+
+api:
+  encryption:
+    key: !secret dryer_api_key   # dashboard copy has the literal key
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  ap:
+    ssid: Dryer Fallback Hotspot
+    password: !secret fallback_ap_password
+
+globals:
+  - id: !extend restore_mode
+    initial_value: "2"
+
+switch:
+  - id: !extend relay
+    disabled_by_default: true
+  - id: !extend child_lock
+    restore_mode: RESTORE_DEFAULT_ON
