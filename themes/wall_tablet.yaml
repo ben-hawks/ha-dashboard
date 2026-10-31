@@ -1,43 +1,71 @@
-# Wall tablet theme. Dark and light share the same shapes and accent colours;
-# the automation in packages/wall_tablet.yaml picks the mode.
+# Wall tablet theme, "Aurora": soft blue / purple / teal glows behind
+# see-through cards with a fine highlight edge. Dark and light share the same
+# shapes; the automation in packages/wall_tablet.yaml picks the mode.
+#
+# Cards are translucent via ha-card-background only. card-background-color
+# (used by pop-up dialogs and menus) stays solid so those remain readable.
+# No blur: backdrop-filter is too heavy for the wall tablet.
 Wall Tablet:
-  ha-card-border-radius: "18px"
-  ha-card-border-width: "0px"
-  ha-card-box-shadow: "none"
-  ha-badge-border-radius: "18px"
+  ha-card-border-radius: "22px"
+  ha-card-border-width: "1px"
+  ha-badge-border-radius: "999px"
 
   modes:
     dark:
-      primary-color: "#5b9cf6"
-      accent-color: "#f4a940"
-      primary-background-color: "#0e1117"
-      secondary-background-color: "#161a22"
-      lovelace-background: "#0e1117"
-      card-background-color: "#1a1f29"
-      ha-card-background: "#1a1f29"
-      primary-text-color: "#e9ecf1"
-      secondary-text-color: "#9aa3b2"
-      disabled-text-color: "#5c6574"
+      lovelace-background: >-
+        radial-gradient(1100px 600px at 12% -10%, rgba(64, 140, 255, 0.30), transparent 60%),
+        radial-gradient(900px 600px at 95% 10%, rgba(160, 90, 255, 0.25), transparent 60%),
+        radial-gradient(900px 700px at 60% 120%, rgba(0, 190, 170, 0.22), transparent 60%),
+        #0b0f1a
+      primary-background-color: "#0b0f1a"
+      secondary-background-color: "#131a2a"
+      card-background-color: "#141a2a"
+      ha-card-background: "rgba(255, 255, 255, 0.065)"
+      ha-card-border-color: "rgba(255, 255, 255, 0.10)"
+      ha-card-box-shadow: "0 10px 30px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.08)"
+      ha-dialog-surface-background: "#141a2a"
+      mdc-theme-surface: "#141a2a"
+      mdc-dialog-scrim-color: "rgba(5, 8, 16, 0.7)"
+
+      primary-color: "#7aa8ff"
+      accent-color: "#ffc164"
+      primary-text-color: "#eef2ff"
+      secondary-text-color: "#a5adc6"
+      disabled-text-color: "#5f6782"
       divider-color: "rgba(255, 255, 255, 0.08)"
-      state-icon-color: "#9aa3b2"
-      app-header-background-color: "#0e1117"
-      app-header-text-color: "#e9ecf1"
-      app-header-selection-bar-color: "#5b9cf6"
-      mdc-dialog-scrim-color: "rgba(0, 0, 0, 0.7)"
+      state-icon-color: "#a5adc6"
+      state-light-active-color: "#ffc164"
+
+      app-header-background-color: "rgba(10, 14, 25, 0.55)"
+      app-header-text-color: "#eef2ff"
+      app-header-selection-bar-color: "#7aa8ff"
+      app-header-border-bottom: "1px solid rgba(255, 255, 255, 0.06)"
 
     light:
-      primary-color: "#1f6fe5"
-      accent-color: "#e08a00"
-      primary-background-color: "#f1f3f7"
-      secondary-background-color: "#e7eaf0"
-      lovelace-background: "#f1f3f7"
+      lovelace-background: >-
+        radial-gradient(1100px 600px at 12% -10%, rgba(90, 140, 255, 0.28), transparent 60%),
+        radial-gradient(900px 600px at 95% 10%, rgba(170, 120, 255, 0.22), transparent 60%),
+        radial-gradient(900px 700px at 60% 120%, rgba(40, 200, 170, 0.20), transparent 60%),
+        #eef2fb
+      primary-background-color: "#eef2fb"
+      secondary-background-color: "#e3e9f6"
       card-background-color: "#ffffff"
-      ha-card-background: "#ffffff"
-      primary-text-color: "#1b1f27"
-      secondary-text-color: "#5d6675"
-      disabled-text-color: "#a3abb8"
-      divider-color: "rgba(0, 0, 0, 0.08)"
-      state-icon-color: "#5d6675"
-      app-header-background-color: "#f1f3f7"
-      app-header-text-color: "#1b1f27"
-      app-header-selection-bar-color: "#1f6fe5"
+      ha-card-background: "rgba(255, 255, 255, 0.72)"
+      ha-card-border-color: "rgba(255, 255, 255, 0.95)"
+      ha-card-box-shadow: "0 10px 30px rgba(40, 60, 110, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.9)"
+      ha-dialog-surface-background: "#ffffff"
+      mdc-theme-surface: "#ffffff"
+
+      primary-color: "#3d6fe0"
+      accent-color: "#e69b2a"
+      primary-text-color: "#1a2033"
+      secondary-text-color: "#5b6582"
+      disabled-text-color: "#a4acc2"
+      divider-color: "rgba(20, 30, 60, 0.08)"
+      state-icon-color: "#5b6582"
+      state-light-active-color: "#e69b2a"
+
+      app-header-background-color: "rgba(255, 255, 255, 0.55)"
+      app-header-text-color: "#1a2033"
+      app-header-selection-bar-color: "#3d6fe0"
+      app-header-border-bottom: "1px solid rgba(20, 30, 60, 0.06)"
