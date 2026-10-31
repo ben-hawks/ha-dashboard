@@ -10,6 +10,7 @@ It's meant to be easy for anyone in the house, not just whoever set it up.
 - **Chicken Command Center (coop tablet):** [docs/coop-tablet.md](docs/coop-tablet.md)
 - **Chicken counting feasibility test:** [docs/chicken-vision-test.md](docs/chicken-vision-test.md)
 - **Frigate for the chicken cameras (Arc server):** [docs/frigate.md](docs/frigate.md)
+- **Training our own hen model:** [docs/hen-model.md](docs/hen-model.md)
 - **Adding devices, rooms, tabs and alerts:** [docs/adding-things.md](docs/adding-things.md)
 
 ## Tabs
@@ -51,6 +52,7 @@ tools/weather.py             weather station card + its helper sensors (template
 tools/coop.py                coop screen's animated scene, chicken comfort + helpers (templates/coop.yaml)
 tools/chicken_vision_test.py hen detection/door-counting test on exported camera clips (not part of HA)
 frigate/                     Frigate NVR for the chicken cameras: docker compose + config (runs on the Arc server)
+hen_model/                   our own hen detection model: harvest frames, label (Label Studio), train, export for Frigate
 ```
 
 ## Requirements
