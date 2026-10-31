@@ -76,9 +76,15 @@ sections:
                     name: Battery
                     features:
                       - type: bar-gauge
-                  - type: tile
-                    entity: sensor.shed_battery_time_left
-                    name: Time left
+                  # Time left on battery, and time to a full charge.
+                  - type: vertical-stack
+                    cards:
+                      - type: tile
+                        entity: sensor.shed_battery_time_left
+                        name: Time left
+                      - type: tile
+                        entity: sensor.shed_battery_time_to_full
+                        name: Full charge in
               # The AC and DC outlet switches (not their _eco mode twins),
               # found by the power station's serial number so a re-added
               # device doesn't break them.
