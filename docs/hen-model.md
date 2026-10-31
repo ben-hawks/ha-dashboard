@@ -24,12 +24,18 @@ Opossum or coyote can be added later if they turn up.
 
 | Where | What runs there |
 |-------|-----------------|
-| **TrueNAS** | Frigate (records, keeps 3 days of continuous footage), Label Studio (where boxes get drawn), and a `hens` dataset holding the frames, shared over SMB |
-| **Training machine** (with an NVIDIA GPU) | The Python scripts in `hen_model/`, with the `hens` share mounted |
+| **TrueNAS** | Frigate (records, keeps 3 days of continuous footage), Label Studio (where boxes get drawn), a `hens` dataset holding the frames, shared over SMB, and a **daily harvest** that copies frames out of Frigate before they expire |
+| **Training machine** (with an NVIDIA GPU) | The other Python scripts in `hen_model/`, with the `hens` share mounted |
+
+Harvesting runs on TrueNAS because it can't wait: Frigate deletes
+continuous footage after 3 days, so a week with the training machine off
+would lose a week of frames. Everything else can wait until you sit down
+to it.
 
 The loop, each round:
 
-1. **harvest.py** pulls frames out of Frigate into the share.
+1. **harvest.py** pulls frames out of Frigate into the share, every night
+   on TrueNAS.
 2. **prelabel.py** has YOLOE, a model you can ask for things by name, draw
    first-guess boxes, and sends the frames to Label Studio.
 3. **You** fix the boxes in Label Studio.
@@ -71,6 +77,34 @@ The loop, each round:
    switched off, so it has to be this kind.
 5. **A Frigate user for harvesting**: in Frigate, **Settings → Users → Add**,
    role **viewer**.
+6. **The daily harvest.** Copy `hen_model/` to the server, e.g.
+   `/mnt/tank/apps/hens/hen_model`. Next to it, create a login file
+   `/mnt/tank/apps/hens/frigate-login` holding the user from step 5:
+
+   ```
+   FRIGATE_USER=hens
+   FRIGATE_PASSWORD=the-password
+   ```
+
+   Then make it readable by root only:
+
+   ```bash
+   sudo chmod 600 /mnt/tank/apps/hens/frigate-login
+   ```
+
+   Then **System → Advanced Settings → Cron Jobs → Add**: run as **root**,
+   schedule **daily** (any time; late evening catches the day's bedtime),
+   command:
+
+   ```
+   bash /mnt/tank/apps/hens/hen_model/harvest-truenas.sh /mnt/tank/hens /mnt/tank/apps/hens/frigate-login --busy 06:30-08:30,17:00-19:30
+   ```
+
+   Change `--busy` to your let-out and bedtime windows, in TrueNAS's time
+   zone. Start it once by hand from the Cron Jobs list to check it:
+   `/mnt/tank/hens/harvest.log`
+   shows how it went. It runs `harvest.py` in a throwaway Python container,
+   as the share's owner, so the files stay editable over SMB.
 
 ### On the training machine
 
@@ -102,18 +136,19 @@ read -s LABEL_STUDIO_TOKEN && export LABEL_STUDIO_TOKEN
 
 ### 1. Harvest frames
 
+This happens by itself every night on TrueNAS (setup step 6). Each run
+samples each camera's recordings every 30 minutes, and every 5 minutes in
+the busy windows: let-out and bedtime, when the light changes and the hens
+crowd the door. It also takes the snapshot of every bird, person, cat and
+dog detection. Frames nearly identical to one already kept are skipped, so
+an empty run at noon gives a handful of frames, not fifty.
+
+To harvest by hand from the training machine instead (for the busy
+windows, use its own time zone):
+
 ```bash
 ~/hens/bin/python hen_model/harvest.py --frigate http://TRUENAS:8971 --user hens --out /mnt/hens --days 3
 ```
-
-It samples each camera's recordings every 30 minutes, and every 5 minutes
-in the busy windows: let-out and bedtime, when the light changes and the
-hens crowd the door. It also takes the snapshot of every bird, person, cat
-and dog detection. Set `--busy` to your real times, in the training
-machine's time zone, e.g. `--busy 06:30-08:30,17:00-19:30`. Frames nearly
-identical to one already kept are skipped, so an empty run at noon gives a
-handful of frames, not fifty. Run it every few days, because Frigate keeps
-only 3 days of continuous footage.
 
 ### 2. Pre-label and send to Label Studio
 
@@ -186,14 +221,55 @@ Harvest again a few days later and label the new frames. Concentrate on
 what the model got wrong: missed hens at the door, wild birds called hens,
 night frames. Every round makes the next model better.
 
-## Predators
+## Predators: public photos
 
 Foxes, raccoons, skunks and raptors rarely show up on our cameras, so
-there's little to learn them from. `classes.yaml` lists the matching
-Open Images classes for adding public photos of them; that step is the
-next piece to build. Until then the model will rarely report predators.
-Leave Frigate on the stock model if that matters more to you than better
-hen detection.
+there's little of our own footage to learn them from. `public.py`
+downloads photos of them from Open Images, Google's public photo set with
+boxes drawn by people. They go straight into the training set, with no
+Label Studio pass. Once is enough; run it again only after changing the
+classes:
+
+```bash
+~/hens/bin/python hen_model/public.py --data /mnt/hens --sheets
+```
+
+The first run reads Open Images' box lists (about 2 minutes, a 2.3 GB
+download read on the fly and never stored), then downloads 200 photos per
+class into `public/`. It picks only photos with no drawings, toys or boxes
+round a whole group, and boxes every one of our classes in them: a dog
+photo with a person in it gets both boxes.
+
+How many photos Open Images has to choose from:
+
+| Class | Usable photos |
+|-------|---------------|
+| dog | about 18,500 |
+| cat | about 11,500 |
+| raptor (eagle, falcon, owl) | about 2,800 |
+| fox | about 420 |
+| raccoon | about 280 |
+| skunk | about 40 |
+
+Skunk stays weak: 40 photos is thin, and there's nothing to add. Opossum
+and coyote aren't in Open Images at all.
+
+**Check the photos.** Open Images has mistakes; in testing, a
+black-and-white cat was labelled skunk and a wolf fox. `--sheets` writes
+contact sheets per class to `public/review/`, with each photo's file name
+above it. Delete bad ones from `public/images/`. The next run notes them in
+`public/rejected.txt`, never downloads them again, and tops the class back
+up.
+
+All of these are daytime photos, mostly close up. The model will still be
+weaker on predators at night, on night vision, than on hens; the few real
+predator visits the cameras do catch are the most valuable frames you can
+label.
+
+`dataset.py` adds the public photos to training automatically (leave them
+out with `--no-public`). They're never used for the validation score,
+which stays about our own cameras. 200 per class is a balance: many more
+and the model spends its effort on Flickr photos rather than our coop.
 
 ## Files
 
@@ -201,6 +277,8 @@ hen detection.
 |------|--------------|
 | `hen_model/classes.yaml` | the classes, YOLOE's prompts for each, matching Open Images classes |
 | `hen_model/harvest.py` | pulls frames out of Frigate into the share |
+| `hen_model/harvest-truenas.sh` | runs harvest.py daily on TrueNAS, from a cron job |
+| `hen_model/public.py` | downloads boxed predator photos from Open Images |
 | `hen_model/prelabel.py` | YOLOE's first-guess boxes, sent to Label Studio |
 | `hen_model/dataset.py` | Label Studio labels → YOLO training set |
 | `hen_model/train.py` | trains, exports `hens.onnx`, writes the Frigate config lines |

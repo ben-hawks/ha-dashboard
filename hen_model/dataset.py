@@ -15,6 +15,10 @@ would let the model "recognise" its own training frames and look better
 than it is. The same hour always lands on the same side, so re-runs after
 more labelling keep the split stable.
 
+Public predator photos from public.py (<data>/public) are added to the
+training side only: the validation frames are there to say how well the
+model does on our cameras.
+
 The dataset is rebuilt from scratch each run.
 
 Run (on the training machine):
@@ -87,6 +91,7 @@ def main():
     p.add_argument("--export", help="a Label Studio JSON export, instead of --ls")
     p.add_argument("--out", help="where to write the dataset (default <data>/dataset)")
     p.add_argument("--val-share", type=float, default=0.2, help="share of camera-hours kept for validation (default 0.2)")
+    p.add_argument("--no-public", action="store_true", help="leave out the public predator photos from public.py")
     args = p.parse_args()
 
     data = Path(args.data)
@@ -131,6 +136,21 @@ def main():
             empty[split] += 1
         boxes[split].update(classes[int(line.split()[0])]["name"] for line in lines)
 
+    public, public_boxes = 0, Counter()
+    if not args.no_public:
+        for label in sorted((data / "public" / "labels").glob("*.txt")):
+            image = data / "public" / "images" / f"{label.stem}.jpg"
+            if not image.exists():  # deleted as a bad photo
+                continue
+            lines = [line for line in label.read_text().splitlines()
+                     if line and int(line.split()[0]) < len(classes)]
+            shutil.copy2(image, out / "images" / "train" / image.name)
+            (out / "labels" / "train" / label.name).write_text("".join(line + "\n" for line in lines))
+            public += 1
+            public_boxes.update(classes[int(line.split()[0])]["name"] for line in lines)
+        boxes["train"].update(public_boxes)
+        images["train"] += public
+
     (out / "data.yaml").write_text(yaml.safe_dump({
         "path": str(out.resolve()), "train": "images/train", "val": "images/val",
         "names": {i: c["name"] for i, c in enumerate(classes)},
@@ -140,6 +160,9 @@ def main():
     for split in ("train", "val"):
         counts = ", ".join(f"{c['name']} {boxes[split][c['name']]}" for c in classes if boxes[split][c["name"]])
         print(f"  {split:5}  {images[split]} frames ({empty[split]} with nothing in them); boxes: {counts or 'none'}")
+        if split == "train" and public:
+            counts = ", ".join(f"{c['name']} {public_boxes[c['name']]}" for c in classes if public_boxes[c["name"]])
+            print(f"         of which {public} public photos; boxes: {counts}")
     thin = [c["name"] for c in classes if boxes["train"][c["name"]] and not boxes["val"][c["name"]]]
     if thin:
         print(f"  No validation boxes yet for: {', '.join(thin)} (its scores won't mean much until there are)")
@@ -147,7 +170,7 @@ def main():
         print(f"  Ignored boxes with labels not in classes.yaml: {', '.join(sorted(unknown))}")
     if missing:
         print(f"  {len(missing)} labelled frames are missing from {data} (e.g. {missing[0]})")
-    if not images["train"]:
+    if not images["train"] and not public:
         sys.exit("No labelled frames yet: label some in Label Studio first.")
     print(f"Next: python3 hen_model/train.py --dataset {out}")
 
