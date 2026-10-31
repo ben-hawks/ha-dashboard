@@ -3,9 +3,11 @@
 #
 # Copy this folder to the server, fill in .env (from .env.example), then:
 #   docker compose up -d
-# Web UI: http://<server>:8971, plain http as TLS is off in config.yml (the
-# admin password is in the log on first start: docker compose logs frigate |
-# grep -i password). See docs/frigate.md.
+# In Portainer: Stacks > Add stack, paste this file, and load the filled-in
+# .env under "Environment variables", with CONFIG_PATH set to the folder
+# holding config.yml.
+# Web UI: http://<server>:8971, plain http as TLS is off in config.yml. The
+# admin password is in the log on first start. See docs/frigate.md.
 
 services:
   frigate:
@@ -23,7 +25,7 @@ services:
       - /dev/dri:/dev/dri
     volumes:
       - /etc/localtime:/etc/localtime:ro
-      - ./config:/config
+      - ${CONFIG_PATH:-./config}:/config
       - ${STORAGE_PATH:-./storage}:/media/frigate
       - type: tmpfs # recording segments are cached in memory before they're written
         target: /tmp/cache
@@ -34,4 +36,17 @@ services:
       - "8554:8554" # camera restreams (Home Assistant's live view uses these)
       - "8555:8555/tcp" # WebRTC live view
       - "8555:8555/udp"
-    env_file: .env
+    # Listed one by one rather than with env_file, so they come from .env
+    # with the docker compose command and from the stack's environment
+    # variables in Portainer. A missing one stops the deploy with its name.
+    environment:
+      FRIGATE_PROTECT_HOST: ${FRIGATE_PROTECT_HOST:?is missing, see .env.example}
+      FRIGATE_CAM1_HIGH: ${FRIGATE_CAM1_HIGH:?is missing, see .env.example}
+      FRIGATE_CAM1_MEDIUM: ${FRIGATE_CAM1_MEDIUM:?is missing, see .env.example}
+      FRIGATE_CAM2_HIGH: ${FRIGATE_CAM2_HIGH:?is missing, see .env.example}
+      FRIGATE_CAM2_MEDIUM: ${FRIGATE_CAM2_MEDIUM:?is missing, see .env.example}
+      FRIGATE_RUN_HIGH: ${FRIGATE_RUN_HIGH:?is missing, see .env.example}
+      FRIGATE_RUN_MEDIUM: ${FRIGATE_RUN_MEDIUM:?is missing, see .env.example}
+      FRIGATE_MQTT_HOST: ${FRIGATE_MQTT_HOST:?is missing, see .env.example}
+      FRIGATE_MQTT_USER: ${FRIGATE_MQTT_USER:?is missing, see .env.example}
+      FRIGATE_MQTT_PASSWORD: ${FRIGATE_MQTT_PASSWORD:?is missing, see .env.example}

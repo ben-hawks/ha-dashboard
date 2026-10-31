@@ -65,7 +65,29 @@ docker compose up -d
 docker compose logs frigate | grep -i password
 ```
 
-That prints the admin password, created on first start. Open
+That prints the admin password, created on first start.
+
+**With Portainer instead:**
+
+1. Put `config/config.yml` in a folder on the server, e.g.
+   `/srv/frigate-config/config.yml`.
+2. Fill in a copy of `.env.example`. Set `CONFIG_PATH` to that folder and
+   `STORAGE_PATH` to a full path too. Portainer doesn't keep the stack's
+   files in a folder of yours, so relative paths like `./config` end up
+   inside Portainer's own storage.
+3. **Stacks → Add stack → Web editor**: paste `docker-compose.yml`. Under
+   **Environment variables**, **Load variables from .env file** and pick the
+   filled-in copy. Deploy.
+4. The admin password is in **Containers → frigate → Logs**; search for
+   "password".
+
+Portainer's environment variables only reach Frigate through the
+`environment:` list in `docker-compose.yml`. If you change one later, use
+**Update the stack**; restarting the container keeps the old values. A
+missing one stops the deploy with "required variable FRIGATE_… is missing
+a value".
+
+Then open
 `http://<server>:8971`: plain http, because TLS is off in the config so
 Home Assistant can connect (step 6). Log in as `admin`, change the
 password (**Settings → Users**), and the three cameras should be live
