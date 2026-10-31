@@ -52,18 +52,37 @@ def rel_from_url(url):
     return url.split("?d=", 1)[1] if "?d=" in url else url
 
 
+def base_url(url):
+    """An address as typed into a setting, with http:// added if left off."""
+    url = url.strip().rstrip("/")
+    if "://" not in url:
+        url = "http://" + url
+    return url
+
+
+def unreachable(what, url, setting, example, error):
+    reason = str(error.__context__ or error) if isinstance(error, requests.ConnectionError) else str(error)
+    sys.exit(f"Can't reach {what} at {url}: {reason[:200]}\n"
+             f"Check {setting} (on the same server as the harvester: {example}).")
+
+
 class Frigate:
     """Frigate's HTTP API. Logs in when given a user (port 8971); port 5000
     needs no login."""
 
     def __init__(self, url, user=None, password=None):
-        self.url = url.rstrip("/")
+        self.url = base_url(url)
         self.session = requests.Session()
-        if user:
-            r = self.session.post(f"{self.url}/api/login", json={"user": user, "password": password},
-                                  timeout=30)
-            if r.status_code != 200:
-                sys.exit(f"Frigate login failed ({r.status_code}): check the user and password")
+        try:
+            if user:
+                r = self.session.post(f"{self.url}/api/login", json={"user": user, "password": password},
+                                      timeout=30)
+                if r.status_code != 200:
+                    sys.exit(f"Frigate login failed ({r.status_code}): check the user and password")
+            else:
+                self.session.get(f"{self.url}/api/version", timeout=30).raise_for_status()
+        except requests.RequestException as e:
+            unreachable("Frigate", self.url, "FRIGATE_URL / --frigate", "http://127.0.0.1:8971", e)
 
     def get(self, path, **params):
         r = self.session.get(f"{self.url}/api/{path}", params=params, timeout=60)
@@ -76,18 +95,24 @@ class LabelStudio:
     either a personal access token (newer installs) or a legacy token."""
 
     def __init__(self, url, token):
-        self.url = url.rstrip("/")
+        self.url = base_url(url)
         self.session = requests.Session()
         if token.count(".") == 2:  # personal access token (a JWT): swap it for a short-lived one
-            r = requests.post(f"{self.url}/api/token/refresh", json={"refresh": token}, timeout=30)
+            try:
+                r = requests.post(f"{self.url}/api/token/refresh", json={"refresh": token.strip()}, timeout=30)
+            except requests.RequestException as e:
+                unreachable("Label Studio", self.url, "LABEL_STUDIO_URL / --ls", "http://127.0.0.1:8085", e)
             if r.status_code != 200:
-                sys.exit(f"Label Studio refused the token ({r.status_code})")
+                sys.exit(f"Label Studio refused the token ({r.status_code}): create a new personal access token")
             self.session.headers["Authorization"] = f"Bearer {r.json()['access']}"
         else:
-            self.session.headers["Authorization"] = f"Token {token}"
+            self.session.headers["Authorization"] = f"Token {token.strip()}"
 
     def request(self, method, path, **kwargs):
-        r = self.session.request(method, f"{self.url}/api/{path}", timeout=300, **kwargs)
+        try:
+            r = self.session.request(method, f"{self.url}/api/{path}", timeout=300, **kwargs)
+        except requests.RequestException as e:
+            unreachable("Label Studio", self.url, "LABEL_STUDIO_URL / --ls", "http://127.0.0.1:8085", e)
         if not r.ok:
             sys.exit(f"Label Studio {method} /api/{path} failed ({r.status_code}): {r.text[:300]}")
         return r.json() if r.content else None
