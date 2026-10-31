@@ -9,6 +9,7 @@ It's meant to be easy for anyone in the house, not just whoever set it up.
 - **Floor Plan tab (NeonPlan 3D):** [docs/floorplan.md](docs/floorplan.md)
 - **Chicken Command Center (coop tablet):** [docs/coop-tablet.md](docs/coop-tablet.md)
 - **Adding devices, rooms, tabs and alerts:** [docs/adding-things.md](docs/adding-things.md)
+- **Room-by-room heating/cooling (zoning):** [docs/hvac-zoning.md](docs/hvac-zoning.md)
 
 ## Tabs
 
@@ -17,7 +18,7 @@ It's meant to be easy for anyone in the house, not just whoever set it up.
 | **Home** | Greeting, who's home, outside/inside temperature, the 3D floor plan, clock, forecast, chicken comfort, main lights, "All lights off", thermostat, whatever's playing, vacuum, litter box. A red banner appears only when something needs attention. |
 | **Floor Plan** | 3D model of both floors (NeonPlan 3D): rooms light up with their lights, tap a room for its devices, smoke/CO alerts on the plan. A flat 2D version is kept as a fallback |
 | **Rooms** | Every light and speaker, grouped by room |
-| **Climate** | Thermostat, hallway temperature/humidity, Airthings air quality |
+| **Climate** | Thermostat, room zoning (who's in control: Nest / Preview / Home Assistant, house mode, each room's temperature, status and vents, setpoints), hallway temperature/humidity, Airthings air quality |
 | **Outdoors** | Weather band (station card, hourly + daily forecast, 24 h graphs; tap the forecast for a live radar map, which also appears by itself when rain, snow or storms are due) and the garden beds on one screen, then coop & shed. A card per garden bed (rename it and pick the plant on the dashboard from 13 illustrations incl. berries; dry beds raise a Home alert; moisture with plant-specific Dry/Good/Wet, soil temperature, EC, 3-day moisture graph), an illustrated WS90 weather station card (sky picture incl. snow, temperature, wind compass, rain, UV, pressure, 24 h graphs), chicken coop, shed power station |
 | **Safety** | Smoke/CO status per room, alarm hub; "Silence all alarms" appears only while one is going off |
 | **Devices** | Alerts, low batteries, offline devices, vacuum parts, cats, litter box and water fountain, backup power, shopping list, light/dark setting |
