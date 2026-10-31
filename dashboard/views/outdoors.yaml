@@ -107,11 +107,28 @@ sections:
                         type: tile
                         name: DC outlets
                         icon: mdi:usb-port
-              # Solar coming in, with the last 24 hours behind it.
-              - type: tile
-                entity: sensor.shed_el30v2_el30v22533005590342_photovoltaics_input_power
-                name: Solar input
-                color: amber
-                features:
-                  - type: trend-graph
-                    hours_to_show: 24
+              # Solar in, what the shed is drawing, and the difference
+              # (+ charging, - draining), over a graph of in vs. out.
+              - type: grid
+                columns: 3
+                square: false
+                cards:
+                  - type: tile
+                    entity: sensor.shed_el30v2_el30v22533005590342_photovoltaics_input_power
+                    name: Solar in
+                    color: amber
+                  - type: tile
+                    entity: sensor.shed_power_draw
+                    name: Draw
+                    color: blue
+                  - type: tile
+                    entity: sensor.shed_net_power
+                    name: Net
+                    color: green
+              - type: history-graph
+                hours_to_show: 24
+                entities:
+                  - entity: sensor.shed_el30v2_el30v22533005590342_photovoltaics_input_power
+                    name: Solar in
+                  - entity: sensor.shed_power_draw
+                    name: Draw

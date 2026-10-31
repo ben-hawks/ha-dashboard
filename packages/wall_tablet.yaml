@@ -392,6 +392,32 @@ template:
           {%- set minutes = mm ~ (' minute' if mm == 1 else ' minutes') %}
           {{ (hours ~ ', ' ~ minutes) if h else minutes }}
 
+      # What the shed is using (AC + DC outlets), and solar in minus that:
+      # positive = the battery is gaining, negative = it's draining.
+      - name: Shed Power Draw
+        unique_id: shed_power_draw
+        icon: mdi:power-plug-outline
+        unit_of_measurement: W
+        device_class: power
+        state_class: measurement
+        availability: "{{ states('sensor.shed_el30v2_el30v22533005590342_alternating_current_out_power') | is_number and states('sensor.shed_el30v2_el30v22533005590342_direct_current_out_power') | is_number }}"
+        state: "{{ (states('sensor.shed_el30v2_el30v22533005590342_alternating_current_out_power') | float + states('sensor.shed_el30v2_el30v22533005590342_direct_current_out_power') | float) | round(0) }}"
+      - name: Shed Net Power
+        unique_id: shed_net_power
+        unit_of_measurement: W
+        device_class: power
+        state_class: measurement
+        icon: >-
+          {{ 'mdi:battery-arrow-up' if this.state | float(0) > 0
+             else 'mdi:battery-arrow-down' if this.state | float(0) < 0
+             else 'mdi:battery-outline' }}
+        availability: >-
+          {{ states('sensor.shed_el30v2_el30v22533005590342_photovoltaics_input_power') | is_number and states('sensor.shed_el30v2_el30v22533005590342_alternating_current_out_power') | is_number
+             and states('sensor.shed_el30v2_el30v22533005590342_direct_current_out_power') | is_number }}
+        state: >-
+          {{ (states('sensor.shed_el30v2_el30v22533005590342_photovoltaics_input_power') | float - states('sensor.shed_el30v2_el30v22533005590342_alternating_current_out_power') | float
+               - states('sensor.shed_el30v2_el30v22533005590342_direct_current_out_power') | float) | round(0) }}
+
       # Estimated time until the shed battery is full.
       # On solar: from the last 15 minutes' solar input, the shed's AC and
       # DC draw right now, and the sun's path: solar is assumed to follow
