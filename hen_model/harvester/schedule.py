@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
-"""Run harvest.py at set times every day, inside the hen-harvester container.
+"""Run harvest.py at set times every day, inside the hen-harvester container,
+then prelabel.py to send the new frames to Label Studio with YOLOE's
+first-guess boxes.
 
 Settings come from the container's environment (the Portainer stack):
   FRIGATE_URL       Frigate's address (default http://127.0.0.1:8971)
@@ -8,6 +10,10 @@ Settings come from the container's environment (the Portainer stack):
   HARVEST_AT        local times to run, comma-separated (default 23:30)
   HARVEST_ARGS      extra harvest.py options, e.g. --busy 06:30-08:30,17:00-19:30
   RUN_ON_START      harvest once as soon as the container starts (default yes)
+  LABEL_STUDIO_URL  Label Studio's address, e.g. http://127.0.0.1:8085; with
+  LABEL_STUDIO_TOKEN  a personal access token, new frames are pre-labelled
+                    and sent there after each harvest. Leave out to skip.
+  PRELABEL_ARGS     extra prelabel.py options, e.g. --model yoloe-26s-seg.pt
 
 Each run looks back to the last one that worked, plus a little overlap, but
 never more than the 3 days Frigate keeps: if the container was down for a
@@ -84,6 +90,7 @@ def harvest():
     if result.returncode == 0:
         LAST.write_text(str(started.timestamp()))
         log("harvest finished")
+        prelabel()
     else:
         log(f"harvest failed (exit {result.returncode}); the next run will cover this period too")
 
@@ -125,6 +132,21 @@ def check_writable():
     sys.exit("\n".join(lines))
 
 
+def prelabel():
+    """Send frames not yet in Label Studio, with YOLOE's boxes. Frames it
+    doesn't get to (Label Studio down, say) go next time."""
+    url, token = os.environ.get("LABEL_STUDIO_URL"), os.environ.get("LABEL_STUDIO_TOKEN")
+    if not (url and token):
+        return
+    log("pre-labelling new frames for Label Studio")
+    result = subprocess.run([sys.executable, "/app/prelabel.py", "--data", str(HENS), "--ls", url,
+                             *shlex.split(os.environ.get("PRELABEL_ARGS", ""))])
+    if result.returncode == 0:
+        log("pre-labelling finished")
+    else:
+        log(f"pre-labelling failed (exit {result.returncode}); those frames will be sent next time")
+
+
 def main():
     for name in ("FRIGATE_USER", "FRIGATE_PASSWORD"):
         if not os.environ.get(name):
@@ -136,6 +158,11 @@ def main():
 
     log(f"hen harvester: runs daily at {', '.join(f'{h:02d}:{m:02d}' for h, m in times)} "
         f"({time.strftime('%Z')}), Frigate at {os.environ.get('FRIGATE_URL', 'http://127.0.0.1:8971')}")
+    url = os.environ.get("LABEL_STUDIO_URL")
+    if url and os.environ.get("LABEL_STUDIO_TOKEN"):
+        log(f"pre-labelling new frames into Label Studio at {url}")
+    else:
+        log("pre-labelling off (set LABEL_STUDIO_URL and LABEL_STUDIO_TOKEN to turn it on)")
     if os.environ.get("RUN_ON_START", "yes").lower() not in ("no", "false", "0"):
         harvest()
     while True:

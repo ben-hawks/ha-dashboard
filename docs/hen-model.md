@@ -103,6 +103,10 @@ The loop, each round:
    | `FRIGATE_PASSWORD` | | its password |
    | `HARVEST_AT` | `23:30` | when to run each day, in TrueNAS's time zone; several are fine, e.g. `12:00,23:30` |
    | `HARVEST_ARGS` | `--busy 06:30-08:30,17:00-19:30` | your let-out and bedtime windows, sampled more often |
+   | `LABEL_STUDIO_URL` | `http://127.0.0.1:8085` | Label Studio on the same server; with the token, new frames are pre-labelled and sent there after each harvest |
+   | `LABEL_STUDIO_TOKEN` | | the personal access token from step 4 |
+   | `PRELABEL_THREADS` | `4` | CPU threads YOLOE may use (default 4), so it doesn't crowd out Frigate |
+   | `PRELABEL_ARGS` | `--model yoloe-26s-seg.pt` | optional prelabel.py options |
 
    Deploy. Portainer builds the image from the repo, which takes a minute
    the first time. The harvester runs once straight away, so
@@ -171,12 +175,24 @@ windows, use its own time zone):
 
 ### 2. Pre-label and send to Label Studio
 
+With `LABEL_STUDIO_URL` and `LABEL_STUDIO_TOKEN` set on the harvester
+(setup step 6), this happens by itself: after each harvest, YOLOE draws
+its guesses on the new frames and they appear in Label Studio's **Hen
+model** project, which is created the first time. It runs on TrueNAS's
+CPU, roughly a few seconds per frame, so a night's frames take a few
+minutes. The first time also downloads YOLOE (a few hundred MB), which is
+then kept. The harvester's log shows how many boxes of each class it drew.
+
+To run it by hand from the training machine instead (faster on a GPU, with
+`--device 0`):
+
 ```bash
 ~/hens/bin/python hen_model/prelabel.py --data /mnt/hens --ls http://TRUENAS:8085
 ```
 
-Only frames not sent before are processed. Add `--limit 20` the first time
-to see how it does. The first run downloads YOLOE (a few hundred MB).
+Either way, only frames not sent before are processed (the list is
+`labelstudio/prelabelled.txt` in the share), so the two never send a frame
+twice. Add `--limit 20` to try it on a few frames first.
 
 ### 3. Label
 
@@ -296,7 +312,7 @@ and the model spends its effort on Flickr photos rather than our coop.
 |------|--------------|
 | `hen_model/classes.yaml` | the classes, YOLOE's prompts for each, matching Open Images classes |
 | `hen_model/harvest.py` | pulls frames out of Frigate into the share |
-| `hen_model/harvester/` | the harvester container for Portainer: Dockerfile, compose file, daily schedule |
+| `hen_model/harvester/` | the harvester container for Portainer: Dockerfile, compose file, daily schedule (harvest, then pre-label) |
 | `hen_model/public.py` | downloads boxed predator photos from Open Images |
 | `hen_model/prelabel.py` | YOLOE's first-guess boxes, sent to Label Studio |
 | `hen_model/dataset.py` | Label Studio labels → YOLO training set |

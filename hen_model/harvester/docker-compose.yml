@@ -1,5 +1,6 @@
 # The hen harvester: copies training frames out of Frigate every night,
-# before Frigate's 3 days of continuous footage expire.
+# before Frigate's 3 days of continuous footage expire, and (with a Label
+# Studio token) sends them to Label Studio with YOLOE's first-guess boxes.
 # Source: github.com/ben-hawks/ha-dashboard, hen_model/harvester/
 #
 # In Portainer: Stacks > Add stack > Repository, with
@@ -24,6 +25,7 @@ services:
     volumes:
       - ${HENS_PATH:?is missing, set it to the shared hen-model folder}:/hens
       - /etc/localtime:/etc/localtime:ro # HARVEST_AT and --busy are in TrueNAS's time zone
+      - hen-harvester-cache:/cache # YOLOE's model files, downloaded once
     environment:
       FRIGATE_URL: ${FRIGATE_URL:-http://127.0.0.1:8971}
       FRIGATE_USER: ${FRIGATE_USER:?is missing, set it to a Frigate viewer login}
@@ -31,3 +33,12 @@ services:
       HARVEST_AT: ${HARVEST_AT:-23:30}
       HARVEST_ARGS: ${HARVEST_ARGS:-}
       RUN_ON_START: ${RUN_ON_START:-yes}
+      # Pre-labelling: leave these two empty to only harvest.
+      LABEL_STUDIO_URL: ${LABEL_STUDIO_URL:-}
+      LABEL_STUDIO_TOKEN: ${LABEL_STUDIO_TOKEN:-}
+      PRELABEL_ARGS: ${PRELABEL_ARGS:-}
+      # CPU threads YOLOE may use, so it doesn't crowd out Frigate.
+      OMP_NUM_THREADS: ${PRELABEL_THREADS:-4}
+
+volumes:
+  hen-harvester-cache:
