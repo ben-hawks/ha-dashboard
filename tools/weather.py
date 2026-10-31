@@ -202,6 +202,31 @@ SKIES = {
 DEFAULT_SKY = "Partly cloudy"
 
 
+def bolt(x, y):
+    g = uid("bolt")
+    return (f'<defs><linearGradient id="{g}" x1="0" y1="0" x2="0" y2="1">'
+            f'<stop offset="0" stop-color="#fff3a6"/><stop offset="1" stop-color="#ffb21f"/>'
+            f'</linearGradient></defs>'
+            f'<path transform="translate({x} {y})" d="M6 0 L-6 18 L1 18 L-4 34 L12 12 L4 12 L10 0 Z" '
+            f'fill="url(#{g})" stroke="#c98a10" stroke-width="1" stroke-linejoin="round"/>')
+
+
+def fog_lines():
+    return "".join(f'<line x1="{x0}" y1="{y}" x2="{x1}" y2="{y}" stroke="#b7c2d4" stroke-width="5" '
+                   f'stroke-linecap="round" stroke-opacity="0.9"/>'
+                   for x0, x1, y in [(26, 112, 98), (40, 126, 110), (30, 100, 122)])
+
+
+# Forecast pictures: the station's skies plus a few conditions only the
+# forecast reports.
+FORECAST_ART = {
+    **SKIES,
+    "Partly cloudy night": moon(84, 44, 20) + cloud(14, 104, 1.0),
+    "Fog": cloud(16, 86, 1.05, "#e6eaf0", "#aeb7c6") + fog_lines(),
+    "Storm": cloud(12, 86, 1.08, "#9aa6ba", "#5c6880", "#4c566b") + bolt(66, 82),
+}
+
+
 def backdrop(stops):
     """Tinted light across the top of the card: (cx, cy, r, colour, opacity)."""
     defs = "".join(
@@ -330,51 +355,69 @@ def trend_tile(key, name, hours=24):
             "features": [{"type": "trend-graph", "hours_to_show": hours}]}
 
 
-# Met.no condition → Material Design icon (night variants where it matters).
-CONDITION_ICONS = {
-    "clear-night": "weather-night", "cloudy": "weather-cloudy", "exceptional": "alert-circle-outline",
-    "fog": "weather-fog", "hail": "weather-hail", "lightning": "weather-lightning",
-    "lightning-rainy": "weather-lightning-rainy", "partlycloudy": "weather-partly-cloudy",
-    "pouring": "weather-pouring", "rainy": "weather-rainy", "snowy": "weather-snowy",
-    "snowy-rainy": "weather-snowy-rainy", "sunny": "weather-sunny", "windy": "weather-windy",
-    "windy-variant": "weather-windy-variant",
-}
 HOURS_SHOWN, DAYS_SHOWN = 6, 5
 
-# A compact forecast as Markdown tables. Hourly: the day's name sits in a
-# header row above its first hour, so a new day doesn't take up a column.
-FORECAST_MARKDOWN = (
-    f"{{%- set icons = {CONDITION_ICONS} %}}"
-    "{%- macro icon(c, night) -%}"
-    "{%- set i = icons.get(c, 'weather-cloudy') -%}"
-    "{%- if night and c == 'partlycloudy' %}{% set i = 'weather-night-partly-cloudy' %}{% endif -%}"
-    '<ha-icon icon="mdi:{{ i }}"></ha-icon>'
-    "{%- endmacro %}"
-    f"{{%- set hourly = (state_attr('sensor.forecast_hourly', 'forecast') or [])[:{HOURS_SHOWN}] %}}"
-    f"{{%- set daily = (state_attr('sensor.forecast_daily', 'forecast') or [])[:{DAYS_SHOWN}] %}}"
-    "{%- set h = namespace(days='', sep='', times='', icons='', temps='') %}"
-    "{%- for f in hourly %}"
-    "{%- set t = as_local(as_datetime(f.datetime)) %}"
-    "{%- set h.days = h.days ~ '| ' ~ (t.strftime('%a') if loop.first or t.hour == 0 else '') ~ ' ' %}"
-    "{%- set h.sep = h.sep ~ '|:-:' %}"
-    "{%- set h.times = h.times ~ '| ' ~ t.strftime('%-I %p') ~ ' ' %}"
-    "{%- set h.icons = h.icons ~ '| ' ~ icon(f.condition, t.hour >= 19 or t.hour < 7) ~ ' ' %}"
-    "{%- set h.temps = h.temps ~ '| ' ~ f.temperature | round(0) | int ~ '° ' %}"
-    "{%- endfor %}"
-    "{%- set d = namespace(days='', sep='', icons='', highs='', lows='') %}"
-    "{%- for f in daily %}"
-    "{%- set t = as_local(as_datetime(f.datetime)) %}"
-    "{%- set d.days = d.days ~ '| ' ~ ('Today' if t.date() == now().date() else t.strftime('%a')) ~ ' ' %}"
-    "{%- set d.sep = d.sep ~ '|:-:' %}"
-    "{%- set d.icons = d.icons ~ '| ' ~ icon(f.condition, false) ~ ' ' %}"
-    "{%- set d.highs = d.highs ~ '| **' ~ f.temperature | round(0) | int ~ '°** ' %}"
-    "{%- set d.lows = d.lows ~ '| ' ~ (f.templow | round(0) | int ~ '°' if f.templow is defined else '') ~ ' ' %}"
-    "{%- endfor %}"
-    "{%- if not hourly %}Forecast loading…{% else %}"
-    "{{ h.days }}|\n{{ h.sep }}|\n{{ h.times }}|\n{{ h.icons }}|\n{{ h.temps }}|\n\n"
-    "{{ d.days }}|\n{{ d.sep }}|\n{{ d.icons }}|\n{{ d.highs }}|\n{{ d.lows }}|"
-    "{% endif %}"
-)
+# Met.no condition → forecast picture. Night variants are picked by hour.
+CONDITION_ART = {
+    "clear-night": "Night", "sunny": "Sunny", "partlycloudy": "Partly cloudy",
+    "cloudy": "Cloudy", "exceptional": "Cloudy", "windy": "Cloudy", "windy-variant": "Cloudy",
+    "fog": "Fog", "rainy": "Rain", "pouring": "Rain", "lightning": "Storm",
+    "lightning-rainy": "Storm", "snowy": "Snow", "snowy-rainy": "Snow", "hail": "Snow",
+}
+NIGHT_ART = {"Sunny": "Night", "Partly cloudy": "Partly cloudy night"}
+
+
+def icon_uri(kind):
+    """A forecast picture cropped to the art itself (it sits top-left on the
+    station canvas)."""
+    return data_uri(f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 6 150 130">'
+                    f'{FORECAST_ART[kind]}</svg>')
+
+
+FORECAST_ICONS = {kind: icon_uri(kind) for kind in FORECAST_ART}
+
+
+def forecast_base():
+    rule = (f'<line x1="14" y1="146" x2="{W - 14}" y2="146" stroke="{LABEL}" '
+            f'stroke-opacity="0.22" stroke-width="1"/>')
+    return canvas(rule)
+
+
+def forecast_card():
+    """Next hours on top, next days below, in the station card's style. Each
+    slot is a helper sensor: its state picks the picture, its attributes hold
+    the labels (see forecast_templates)."""
+    primary = {"color": "var(--primary-text-color)", "white-space": "nowrap"}
+    secondary = {"color": "var(--secondary-text-color)", "white-space": "nowrap"}
+    elements = []
+
+    def slot(entity, cx, rows, icon_y, icon_w):
+        elements.append({"type": "image", "entity": entity, "image": FORECAST_ICONS[DEFAULT_SKY],
+                         "state_image": FORECAST_ICONS, "tap_action": {"action": "none"},
+                         "style": {**at(cx, icon_y), "width": f"{icon_w / W * 100:.1f}%"}})
+        for attribute, y, style in rows:
+            elements.append({"type": "state-label", "entity": entity, "attribute": attribute,
+                             "tap_action": {"action": "none"}, "style": {**at(cx, y), **style}})
+
+    hour_w = W / HOURS_SHOWN
+    for i in range(HOURS_SHOWN):
+        slot(f"sensor.forecast_hour_{i + 1}", hour_w * (i + 0.5), [
+            # Only set on the first hour and on midnight: marks a new day.
+            ("day", 16, {**secondary, "color": "var(--primary-color)", "font-size": "11px",
+                         "font-weight": "700", "letter-spacing": "0.04em"}),
+            ("time", 34, {**secondary, "font-size": "12px"}),
+            ("temperature", 118, {**primary, "font-size": "16px", "font-weight": "600"}),
+        ], icon_y=76, icon_w=56)
+
+    day_w = W / DAYS_SHOWN
+    for i in range(DAYS_SHOWN):
+        slot(f"sensor.forecast_day_{i + 1}", day_w * (i + 0.5), [
+            ("day", 164, {**secondary, "font-size": "12px", "font-weight": "500"}),
+            ("high", 244, {**primary, "font-size": "16px", "font-weight": "600"}),
+            ("low", 266, {**secondary, "font-size": "13px"}),
+        ], icon_y=203, icon_w=56)
+
+    return {"type": "picture-elements", "image": data_uri(forecast_base()), "elements": elements}
 
 
 def section():
@@ -391,7 +434,7 @@ def section():
              "grid_options": {"columns": "full"},
              "cards": [
                  {k: v for k, v in hero_card().items() if k != "grid_options"},
-                 {"type": "markdown", "content": FORECAST_MARKDOWN},
+                 forecast_card(),
                  {"type": "grid", "columns": 2, "square": False, "cards": [
                      trend_tile("temperature", "Temperature"),
                      trend_tile("wind_speed", "Wind"),
@@ -467,8 +510,45 @@ def templates():
 
 
 def forecast_templates():
-    """Trigger-based sensors holding Met.no's hourly and daily forecasts (the
-    weather entity doesn't expose them as attributes any more)."""
+    """Trigger-based slot sensors (sensor.forecast_hour_1…6, forecast_day_1…5)
+    filled from Met.no every 30 minutes and on template reload. State = the
+    picture to show; attributes = the labels."""
+    art = (f"{{% set art = {CONDITION_ART} %}}"
+           f"{{% set night_art = {NIGHT_ART} %}}")
+
+    def hour(i):
+        f = f"hourly['weather.forecast_home'].forecast[{i}]"
+        t = f"as_local(as_datetime({f}.datetime))"
+        return {
+            "name": f"Forecast Hour {i + 1}", "unique_id": f"forecast_hour_{i + 1}",
+            "icon": "mdi:clock-outline",
+            "state": (art + f"{{% set t = {t} %}}{{% set a = art.get({f}.condition, 'Cloudy') %}}"
+                      "{{ night_art.get(a, a) if t.hour >= 19 or t.hour < 7 else a }}"),
+            "attributes": {
+                "time": f"{{{{ {t}.strftime('%-I %p') }}}}",
+                "day": (f"{{% set t = {t} %}}"
+                        + ("{{ t.strftime('%a').upper() }}" if i == 0 else
+                           "{{ t.strftime('%a').upper() if t.hour == 0 else '' }}")),
+                "temperature": f"{{{{ {f}.temperature | round(0) | int }}}}°",
+            },
+        }
+
+    def day(i):
+        f = f"daily['weather.forecast_home'].forecast[{i}]"
+        t = f"as_local(as_datetime({f}.datetime))"
+        return {
+            "name": f"Forecast Day {i + 1}", "unique_id": f"forecast_day_{i + 1}",
+            "icon": "mdi:calendar",
+            "state": art + f"{{{{ art.get({f}.condition, 'Cloudy') }}}}",
+            "attributes": {
+                "day": (f"{{% set t = {t} %}}"
+                        "{{ 'Today' if t.date() == now().date() else t.strftime('%a') }}"),
+                "high": f"{{{{ {f}.temperature | round(0) | int }}}}°",
+                "low": (f"{{{{ ({f}.templow | round(0) | int) ~ '°' "
+                        f"if {f}.templow is defined else '' }}}}"),
+            },
+        }
+
     return [{
         "triggers": [
             {"trigger": "time_pattern", "minutes": "/30"},
@@ -480,13 +560,7 @@ def forecast_templates():
              "data": {"type": kind}, "response_variable": kind}
             for kind in ("hourly", "daily")
         ],
-        "sensor": [
-            {"name": f"Forecast {kind.title()}", "unique_id": f"forecast_{kind}",
-             "icon": "mdi:weather-partly-cloudy", "device_class": "timestamp",
-             "state": "{{ now().isoformat() }}",
-             "attributes": {"forecast": f"{{{{ {kind}['weather.forecast_home'].forecast[:12] }}}}"}}
-            for kind in ("hourly", "daily")
-        ],
+        "sensor": [hour(i) for i in range(HOURS_SHOWN)] + [day(i) for i in range(DAYS_SHOWN)],
     }]
 
 

@@ -21,17 +21,91 @@ actions:
     type: daily
   response_variable: daily
 sensor:
-- name: Forecast Hourly
-  unique_id: forecast_hourly
-  icon: mdi:weather-partly-cloudy
-  device_class: timestamp
-  state: '{{ now().isoformat() }}'
+- name: Forecast Hour 1
+  unique_id: forecast_hour_1
+  icon: mdi:clock-outline
+  state: '{% set art = {''clear-night'': ''Night'', ''sunny'': ''Sunny'', ''partlycloudy'': ''Partly cloudy'', ''cloudy'': ''Cloudy'', ''exceptional'': ''Cloudy'', ''windy'': ''Cloudy'', ''windy-variant'': ''Cloudy'', ''fog'': ''Fog'', ''rainy'': ''Rain'', ''pouring'': ''Rain'', ''lightning'': ''Storm'', ''lightning-rainy'': ''Storm'', ''snowy'': ''Snow'', ''snowy-rainy'': ''Snow'', ''hail'': ''Snow''} %}{% set night_art = {''Sunny'': ''Night'', ''Partly cloudy'': ''Partly cloudy night''} %}{% set t = as_local(as_datetime(hourly[''weather.forecast_home''].forecast[0].datetime)) %}{% set a = art.get(hourly[''weather.forecast_home''].forecast[0].condition, ''Cloudy'') %}{{ night_art.get(a, a) if t.hour >= 19 or t.hour < 7 else a }}'
   attributes:
-    forecast: '{{ hourly[''weather.forecast_home''].forecast[:12] }}'
-- name: Forecast Daily
-  unique_id: forecast_daily
-  icon: mdi:weather-partly-cloudy
-  device_class: timestamp
-  state: '{{ now().isoformat() }}'
+    time: '{{ as_local(as_datetime(hourly[''weather.forecast_home''].forecast[0].datetime)).strftime(''%-I %p'') }}'
+    day: '{% set t = as_local(as_datetime(hourly[''weather.forecast_home''].forecast[0].datetime)) %}{{ t.strftime(''%a'').upper() }}'
+    temperature: '{{ hourly[''weather.forecast_home''].forecast[0].temperature | round(0) | int }}°'
+- name: Forecast Hour 2
+  unique_id: forecast_hour_2
+  icon: mdi:clock-outline
+  state: '{% set art = {''clear-night'': ''Night'', ''sunny'': ''Sunny'', ''partlycloudy'': ''Partly cloudy'', ''cloudy'': ''Cloudy'', ''exceptional'': ''Cloudy'', ''windy'': ''Cloudy'', ''windy-variant'': ''Cloudy'', ''fog'': ''Fog'', ''rainy'': ''Rain'', ''pouring'': ''Rain'', ''lightning'': ''Storm'', ''lightning-rainy'': ''Storm'', ''snowy'': ''Snow'', ''snowy-rainy'': ''Snow'', ''hail'': ''Snow''} %}{% set night_art = {''Sunny'': ''Night'', ''Partly cloudy'': ''Partly cloudy night''} %}{% set t = as_local(as_datetime(hourly[''weather.forecast_home''].forecast[1].datetime)) %}{% set a = art.get(hourly[''weather.forecast_home''].forecast[1].condition, ''Cloudy'') %}{{ night_art.get(a, a) if t.hour >= 19 or t.hour < 7 else a }}'
   attributes:
-    forecast: '{{ daily[''weather.forecast_home''].forecast[:12] }}'
+    time: '{{ as_local(as_datetime(hourly[''weather.forecast_home''].forecast[1].datetime)).strftime(''%-I %p'') }}'
+    day: '{% set t = as_local(as_datetime(hourly[''weather.forecast_home''].forecast[1].datetime)) %}{{ t.strftime(''%a'').upper() if t.hour == 0 else '''' }}'
+    temperature: '{{ hourly[''weather.forecast_home''].forecast[1].temperature | round(0) | int }}°'
+- name: Forecast Hour 3
+  unique_id: forecast_hour_3
+  icon: mdi:clock-outline
+  state: '{% set art = {''clear-night'': ''Night'', ''sunny'': ''Sunny'', ''partlycloudy'': ''Partly cloudy'', ''cloudy'': ''Cloudy'', ''exceptional'': ''Cloudy'', ''windy'': ''Cloudy'', ''windy-variant'': ''Cloudy'', ''fog'': ''Fog'', ''rainy'': ''Rain'', ''pouring'': ''Rain'', ''lightning'': ''Storm'', ''lightning-rainy'': ''Storm'', ''snowy'': ''Snow'', ''snowy-rainy'': ''Snow'', ''hail'': ''Snow''} %}{% set night_art = {''Sunny'': ''Night'', ''Partly cloudy'': ''Partly cloudy night''} %}{% set t = as_local(as_datetime(hourly[''weather.forecast_home''].forecast[2].datetime)) %}{% set a = art.get(hourly[''weather.forecast_home''].forecast[2].condition, ''Cloudy'') %}{{ night_art.get(a, a) if t.hour >= 19 or t.hour < 7 else a }}'
+  attributes:
+    time: '{{ as_local(as_datetime(hourly[''weather.forecast_home''].forecast[2].datetime)).strftime(''%-I %p'') }}'
+    day: '{% set t = as_local(as_datetime(hourly[''weather.forecast_home''].forecast[2].datetime)) %}{{ t.strftime(''%a'').upper() if t.hour == 0 else '''' }}'
+    temperature: '{{ hourly[''weather.forecast_home''].forecast[2].temperature | round(0) | int }}°'
+- name: Forecast Hour 4
+  unique_id: forecast_hour_4
+  icon: mdi:clock-outline
+  state: '{% set art = {''clear-night'': ''Night'', ''sunny'': ''Sunny'', ''partlycloudy'': ''Partly cloudy'', ''cloudy'': ''Cloudy'', ''exceptional'': ''Cloudy'', ''windy'': ''Cloudy'', ''windy-variant'': ''Cloudy'', ''fog'': ''Fog'', ''rainy'': ''Rain'', ''pouring'': ''Rain'', ''lightning'': ''Storm'', ''lightning-rainy'': ''Storm'', ''snowy'': ''Snow'', ''snowy-rainy'': ''Snow'', ''hail'': ''Snow''} %}{% set night_art = {''Sunny'': ''Night'', ''Partly cloudy'': ''Partly cloudy night''} %}{% set t = as_local(as_datetime(hourly[''weather.forecast_home''].forecast[3].datetime)) %}{% set a = art.get(hourly[''weather.forecast_home''].forecast[3].condition, ''Cloudy'') %}{{ night_art.get(a, a) if t.hour >= 19 or t.hour < 7 else a }}'
+  attributes:
+    time: '{{ as_local(as_datetime(hourly[''weather.forecast_home''].forecast[3].datetime)).strftime(''%-I %p'') }}'
+    day: '{% set t = as_local(as_datetime(hourly[''weather.forecast_home''].forecast[3].datetime)) %}{{ t.strftime(''%a'').upper() if t.hour == 0 else '''' }}'
+    temperature: '{{ hourly[''weather.forecast_home''].forecast[3].temperature | round(0) | int }}°'
+- name: Forecast Hour 5
+  unique_id: forecast_hour_5
+  icon: mdi:clock-outline
+  state: '{% set art = {''clear-night'': ''Night'', ''sunny'': ''Sunny'', ''partlycloudy'': ''Partly cloudy'', ''cloudy'': ''Cloudy'', ''exceptional'': ''Cloudy'', ''windy'': ''Cloudy'', ''windy-variant'': ''Cloudy'', ''fog'': ''Fog'', ''rainy'': ''Rain'', ''pouring'': ''Rain'', ''lightning'': ''Storm'', ''lightning-rainy'': ''Storm'', ''snowy'': ''Snow'', ''snowy-rainy'': ''Snow'', ''hail'': ''Snow''} %}{% set night_art = {''Sunny'': ''Night'', ''Partly cloudy'': ''Partly cloudy night''} %}{% set t = as_local(as_datetime(hourly[''weather.forecast_home''].forecast[4].datetime)) %}{% set a = art.get(hourly[''weather.forecast_home''].forecast[4].condition, ''Cloudy'') %}{{ night_art.get(a, a) if t.hour >= 19 or t.hour < 7 else a }}'
+  attributes:
+    time: '{{ as_local(as_datetime(hourly[''weather.forecast_home''].forecast[4].datetime)).strftime(''%-I %p'') }}'
+    day: '{% set t = as_local(as_datetime(hourly[''weather.forecast_home''].forecast[4].datetime)) %}{{ t.strftime(''%a'').upper() if t.hour == 0 else '''' }}'
+    temperature: '{{ hourly[''weather.forecast_home''].forecast[4].temperature | round(0) | int }}°'
+- name: Forecast Hour 6
+  unique_id: forecast_hour_6
+  icon: mdi:clock-outline
+  state: '{% set art = {''clear-night'': ''Night'', ''sunny'': ''Sunny'', ''partlycloudy'': ''Partly cloudy'', ''cloudy'': ''Cloudy'', ''exceptional'': ''Cloudy'', ''windy'': ''Cloudy'', ''windy-variant'': ''Cloudy'', ''fog'': ''Fog'', ''rainy'': ''Rain'', ''pouring'': ''Rain'', ''lightning'': ''Storm'', ''lightning-rainy'': ''Storm'', ''snowy'': ''Snow'', ''snowy-rainy'': ''Snow'', ''hail'': ''Snow''} %}{% set night_art = {''Sunny'': ''Night'', ''Partly cloudy'': ''Partly cloudy night''} %}{% set t = as_local(as_datetime(hourly[''weather.forecast_home''].forecast[5].datetime)) %}{% set a = art.get(hourly[''weather.forecast_home''].forecast[5].condition, ''Cloudy'') %}{{ night_art.get(a, a) if t.hour >= 19 or t.hour < 7 else a }}'
+  attributes:
+    time: '{{ as_local(as_datetime(hourly[''weather.forecast_home''].forecast[5].datetime)).strftime(''%-I %p'') }}'
+    day: '{% set t = as_local(as_datetime(hourly[''weather.forecast_home''].forecast[5].datetime)) %}{{ t.strftime(''%a'').upper() if t.hour == 0 else '''' }}'
+    temperature: '{{ hourly[''weather.forecast_home''].forecast[5].temperature | round(0) | int }}°'
+- name: Forecast Day 1
+  unique_id: forecast_day_1
+  icon: mdi:calendar
+  state: '{% set art = {''clear-night'': ''Night'', ''sunny'': ''Sunny'', ''partlycloudy'': ''Partly cloudy'', ''cloudy'': ''Cloudy'', ''exceptional'': ''Cloudy'', ''windy'': ''Cloudy'', ''windy-variant'': ''Cloudy'', ''fog'': ''Fog'', ''rainy'': ''Rain'', ''pouring'': ''Rain'', ''lightning'': ''Storm'', ''lightning-rainy'': ''Storm'', ''snowy'': ''Snow'', ''snowy-rainy'': ''Snow'', ''hail'': ''Snow''} %}{% set night_art = {''Sunny'': ''Night'', ''Partly cloudy'': ''Partly cloudy night''} %}{{ art.get(daily[''weather.forecast_home''].forecast[0].condition, ''Cloudy'') }}'
+  attributes:
+    day: '{% set t = as_local(as_datetime(daily[''weather.forecast_home''].forecast[0].datetime)) %}{{ ''Today'' if t.date() == now().date() else t.strftime(''%a'') }}'
+    high: '{{ daily[''weather.forecast_home''].forecast[0].temperature | round(0) | int }}°'
+    low: '{{ (daily[''weather.forecast_home''].forecast[0].templow | round(0) | int) ~ ''°'' if daily[''weather.forecast_home''].forecast[0].templow is defined else '''' }}'
+- name: Forecast Day 2
+  unique_id: forecast_day_2
+  icon: mdi:calendar
+  state: '{% set art = {''clear-night'': ''Night'', ''sunny'': ''Sunny'', ''partlycloudy'': ''Partly cloudy'', ''cloudy'': ''Cloudy'', ''exceptional'': ''Cloudy'', ''windy'': ''Cloudy'', ''windy-variant'': ''Cloudy'', ''fog'': ''Fog'', ''rainy'': ''Rain'', ''pouring'': ''Rain'', ''lightning'': ''Storm'', ''lightning-rainy'': ''Storm'', ''snowy'': ''Snow'', ''snowy-rainy'': ''Snow'', ''hail'': ''Snow''} %}{% set night_art = {''Sunny'': ''Night'', ''Partly cloudy'': ''Partly cloudy night''} %}{{ art.get(daily[''weather.forecast_home''].forecast[1].condition, ''Cloudy'') }}'
+  attributes:
+    day: '{% set t = as_local(as_datetime(daily[''weather.forecast_home''].forecast[1].datetime)) %}{{ ''Today'' if t.date() == now().date() else t.strftime(''%a'') }}'
+    high: '{{ daily[''weather.forecast_home''].forecast[1].temperature | round(0) | int }}°'
+    low: '{{ (daily[''weather.forecast_home''].forecast[1].templow | round(0) | int) ~ ''°'' if daily[''weather.forecast_home''].forecast[1].templow is defined else '''' }}'
+- name: Forecast Day 3
+  unique_id: forecast_day_3
+  icon: mdi:calendar
+  state: '{% set art = {''clear-night'': ''Night'', ''sunny'': ''Sunny'', ''partlycloudy'': ''Partly cloudy'', ''cloudy'': ''Cloudy'', ''exceptional'': ''Cloudy'', ''windy'': ''Cloudy'', ''windy-variant'': ''Cloudy'', ''fog'': ''Fog'', ''rainy'': ''Rain'', ''pouring'': ''Rain'', ''lightning'': ''Storm'', ''lightning-rainy'': ''Storm'', ''snowy'': ''Snow'', ''snowy-rainy'': ''Snow'', ''hail'': ''Snow''} %}{% set night_art = {''Sunny'': ''Night'', ''Partly cloudy'': ''Partly cloudy night''} %}{{ art.get(daily[''weather.forecast_home''].forecast[2].condition, ''Cloudy'') }}'
+  attributes:
+    day: '{% set t = as_local(as_datetime(daily[''weather.forecast_home''].forecast[2].datetime)) %}{{ ''Today'' if t.date() == now().date() else t.strftime(''%a'') }}'
+    high: '{{ daily[''weather.forecast_home''].forecast[2].temperature | round(0) | int }}°'
+    low: '{{ (daily[''weather.forecast_home''].forecast[2].templow | round(0) | int) ~ ''°'' if daily[''weather.forecast_home''].forecast[2].templow is defined else '''' }}'
+- name: Forecast Day 4
+  unique_id: forecast_day_4
+  icon: mdi:calendar
+  state: '{% set art = {''clear-night'': ''Night'', ''sunny'': ''Sunny'', ''partlycloudy'': ''Partly cloudy'', ''cloudy'': ''Cloudy'', ''exceptional'': ''Cloudy'', ''windy'': ''Cloudy'', ''windy-variant'': ''Cloudy'', ''fog'': ''Fog'', ''rainy'': ''Rain'', ''pouring'': ''Rain'', ''lightning'': ''Storm'', ''lightning-rainy'': ''Storm'', ''snowy'': ''Snow'', ''snowy-rainy'': ''Snow'', ''hail'': ''Snow''} %}{% set night_art = {''Sunny'': ''Night'', ''Partly cloudy'': ''Partly cloudy night''} %}{{ art.get(daily[''weather.forecast_home''].forecast[3].condition, ''Cloudy'') }}'
+  attributes:
+    day: '{% set t = as_local(as_datetime(daily[''weather.forecast_home''].forecast[3].datetime)) %}{{ ''Today'' if t.date() == now().date() else t.strftime(''%a'') }}'
+    high: '{{ daily[''weather.forecast_home''].forecast[3].temperature | round(0) | int }}°'
+    low: '{{ (daily[''weather.forecast_home''].forecast[3].templow | round(0) | int) ~ ''°'' if daily[''weather.forecast_home''].forecast[3].templow is defined else '''' }}'
+- name: Forecast Day 5
+  unique_id: forecast_day_5
+  icon: mdi:calendar
+  state: '{% set art = {''clear-night'': ''Night'', ''sunny'': ''Sunny'', ''partlycloudy'': ''Partly cloudy'', ''cloudy'': ''Cloudy'', ''exceptional'': ''Cloudy'', ''windy'': ''Cloudy'', ''windy-variant'': ''Cloudy'', ''fog'': ''Fog'', ''rainy'': ''Rain'', ''pouring'': ''Rain'', ''lightning'': ''Storm'', ''lightning-rainy'': ''Storm'', ''snowy'': ''Snow'', ''snowy-rainy'': ''Snow'', ''hail'': ''Snow''} %}{% set night_art = {''Sunny'': ''Night'', ''Partly cloudy'': ''Partly cloudy night''} %}{{ art.get(daily[''weather.forecast_home''].forecast[4].condition, ''Cloudy'') }}'
+  attributes:
+    day: '{% set t = as_local(as_datetime(daily[''weather.forecast_home''].forecast[4].datetime)) %}{{ ''Today'' if t.date() == now().date() else t.strftime(''%a'') }}'
+    high: '{{ daily[''weather.forecast_home''].forecast[4].temperature | round(0) | int }}°'
+    low: '{{ (daily[''weather.forecast_home''].forecast[4].templow | round(0) | int) ~ ''°'' if daily[''weather.forecast_home''].forecast[4].templow is defined else '''' }}'
