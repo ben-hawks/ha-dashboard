@@ -18,7 +18,7 @@ It's meant to be easy for anyone in the house, not just whoever set it up.
 | **Floor Plan** | 3D model of both floors (NeonPlan 3D): rooms light up with their lights, tap a room for its devices, smoke/CO alerts on the plan. A flat 2D version is kept as a fallback |
 | **Rooms** | Every light and speaker, grouped by room |
 | **Climate** | Thermostat, hallway temperature/humidity, Airthings air quality |
-| **Outdoors** | Forecast, Ecowitt weather station and soil sensors (fill in automatically), chicken coop, shed power station |
+| **Outdoors** | Forecast, a card per garden bed (plant illustration, moisture with Dry/Good/Wet, soil temperature, EC, 3-day moisture graph), Ecowitt weather station once connected, chicken coop, shed power station |
 | **Safety** | Smoke/CO status per room, alarm hub; "Silence all alarms" appears only while one is going off |
 | **Devices** | Alerts, low batteries, offline devices, vacuum parts, cats, litter box and water fountain, backup power, shopping list, light/dark setting |
 
@@ -43,6 +43,7 @@ packages/wall_tablet.yaml    light groups, helpers, alert sensors, theme + hallw
 themes/wall_tablet.yaml      dark + light theme
 tools/entity_export.jinja    lists your entities (paste into Developer Tools → Template)
 tools/floorplan.py           traced house layout → 2D Floor Plan tab + NeonPlan 3D import file
+tools/garden.py              garden bed cards + their helper sensors (packages/garden_template.yaml)
 ```
 
 ## Requirements
