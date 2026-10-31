@@ -14,8 +14,8 @@ open it live, full screen.
 
 **Coop scene.** The coop (soft green, darker green trim) and run, with the sky
 following the weather station: sun, drifting clouds, falling rain or snow,
-the moon and twinkling stars at night. By day all nine hens are out in the
-yard, each in her breed's colours and labelled. After sunset they're
+the moon and twinkling stars at night. By day all nine hens are in the run,
+each in her breed's colours, pecking and pottering. After sunset they're
 silhouettes in the windows, with sleepy z's. The windows glow in the Coop
 Light's colour and brightness.
 

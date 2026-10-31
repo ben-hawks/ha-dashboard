@@ -11,7 +11,7 @@ Writes:
 
 The scene is layered images that Home Assistant swaps by state:
   sky       sensor.coop_sky     weather-station sky, day or night
-  hens      sun.sun             out in the yard by day, in the windows at night
+  hens      sun.sun             in the run by day, in the windows at night
   glow      sensor.coop_glow    the Coop Light's colour and brightness
   weather   sensor.coop_sky     falling rain or snow in front
 Animations are CSS inside the SVG pictures: a few small transforms, light
@@ -60,7 +60,7 @@ FLOCK = [
                       muffs=True)),
     ("Boudica", dict(body="#efefef", hackle="#e2e2e2", tail="#1b1b1b", wing="#e8e8e8",
                      pattern="lace", pattern_color="#1b1b1b", comb="rose")),
-    ("Theodora", dict(body="#6b7690", hackle="#c06a2b", tail="#4f5872", wing="#646f89",
+    ("Theodora", dict(body="#6b7690", hackle="#737d94", tail="#4f5872", wing="#646f89",
                       feathered=True)),
 ]
 
@@ -264,9 +264,18 @@ def coop_and_run():
     return svg(inner)
 
 
-# Out in the yard in front of the run, one row, names alternating below and
-# above so they never overlap.
-HEN_ROW_Y, HEN_GAP, HEN_SCALE = 232, 44, 0.86
+# Inside the run: a back row of five and a front row of four, staggered.
+# Feet y is in scene units (the run's bottom rail is at 208).
+HEN_POS = [(38, 188), (84, 188), (130, 188), (176, 188), (222, 188),
+           (61, 203), (107, 203), (153, 203), (199, 203)]
+HEN_SCALE = 0.72
+
+
+def run_front():
+    """The run's posts and bottom rail, drawn over the hens so they're inside."""
+    posts = "".join(f'<rect x="{x - 2.5}" y="{150 + DY}" width="5" height="{46}" rx="1" fill="{POST}"/>'
+                    for x in (20, 78, 136, 194, 248))
+    return svg(f'{posts}<rect x="18" y="{190 + DY}" width="232" height="5" rx="1" fill="{POST}"/>')
 
 HEN_ANIM = """
 .h{transform-box:fill-box;transform-origin:50% 100%}
@@ -287,19 +296,16 @@ stroke-width:2.4px;stroke-linejoin:round;text-anchor:middle}
 def hens_day():
     out = []
     rng = random.Random(7)
-    x0 = (W - HEN_GAP * (len(FLOCK) - 1)) / 2
-    for i, (name, p) in enumerate(FLOCK):
-        x, y, s = x0 + i * HEN_GAP, HEN_ROW_Y, HEN_SCALE
+    # Back row first so the front row overlaps it.
+    for i, ((name, p), (x, y)) in enumerate(zip(FLOCK, HEN_POS)):
+        s = HEN_SCALE * (1.0 if y > 195 else 0.94)
         flip = i % 3 == 1
         anim = ["peck", "bob", "peck"][i % 3]
         delay = round(rng.uniform(0, 4), 1)
-        body = hen(f"h{i}", p)
-        g = f'<g transform="scale({-s if flip else s} {s})">{body}</g>'
-        label_y = 11 if i % 2 == 0 else -36 * s - 5
-        out.append(f'<g transform="translate({x:.0f} {y})">'
+        g = f'<g transform="scale({-s if flip else s:.2f} {s:.2f})">{hen(f"h{i}", p)}</g>'
+        out.append(f'<g transform="translate({x} {y})">'
                    f'<g class="stroll" style="animation-delay:{-delay * 3}s">'
-                   f'<g class="h {anim}" style="animation-delay:{delay}s">{g}</g></g>'
-                   f'<text class="name" x="0" y="{label_y:.0f}">{name}</text></g>')
+                   f'<g class="h {anim}" style="animation-delay:{delay}s">{g}</g></g></g>')
     return svg("".join(out), style=HEN_ANIM)
 
 
@@ -509,6 +515,8 @@ def scene_card():
              "state_image": {"above_horizon": data_uri(hens_day()),
                              "below_horizon": data_uri(hens_night())},
              "tap_action": {"action": "none"}, "style": full},
+            {"type": "image", "image": data_uri(run_front()), "tap_action": {"action": "none"},
+             "style": full},
             {"type": "image", "entity": "sensor.coop_sky", "image": data_uri(svg("")),
              "state_image": precip, "tap_action": {"action": "none"}, "style": full},
         ],
