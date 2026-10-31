@@ -186,15 +186,26 @@ Add it under each camera in `config/config.yml`, e.g.:
 
 The model built into Frigate gets things going, but it misses a lot: given
 a photo of eight birds perched together, it found three. YOLOv9 is better
-at small and bunched-up birds. On the server, in the `frigate/` folder:
+at small and bunched-up birds.
+
+`frigate/export-yolov9.sh` builds it. It only needs `docker run`, so it
+works in the TrueNAS shell (**System → Shell**). Copy the script anywhere on
+the server, e.g. next to the config folder, and point `CONFIG_PATH` at the
+folder holding Frigate's `config.yml`, the same folder as in the Portainer
+stack:
 
 ```bash
-./export-yolov9.sh
+sudo CONFIG_PATH=/mnt/tank/apps/frigate/config bash export-yolov9.sh
 ```
 
-That builds `yolov9-s` at 320×320 into `config/model_cache/yolo.onnx` (a
-few minutes, once). Then replace the `model:` block in `config/config.yml`
-with:
+(With the docker compose command, run it from the `frigate/` folder without
+`CONFIG_PATH`; it uses `config/` there.)
+
+That builds `yolov9-s` at 320×320 into `model_cache/yolo.onnx` inside the
+config folder. It takes 5–15 minutes, once, and a few GB of Docker space
+while it runs. Afterwards only the `python:3.11` image is left, which
+`sudo docker image rm python:3.11` removes. Then replace the `model:` block
+in `config.yml` with:
 
 ```yaml
 model:
@@ -211,7 +222,7 @@ model:
 docker compose restart frigate
 ```
 
-The Arc can manage a bigger model: `./export-yolov9.sh c 320`, keeping an
+The Arc can manage a bigger model: add `c 320` to the end of the command, keeping an
 eye on **System metrics** for skipped detections. 320 is Frigate's
 recommended size, because Frigate already zooms in on wherever there's
 motion before it looks.
