@@ -1,1 +1,4 @@
 __pycache__/
+chicken_test/
+*.pt
+*_openvino_model/
