@@ -1,0 +1,294 @@
+# Coop exhaust fan: ESP32-WROOM-32E 4-relay board + DHT22.
+#
+# The fan decides for itself, on the board, so it keeps working if Wi-Fi or
+# Home Assistant is down:
+#   - Too hot:   runs at "Cool down above" (default 85 °F) and stops 3 °F below.
+#   - Too damp:  runs at "Dry out above" (default 70 %) and stops 5 % below.
+#                Damp air in a cold coop is what causes frostbite on combs.
+#   - Too cold:  it won't run for dampness below "Don't vent below" (default
+#                15 °F), so it doesn't pull freezing drafts over the hens.
+#   - Sensor problem: it falls back to the last good temperature: on if that
+#                was hot, otherwise off. "Sensor problem" turns on in HA.
+#
+# Home Assistant gets temperature, humidity, the fan, why it's on or off
+# ("Fan status"), a mode (Auto / On / Off) and the thresholds. Switching the
+# fan by hand puts it in On or Off mode; after "Manual mode lasts" hours
+# (default 4, 0 = until changed) it goes back to Auto.
+#
+# Wiring
+#   Relay 1 (GPIO32)  exhaust fan: fan + to NO1, supply + to COM1, both minus
+#                     wires straight together. Relays 2-4 (GPIO33, 25, 26)
+#                     are spare and hidden in HA until enabled.
+#   DHT22             + to 3V3, - to GND, data to GPIO27 on the pin header,
+#                     with a 10 kΩ resistor from data to 3V3 (bare DHT22s
+#                     need it; the 3-pin modules have one already).
+#   Power             The 7-30V input can share the fan's 12 V or 24 V supply.
+#                     Use either that or N/L mains, not both.
+#
+# Secrets (in ESPHome's secrets.yaml): wifi_ssid, wifi_password,
+# coop_fan_api_key (32 random bytes, base64; the ESPHome "New device" wizard
+# makes one) and coop_fan_ota_password.
+
+substitutions:
+  name: coop-fan
+  friendly_name: Coop Fan
+  hot_hysteresis_f: "3"
+  damp_hysteresis_pct: "5"
+
+esphome:
+  name: ${name}
+  friendly_name: ${friendly_name}
+  on_boot:
+    priority: -100
+    then:
+      - script.execute: evaluate
+
+esp32:
+  board: esp32dev
+  framework:
+    type: esp-idf
+
+logger:
+
+api:
+  encryption:
+    key: !secret coop_fan_api_key
+
+ota:
+  - platform: esphome
+    password: !secret coop_fan_ota_password
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  # If it can't join Wi-Fi it makes its own network for setup.
+  ap:
+    ssid: Coop Fan Setup
+
+captive_portal:
+
+globals:
+  # When the mode last left Auto, for "Manual mode lasts".
+  - id: manual_since
+    type: uint32_t
+    initial_value: "0"
+  # Last good temperature in °F, for when the sensor drops out.
+  - id: last_good_f
+    type: float
+    initial_value: "NAN"
+
+# ---------------------------------------------------------------------------
+# Relays
+# ---------------------------------------------------------------------------
+switch:
+  - platform: gpio
+    id: fan_relay
+    pin: GPIO32
+    internal: true
+    restore_mode: ALWAYS_OFF
+
+  # The fan as Home Assistant sees it. Flipping it switches to On/Off mode.
+  - platform: template
+    name: Exhaust fan
+    icon: mdi:fan
+    lambda: return id(fan_relay).state;
+    turn_on_action:
+      - select.set:
+          id: fan_mode
+          option: "On"
+    turn_off_action:
+      - select.set:
+          id: fan_mode
+          option: "Off"
+
+  - platform: gpio
+    name: Relay 2
+    pin: GPIO33
+    restore_mode: ALWAYS_OFF
+    disabled_by_default: true
+  - platform: gpio
+    name: Relay 3
+    pin: GPIO25
+    restore_mode: ALWAYS_OFF
+    disabled_by_default: true
+  - platform: gpio
+    name: Relay 4
+    pin: GPIO26
+    restore_mode: ALWAYS_OFF
+    disabled_by_default: true
+
+# ---------------------------------------------------------------------------
+# Sensors
+# ---------------------------------------------------------------------------
+sensor:
+  - platform: dht
+    pin: GPIO27
+    model: DHT22
+    update_interval: 30s
+    temperature:
+      id: coop_temp
+      name: Temperature
+      on_value:
+        - script.execute: evaluate
+    humidity:
+      id: coop_humidity
+      name: Humidity
+      on_value:
+        - script.execute: evaluate
+
+  - platform: wifi_signal
+    name: Wi-Fi signal
+    update_interval: 60s
+  - platform: uptime
+    name: Uptime
+
+binary_sensor:
+  - platform: template
+    name: Sensor problem
+    device_class: problem
+    lambda: return isnan(id(coop_temp).state) || isnan(id(coop_humidity).state);
+
+text_sensor:
+  - platform: template
+    id: fan_status
+    name: Fan status
+    icon: mdi:information-outline
+
+# ---------------------------------------------------------------------------
+# Settings (remembered across restarts)
+# ---------------------------------------------------------------------------
+select:
+  - platform: template
+    id: fan_mode
+    name: Fan mode
+    icon: mdi:fan-auto
+    options: ["Auto", "On", "Off"]
+    initial_option: "Auto"
+    optimistic: true
+    restore_value: true
+    on_value:
+      - lambda: |-
+          if (i != 0) id(manual_since) = millis();
+      - script.execute: evaluate
+
+number:
+  - platform: template
+    id: hot_on
+    name: Cool down above
+    icon: mdi:thermometer-high
+    entity_category: config
+    unit_of_measurement: "°F"
+    min_value: 60
+    max_value: 100
+    step: 1
+    initial_value: 85
+    optimistic: true
+    restore_value: true
+    on_value:
+      - script.execute: evaluate
+  - platform: template
+    id: damp_on
+    name: Dry out above
+    icon: mdi:water-percent
+    entity_category: config
+    unit_of_measurement: "%"
+    min_value: 40
+    max_value: 95
+    step: 1
+    initial_value: 70
+    optimistic: true
+    restore_value: true
+    on_value:
+      - script.execute: evaluate
+  - platform: template
+    id: min_vent
+    name: Don't vent below
+    icon: mdi:snowflake-thermometer
+    entity_category: config
+    unit_of_measurement: "°F"
+    min_value: -20
+    max_value: 50
+    step: 1
+    initial_value: 15
+    optimistic: true
+    restore_value: true
+    on_value:
+      - script.execute: evaluate
+  - platform: template
+    id: manual_hours
+    name: Manual mode lasts
+    icon: mdi:timer-outline
+    entity_category: config
+    unit_of_measurement: h
+    min_value: 0
+    max_value: 24
+    step: 1
+    initial_value: 4
+    optimistic: true
+    restore_value: true
+
+# Re-check every 30 s too, for "Manual mode lasts".
+interval:
+  - interval: 30s
+    then:
+      - script.execute: evaluate
+
+# ---------------------------------------------------------------------------
+# The fan logic
+# ---------------------------------------------------------------------------
+script:
+  - id: evaluate
+    mode: queued
+    max_runs: 3
+    then:
+      - lambda: |-
+          auto idx = id(fan_mode).active_index();
+          size_t mode = idx.has_value() ? *idx : 0;   // 0 Auto, 1 On, 2 Off
+
+          // Manual mode times out back to Auto.
+          float hours = id(manual_hours).state;
+          if (mode != 0 && hours > 0 &&
+              millis() - id(manual_since) > (uint32_t) (hours * 3600000.0f)) {
+            auto call = id(fan_mode).make_call();
+            call.set_option("Auto");
+            call.perform();   // runs this script again, in Auto
+            return;
+          }
+
+          bool on = id(fan_relay).state;
+          bool want;
+          std::string why;
+          float c = id(coop_temp).state;
+          float rh = id(coop_humidity).state;
+
+          if (mode == 1) {
+            want = true;
+            why = "On (manual)";
+          } else if (mode == 2) {
+            want = false;
+            why = "Off (manual)";
+          } else if (isnan(c) || isnan(rh)) {
+            // No reading: run only if it was hot when we last knew.
+            float f = id(last_good_f);
+            want = !isnan(f) && f >= id(hot_on).state - ${hot_hysteresis_f};
+            why = want ? "On (sensor problem, was hot)" : "Off (sensor problem)";
+          } else {
+            float f = c * 1.8f + 32.0f;
+            id(last_good_f) = f;
+            bool hot = on ? f > id(hot_on).state - ${hot_hysteresis_f}
+                          : f >= id(hot_on).state;
+            bool too_cold = f < id(min_vent).state;
+            bool damp = on ? rh > id(damp_on).state - ${damp_hysteresis_pct}
+                           : rh >= id(damp_on).state;
+            want = hot || (damp && !too_cold);
+            if (hot) why = "On (too hot)";
+            else if (want) why = "On (drying out)";
+            else if (damp) why = "Off (damp, but too cold to vent)";
+            else why = "Off (comfortable)";
+          }
+
+          if (want != on) {
+            if (want) id(fan_relay).turn_on();
+            else id(fan_relay).turn_off();
+          }
+          if (id(fan_status).state != why) id(fan_status).publish_state(why);
