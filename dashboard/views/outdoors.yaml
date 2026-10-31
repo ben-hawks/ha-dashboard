@@ -87,3 +87,12 @@ sections:
                     entity: switch.el30v22533005590342_dc
                     name: DC outlets
                     icon: mdi:usb-port
+              # Solar coming in, with the last 24 hours behind it
+              # (sensor.shed_solar_power finds the Bluetti's input sensor).
+              - type: tile
+                entity: sensor.shed_solar_power
+                name: Solar input
+                color: amber
+                features:
+                  - type: trend-graph
+                    hours_to_show: 24

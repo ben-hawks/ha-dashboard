@@ -331,6 +331,40 @@ template:
              | selectattr('state', 'eq', 'on')
              | list | count }}
 
+      # The shed power station's solar input, whatever the Bluetti
+      # integration calls it (pv/solar input power, else DC input power).
+      # The "source" attribute shows which entity it found.
+      - name: Shed Solar Power
+        unique_id: shed_solar_power
+        icon: mdi:solar-power-variant
+        unit_of_measurement: W
+        device_class: power
+        state_class: measurement
+        availability: >-
+          {%- set ids = states.sensor | map(attribute='entity_id')
+                | select('search', '^sensor\\.el30v') | list %}
+          {{ ids | select('search', '(solar|pv|photovoltaic|dc_input)')
+             | reject('search', 'energy|voltage|current|today|total')
+             | select('has_value') | list | count > 0 }}
+        state: >-
+          {%- set ids = states.sensor | map(attribute='entity_id')
+                | select('search', '^sensor\\.el30v') | list %}
+          {%- set solar = ids | select('search', '(solar|pv|photovoltaic)') | list %}
+          {%- set dc_in = ids | select('search', 'dc_input') | list %}
+          {%- set found = (solar + dc_in)
+                | reject('search', 'energy|voltage|current|today|total')
+                | select('has_value') | list %}
+          {{ states(found | first) | float(0) }}
+        attributes:
+          source: >-
+            {%- set ids = states.sensor | map(attribute='entity_id')
+                  | select('search', '^sensor\\.el30v') | list %}
+            {%- set solar = ids | select('search', '(solar|pv|photovoltaic)') | list %}
+            {%- set dc_in = ids | select('search', 'dc_input') | list %}
+            {{ (solar + dc_in)
+               | reject('search', 'energy|voltage|current|today|total')
+               | select('has_value') | first | default('') }}
+
       # Battery sensors below 20%. Phones and power stations are left out
       # by name; tag anything else with the "Hide from tablet" label in
       # Home Assistant to leave it out too.
