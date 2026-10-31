@@ -196,18 +196,27 @@ cards:
         white-space: nowrap
         font-size: 14px
         font-weight: '500'
-  - type: vertical-stack
-    cards:
-    - type: weather-forecast
-      entity: weather.forecast_home
-      show_current: false
-      show_forecast: true
-      forecast_type: hourly
-    - type: weather-forecast
-      entity: weather.forecast_home
-      show_current: false
-      show_forecast: true
-      forecast_type: daily
+  - type: markdown
+    content: '{%- set icons = {''clear-night'': ''weather-night'', ''cloudy'': ''weather-cloudy'', ''exceptional'': ''alert-circle-outline'', ''fog'': ''weather-fog'', ''hail'': ''weather-hail'', ''lightning'': ''weather-lightning'', ''lightning-rainy'': ''weather-lightning-rainy'', ''partlycloudy'': ''weather-partly-cloudy'', ''pouring'': ''weather-pouring'', ''rainy'': ''weather-rainy'', ''snowy'': ''weather-snowy'', ''snowy-rainy'': ''weather-snowy-rainy'', ''sunny'': ''weather-sunny'', ''windy'': ''weather-windy'', ''windy-variant'': ''weather-windy-variant''} %}{%- macro icon(c, night) -%}{%- set i = icons.get(c, ''weather-cloudy'') -%}{%- if night and c == ''partlycloudy'' %}{% set i = ''weather-night-partly-cloudy'' %}{% endif -%}<ha-icon icon="mdi:{{ i }}"></ha-icon>{%- endmacro %}{%- set hourly = (state_attr(''sensor.forecast_hourly'', ''forecast'') or [])[:6] %}{%- set daily = (state_attr(''sensor.forecast_daily'', ''forecast'') or [])[:5] %}{%- set h = namespace(days='''', sep='''', times='''', icons='''', temps='''') %}{%- for f in hourly %}{%- set t = as_local(as_datetime(f.datetime)) %}{%- set h.days = h.days ~ ''| '' ~ (t.strftime(''%a'') if loop.first or t.hour == 0 else '''') ~ '' '' %}{%- set h.sep = h.sep ~ ''|:-:'' %}{%- set h.times = h.times ~ ''| '' ~ t.strftime(''%-I %p'') ~ '' '' %}{%- set h.icons = h.icons ~ ''| '' ~ icon(f.condition, t.hour >= 19 or t.hour < 7) ~ '' '' %}{%- set h.temps = h.temps ~ ''| '' ~ f.temperature | round(0) | int ~ ''° '' %}{%- endfor %}{%- set d = namespace(days='''', sep='''', icons='''', highs='''', lows='''') %}{%- for f in daily %}{%- set t = as_local(as_datetime(f.datetime)) %}{%- set d.days = d.days ~ ''| '' ~ (''Today'' if t.date() == now().date() else t.strftime(''%a'')) ~ '' '' %}{%- set d.sep = d.sep ~ ''|:-:'' %}{%- set d.icons = d.icons ~ ''| '' ~ icon(f.condition, false) ~ '' '' %}{%- set d.highs = d.highs ~ ''| **'' ~ f.temperature | round(0) | int ~ ''°** '' %}{%- set d.lows = d.lows ~ ''| '' ~ (f.templow | round(0) | int ~ ''°'' if f.templow is defined else '''') ~ '' '' %}{%- endfor %}{%- if not hourly %}Forecast loading…{% else %}{{ h.days }}|
+
+      {{ h.sep }}|
+
+      {{ h.times }}|
+
+      {{ h.icons }}|
+
+      {{ h.temps }}|
+
+
+      {{ d.days }}|
+
+      {{ d.sep }}|
+
+      {{ d.icons }}|
+
+      {{ d.highs }}|
+
+      {{ d.lows }}|{% endif %}'
   - type: grid
     columns: 2
     square: false

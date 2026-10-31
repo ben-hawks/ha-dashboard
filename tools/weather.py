@@ -330,12 +330,57 @@ def trend_tile(key, name, hours=24):
             "features": [{"type": "trend-graph", "hours_to_show": hours}]}
 
 
+# Met.no condition → Material Design icon (night variants where it matters).
+CONDITION_ICONS = {
+    "clear-night": "weather-night", "cloudy": "weather-cloudy", "exceptional": "alert-circle-outline",
+    "fog": "weather-fog", "hail": "weather-hail", "lightning": "weather-lightning",
+    "lightning-rainy": "weather-lightning-rainy", "partlycloudy": "weather-partly-cloudy",
+    "pouring": "weather-pouring", "rainy": "weather-rainy", "snowy": "weather-snowy",
+    "snowy-rainy": "weather-snowy-rainy", "sunny": "weather-sunny", "windy": "weather-windy",
+    "windy-variant": "weather-windy-variant",
+}
+HOURS_SHOWN, DAYS_SHOWN = 6, 5
+
+# A compact forecast as Markdown tables. Hourly: the day's name sits in a
+# header row above its first hour, so a new day doesn't take up a column.
+FORECAST_MARKDOWN = (
+    f"{{%- set icons = {CONDITION_ICONS} %}}"
+    "{%- macro icon(c, night) -%}"
+    "{%- set i = icons.get(c, 'weather-cloudy') -%}"
+    "{%- if night and c == 'partlycloudy' %}{% set i = 'weather-night-partly-cloudy' %}{% endif -%}"
+    '<ha-icon icon="mdi:{{ i }}"></ha-icon>'
+    "{%- endmacro %}"
+    f"{{%- set hourly = (state_attr('sensor.forecast_hourly', 'forecast') or [])[:{HOURS_SHOWN}] %}}"
+    f"{{%- set daily = (state_attr('sensor.forecast_daily', 'forecast') or [])[:{DAYS_SHOWN}] %}}"
+    "{%- set h = namespace(days='', sep='', times='', icons='', temps='') %}"
+    "{%- for f in hourly %}"
+    "{%- set t = as_local(as_datetime(f.datetime)) %}"
+    "{%- set h.days = h.days ~ '| ' ~ (t.strftime('%a') if loop.first or t.hour == 0 else '') ~ ' ' %}"
+    "{%- set h.sep = h.sep ~ '|:-:' %}"
+    "{%- set h.times = h.times ~ '| ' ~ t.strftime('%-I %p') ~ ' ' %}"
+    "{%- set h.icons = h.icons ~ '| ' ~ icon(f.condition, t.hour >= 19 or t.hour < 7) ~ ' ' %}"
+    "{%- set h.temps = h.temps ~ '| ' ~ f.temperature | round(0) | int ~ '° ' %}"
+    "{%- endfor %}"
+    "{%- set d = namespace(days='', sep='', icons='', highs='', lows='') %}"
+    "{%- for f in daily %}"
+    "{%- set t = as_local(as_datetime(f.datetime)) %}"
+    "{%- set d.days = d.days ~ '| ' ~ ('Today' if t.date() == now().date() else t.strftime('%a')) ~ ' ' %}"
+    "{%- set d.sep = d.sep ~ '|:-:' %}"
+    "{%- set d.icons = d.icons ~ '| ' ~ icon(f.condition, false) ~ ' ' %}"
+    "{%- set d.highs = d.highs ~ '| **' ~ f.temperature | round(0) | int ~ '°** ' %}"
+    "{%- set d.lows = d.lows ~ '| ' ~ (f.templow | round(0) | int ~ '°' if f.templow is defined else '') ~ ' ' %}"
+    "{%- endfor %}"
+    "{%- if not hourly %}Forecast loading…{% else %}"
+    "{{ h.days }}|\n{{ h.sep }}|\n{{ h.times }}|\n{{ h.icons }}|\n{{ h.temps }}|\n\n"
+    "{{ d.days }}|\n{{ d.sep }}|\n{{ d.icons }}|\n{{ d.highs }}|\n{{ d.lows }}|"
+    "{% endif %}"
+)
+
+
 def section():
     """The Weather band across the top of Outdoors: station card | forecast |
     24 h graphs. A grid card keeps the three columns even (grid_options widths
     in a multi-column section are counted out of 36, not 12)."""
-    forecast = {"type": "weather-forecast", "entity": "weather.forecast_home",
-                "show_current": False, "show_forecast": True}
     return {
         "type": "grid",
         "column_span": 3,
@@ -346,10 +391,7 @@ def section():
              "grid_options": {"columns": "full"},
              "cards": [
                  {k: v for k, v in hero_card().items() if k != "grid_options"},
-                 {"type": "vertical-stack", "cards": [
-                     {**forecast, "forecast_type": "hourly"},
-                     {**forecast, "forecast_type": "daily"},
-                 ]},
+                 {"type": "markdown", "content": FORECAST_MARKDOWN},
                  {"type": "grid", "columns": 2, "square": False, "cards": [
                      trend_tile("temperature", "Temperature"),
                      trend_tile("wind_speed", "Wind"),
@@ -424,6 +466,30 @@ def templates():
     return {"sensor": sensors}
 
 
+def forecast_templates():
+    """Trigger-based sensors holding Met.no's hourly and daily forecasts (the
+    weather entity doesn't expose them as attributes any more)."""
+    return [{
+        "triggers": [
+            {"trigger": "time_pattern", "minutes": "/30"},
+            {"trigger": "homeassistant", "event": "start"},
+            {"trigger": "event", "event_type": "event_template_reloaded"},
+        ],
+        "actions": [
+            {"action": "weather.get_forecasts", "target": {"entity_id": "weather.forecast_home"},
+             "data": {"type": kind}, "response_variable": kind}
+            for kind in ("hourly", "daily")
+        ],
+        "sensor": [
+            {"name": f"Forecast {kind.title()}", "unique_id": f"forecast_{kind}",
+             "icon": "mdi:weather-partly-cloudy", "device_class": "timestamp",
+             "state": "{{ now().isoformat() }}",
+             "attributes": {"forecast": f"{{{{ {kind}['weather.forecast_home'].forecast[:12] }}}}"}}
+            for kind in ("hourly", "daily")
+        ],
+    }]
+
+
 def write(path, header, data):
     (ROOT / path).parent.mkdir(exist_ok=True)
     text = yaml.dump(data, Dumper=yaml.SafeDumper, sort_keys=False, width=10_000,
@@ -436,7 +502,9 @@ def main():
               "# file by hand.\n")
     write("dashboard/views/weather_station_section.yaml", header, section())
     write("templates/weather_station.yaml", header, templates())
-    print("wrote dashboard/views/weather_station_section.yaml and templates/weather_station.yaml")
+    write("templates/forecast.yaml", header, forecast_templates()[0])
+    print("wrote dashboard/views/weather_station_section.yaml, templates/weather_station.yaml "
+          "and templates/forecast.yaml")
 
 
 if __name__ == "__main__":

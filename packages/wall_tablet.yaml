@@ -264,6 +264,8 @@ template:
   # tools/weather.py. Kept outside packages/ so they aren't mistaken for a
   # package if the folder is loaded with !include_dir_named.
   - !include ../templates/weather_station.yaml
+  # Hourly and daily forecasts for the Outdoors forecast table (tools/weather.py).
+  - !include ../templates/forecast.yaml
   - sensor:
       - name: Lights On
         unique_id: wall_tablet_lights_on
