@@ -320,7 +320,6 @@ def card_for(bed):
     })
     return {
         "type": "vertical-stack",
-        "grid_options": {"columns": 3},
         "cards": [
             {"type": "picture-elements", "image": data_uri(BLANK_SVG), "elements": elements},
             {"type": "tile", "entity": moisture, "name": "Moisture, last 3 days",
@@ -331,11 +330,18 @@ def card_for(bed):
 
 
 def section():
+    # The beds sit in a grid card that always splits evenly, up to four per
+    # row. (Sizing them with grid_options doesn't work here: in a section
+    # spanning 3 columns, Home Assistant counts card widths out of 36, not 12.)
     return {
         "type": "grid",
         "column_span": 3,
-        "cards": [{"type": "heading", "heading": "Garden", "icon": "mdi:sprout"}]
-                 + [card_for(b) for b in BEDS],
+        "cards": [
+            {"type": "heading", "heading": "Garden", "icon": "mdi:sprout"},
+            {"type": "grid", "columns": min(len(BEDS), 4), "square": False,
+             "grid_options": {"columns": "full"},
+             "cards": [card_for(b) for b in BEDS]},
+        ],
     }
 
 
