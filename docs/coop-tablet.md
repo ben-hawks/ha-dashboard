@@ -1,23 +1,39 @@
 # Chicken Command Center (coop tablet)
 
-A one-screen dashboard at `/chicken-coop/coop`: three live coop cameras and a
-panel of controls and sensors in a 2×2 grid. Feeds are 16:9 and each takes a
-quarter of the screen (about 640×360 on a 1280×800 tablet).
-A single stacked column of three would only fit about 505×284 per feed.
+A one-screen dashboard at `/chicken-coop/coop`, sized for a 1280×800 tablet.
 
-## What's on it
+| Where | What |
+|-------|------|
+| Left, top | Coop Cam 1 and Coop Cam 2 side by side |
+| Left, bottom | Chicken Run, wide |
+| Right column | The animated coop scene, chicken comfort, controls, coop graphs |
 
-| Quadrant | Content |
-|----------|---------|
-| Top left | Coop Cam 1 (still, refreshed every 10 s), motion icon |
-| Top right | Coop Cam 2 (live at night, still by day), motion icon |
-| Bottom left | Chicken Run (live by day, still at night), motion icon |
-| Bottom right | Outside temperature, then every light, switch, door (cover) and lock in the **Chicken Coop** area, then its temperature and humidity sensors |
+Only one feed plays live video at a time (Chicken Run by day, Coop Cam 2 at
+night); the others are stills that refresh every 10 seconds. Tap any feed to
+open it live, full screen.
 
-Only one feed plays live video at a time, so the tablet decodes a single
-stream. Tap any feed to open it live, full screen. The controls and sensors fill themselves
-in from the area, so when the automatic door or heat lamp is added, put it in
-the **Chicken Coop** area and it appears.
+**Coop scene.** The coop (soft green, darker green trim) and run, with the sky
+following the weather station: sun, drifting clouds, falling rain or snow,
+the moon and twinkling stars at night. By day all nine hens are out in the
+yard, each in her breed's colours and labelled. After sunset they're
+silhouettes in the windows, with sleepy z's. The windows glow in the Coop
+Light's colour and brightness.
+
+**Chicken comfort.** A cartoon hen who's content, fluffed up in a scarf,
+shivering, or panting, with a plain-language status, a tip and a meter from
+0 °F to 100 °F. By day it uses the station's feels-like temperature (wind
+chill and heat index included); at night the sensor inside the coop (with
+a heat index when it's hot), falling back to the station if that sensor is
+offline. Levels: Very cold < 10 °F, Chilly < 32 °F, Comfy up to 75 °F, Warm
+up to 85 °F, Hot up to 95 °F, then Heat danger. A cold, damp coop (humidity
+80% or more below 40 °F) gets a ventilation warning.
+
+**Controls and graphs.** Every light, switch, door and lock in the Chicken
+Coop area, so the automatic door appears once it's in that area; coop
+temperature (with the outside temperature as a faint line) and humidity.
+
+To change the flock, colours or comfort levels, edit `tools/coop.py` and run
+`python3 tools/coop.py`.
 
 ## Home Assistant side
 

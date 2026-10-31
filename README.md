@@ -46,6 +46,7 @@ tools/entity_export.jinja    lists your entities (paste into Developer Tools →
 tools/floorplan.py           traced house layout → 2D Floor Plan tab + NeonPlan 3D import file
 tools/garden.py              garden bed cards + their package (plant dropdowns, helper sensors)
 tools/weather.py             weather station card + its helper sensors (templates/weather_station.yaml)
+tools/coop.py                coop screen's animated scene, chicken comfort + helpers (templates/coop.yaml)
 ```
 
 ## Requirements

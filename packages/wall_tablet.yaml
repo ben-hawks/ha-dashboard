@@ -266,6 +266,8 @@ template:
   - !include ../templates/weather_station.yaml
   # Hourly and daily forecasts for the Outdoors forecast table (tools/weather.py).
   - !include ../templates/forecast.yaml
+  # Coop helpers: coop temperature/humidity, chicken comfort, scene sky and glow (tools/coop.py).
+  - !include ../templates/coop.yaml
   - sensor:
       - name: Lights On
         unique_id: wall_tablet_lights_on
