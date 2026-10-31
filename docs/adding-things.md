@@ -15,9 +15,15 @@ themes/wall_tablet.yaml        colours
   picture to choose what's planted (Seedling, Lettuce, Tomato, Pepper,
   Carrot, Herbs, Cucumber, Strawberry, Blueberry, Raspberry, Sunflower,
   Flowers, Succulent); the picture and the Dry/Wet levels follow. Tap the
-  bed's title to rename it. A dry bed shows in the Home alert banner ("Tomatoes
-  needs water"); a probe reading exactly 0% is treated as not in the ground
-  and ignored. To add a probe, or add a plant type or change its levels, edit
+  bed's title to rename it. Tap the small house/sun icon in the bottom-left
+  corner to mark the bed indoors or outdoors (all start indoors). The levels
+  follow the season: indoors by day length (shorter days, drier target),
+  outdoors by the last 24 hours' average temperature (dormant when cold,
+  wetter in a heat wave). The status line shows this season's target, e.g.
+  "Good · aim 30–56%". A dry bed shows in the Home alert banner ("Tomatoes
+  needs water"), except an outdoor bed while rain is forecast within 6 hours;
+  a probe reading exactly 0% is treated as not in the ground and ignored.
+  The season settings are `SEASON` in `tools/garden.py`. To add a probe, or add a plant type or change its levels, edit
   `BEDS` / `PLANT_TYPES` in `tools/garden.py` and run
   `python3 tools/garden.py` (`--gallery out.html` previews every picture).
 - **Low batteries**: any battery sensor under 20% shows up in the alert

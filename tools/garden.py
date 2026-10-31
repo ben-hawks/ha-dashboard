@@ -15,7 +15,15 @@ Writes:
 
 The plant is chosen on the dashboard: tap a bed's picture and pick from the
 list. The picture and the Dry/Good/Wet thresholds follow the choice. Tap the
-bed's title to rename it.
+bed's title to rename it. Tap the small house/sun icon in a card's corner to
+say whether that bed is indoors or outdoors.
+
+The thresholds also follow the season (see SEASON below): plants need less
+water when they're growing slowly. Indoors that's set by day length (short
+winter days, slow growth); outdoors by the last 24 hours' average
+temperature (dormant in the cold, thirstier in a heat wave). Outdoor beds
+also don't raise the "needs water" alert while rain is forecast in the next
+few hours.
 
 The helper sensors find each probe's readings by channel number at the end
 of the Ecowitt entity ID (…soil_moisture_1, …soil_temperature_1, …), so
@@ -255,6 +263,20 @@ PLANT_TYPES = {
 }
 DEFAULT_PLANT = "Seedling"
 
+# How the plant's Dry/Wet levels scale with the season. Both levels are
+# multiplied by the factor, so in a slow season the soil may get drier
+# before it's "Dry", and it counts as "Wet" (too soggy) sooner.
+SEASON = {
+    # Indoors, by hours of daylight: 0.75 on short days, rising to 1.0.
+    "indoor_daylight": [(10, 0.75), (14, 1.0)],
+    # Outdoors, by 24 h average temperature (°F): dormant in the cold,
+    # normal when mild, wetter in the heat.
+    "outdoor_temperature": [(40, 0.6), (60, 1.0), (80, 1.0), (95, 1.2)],
+    # Forecast pictures (sensor.forecast_hour_1…6) that count as rain coming.
+    "rain_pictures": ["Rain", "Storm"],
+    "rain_hours": 6,
+}
+
 
 def plant_svg(kind):
     return ('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 160">'
@@ -364,7 +386,9 @@ def card_for(bed):
         {"type": "state-label", "entity": moisture,
          "style": {**at(212, 72), "font-size": "34px", "font-weight": "600",
                    "color": "var(--primary-text-color)"}},
-        {"type": "state-label", "entity": status, "style": {**at(212, 103), **small}},
+        # "Dry · aim 23–53%": the status and this season's target range.
+        {"type": "state-label", "entity": status, "attribute": "label",
+         "style": {**at(212, 103), **small, "white-space": "nowrap"}},
         {"type": "state-label", "entity": f"sensor.garden_{c}_soil_temperature",
          "style": {**at(170, 140), **small}},
         {"type": "state-label", "entity": f"sensor.garden_{c}_conductivity",
@@ -379,6 +403,13 @@ def card_for(bed):
             "elements": [{"type": "icon", "icon": icon, "tap_action": {"action": "none"},
                           "style": {**at(146, 72), "color": color, "--mdc-icon-size": "28px"}}],
         })
+    # Indoors (house) / outdoors (sun); tap to switch.
+    elements.append({
+        "type": "state-icon", "entity": f"input_boolean.garden_{c}_outdoors",
+        "tap_action": {"action": "toggle"},
+        "style": {**at(20, 140), "color": "var(--secondary-text-color)",
+                  "--mdc-icon-size": "20px"},
+    })
     elements.append({
         "type": "conditional",
         "conditions": [{"entity": f"binary_sensor.garden_{c}_battery_low", "state": "on"}],
@@ -435,9 +466,72 @@ def mirror(c, key, label, suffix, unit, device_class, icon):
     }
 
 
+def lerp(points, x):
+    """Jinja: piecewise-linear lookup of `x` in [(x, y), ...], clamped."""
+    out = f"{{%- set pts = {[list(p) for p in points]} %}}"
+    out += f"{{%- set x = {x} %}}"
+    out += ("{%- set ns = namespace(y=pts[0][1]) %}"
+            "{%- for i in range(pts | count) %}"
+            "{%- if x >= pts[i][0] %}{% set ns.y = pts[i][1] %}{% endif %}"
+            "{%- if i > 0 and pts[i - 1][0] <= x < pts[i][0] %}"
+            "{%- set ns.y = pts[i - 1][1] + (x - pts[i - 1][0]) / (pts[i][0] - pts[i - 1][0])"
+            " * (pts[i][1] - pts[i - 1][1]) %}"
+            "{%- endif %}{%- endfor %}")
+    return out
+
+
+def season_sensors():
+    """The two season factors (indoor, outdoor) the bed thresholds use."""
+    # Today's daylight hours: from sunrise to sunset, from sun.sun.
+    daylight = ("{%- set rise = as_datetime(state_attr('sun.sun', 'next_rising')) %}"
+                "{%- set set_ = as_datetime(state_attr('sun.sun', 'next_setting')) %}"
+                "{%- if is_state('sun.sun', 'above_horizon') %}"
+                "{%- set rise = rise - timedelta(days=1) %}{%- endif %}"
+                "{%- set hours = (set_ - rise).total_seconds() / 3600 %}")
+    temp = ("{%- set t = states('sensor.garden_outdoor_temperature_24h')"
+            " | float(states('sensor.station_temperature') | float(65)) %}")
+    return [
+        {
+            "name": "Garden Indoor Season",
+            "unique_id": "garden_indoor_season",
+            "icon": "mdi:home-thermometer-outline",
+            "state": daylight + lerp(SEASON["indoor_daylight"], "hours")
+                     + "{{ ns.y | round(2) }}",
+            "attributes": {
+                "daylight_hours": daylight + "{{ hours | round(1) }}",
+                "season": daylight + ("{{ 'Short days, slow growth' if hours < 11"
+                                      " else 'Growing' }}"),
+            },
+        },
+        {
+            "name": "Garden Outdoor Season",
+            "unique_id": "garden_outdoor_season",
+            "icon": "mdi:sun-thermometer-outline",
+            "state": temp + lerp(SEASON["outdoor_temperature"], "t") + "{{ ns.y | round(2) }}",
+            "attributes": {
+                "average_temperature": temp + "{{ t | round(1) }}",
+                "season": temp + ("{{ 'Dormant' if t < 45 else 'Cool, slow growth' if t < 60"
+                                  " else 'Growing' if t <= 80 else 'Hot, drinks more' }}"),
+            },
+        },
+    ]
+
+
+def limits(c):
+    """Jinja: the bed's plant levels scaled by its season → dry, wet, m."""
+    thresholds = {kind: [dry, wet] for kind, (_, dry, wet) in PLANT_TYPES.items()}
+    return (f"{{%- set base = {thresholds}.get(states('input_select.garden_{c}_plant'), [30, 70]) %}}"
+            f"{{%- set where = 'outdoor' if is_state('input_boolean.garden_{c}_outdoors', 'on')"
+            " else 'indoor' %}"
+            "{%- set f = states('sensor.garden_' ~ where ~ '_season') | float(1) %}"
+            "{%- set dry = (base[0] * f) | round(0) | int %}"
+            "{%- set wet = [[(base[1] * f) | round(0) | int, 95] | min, dry + 15] | max %}"
+            f"{{%- set m = states('sensor.garden_{c}_moisture') | float(0) %}}")
+
+
 def package():
     thresholds = {kind: [dry, wet] for kind, (_, dry, wet) in PLANT_TYPES.items()}
-    texts, selects, sensors, binaries = {}, {}, [], []
+    texts, selects, booleans, sensors, binaries = {}, {}, {}, season_sensors(), []
     for b in BEDS:
         c = b["channel"]
         # Empty until renamed on the dashboard; the card then shows b["name"].
@@ -451,6 +545,11 @@ def package():
             "icon": "mdi:sprout",
             # The first option is the default until a plant is picked.
             "options": [DEFAULT_PLANT] + [k for k in PLANT_TYPES if k != DEFAULT_PLANT],
+        }
+        # Off = indoors (where everything starts), on = outdoors.
+        booleans[f"garden_{c}_outdoors"] = {
+            "name": f"Garden {c} outdoors",
+            "icon": "mdi:home-switch-outline",
         }
         sensors += [
             mirror(c, "moisture", "Moisture", f"soil_moisture_{c}", "%",
@@ -489,10 +588,19 @@ def package():
                 "unique_id": f"garden_{c}_status",
                 "icon": "mdi:sprout",
                 "availability": f"{{{{ has_value('sensor.garden_{c}_moisture') }}}}",
-                "state": (f"{{% set limits = {thresholds} %}}"
-                          f"{{% set t = limits.get(states('input_select.garden_{c}_plant'), [30, 70]) %}}"
-                          f"{{% set m = states('sensor.garden_{c}_moisture') | float(0) %}}"
-                          "{{ 'Dry' if m < t[0] else 'Wet' if m > t[1] else 'Good' }}"),
+                "state": limits(c) + "{{ 'Dry' if m < dry else 'Wet' if m > wet else 'Good' }}",
+                "attributes": {
+                    "dry_below": limits(c) + "{{ dry }}",
+                    "wet_above": limits(c) + "{{ wet }}",
+                    "location": (f"{{{{ 'Outdoors' if is_state('input_boolean.garden_{c}_outdoors',"
+                                 " 'on') else 'Indoors' }}"),
+                    "season": (f"{{{{ state_attr('sensor.garden_' ~ ('outdoor' if is_state("
+                               f"'input_boolean.garden_{c}_outdoors', 'on') else 'indoor')"
+                               " ~ '_season', 'season') }}"),
+                    # The card's status line, e.g. "Dry · aim 23–53%".
+                    "label": limits(c) + ("{{ ('Dry' if m < dry else 'Wet' if m > wet else 'Good')"
+                                          " ~ ' · aim ' ~ dry ~ '–' ~ wet ~ '%' }}"),
+                },
             },
         ]
         binaries.append({
@@ -511,9 +619,14 @@ def package():
         "icon": "mdi:watering-can",
         "state": (
             "{%- set ns = namespace(beds=[]) %}"
+            # Rain in the next few hours waters the outdoor beds for us.
+            f"{{%- set rain = range(1, {SEASON['rain_hours']} + 1)"
+            " | map('string') | map('regex_replace', '^', 'sensor.forecast_hour_')"
+            f" | map('states') | select('in', {SEASON['rain_pictures']}) | list | count > 0 %}}"
             f"{{%- for c in {channels} %}}"
             "{%- if is_state('sensor.garden_' ~ c ~ '_status', 'Dry')"
-            " and states('sensor.garden_' ~ c ~ '_moisture') | float(0) > 0 %}"
+            " and states('sensor.garden_' ~ c ~ '_moisture') | float(0) > 0"
+            " and not (rain and is_state('input_boolean.garden_' ~ c ~ '_outdoors', 'on')) %}"
             "{%- set ns.beds = ns.beds + [states('sensor.garden_' ~ c ~ '_name')] %}"
             "{%- endif %}{%- endfor %}"
             "{%- if not ns.beds %}OK"
@@ -521,7 +634,18 @@ def package():
             "{%- else %}{{ ns.beds[:-1] | join(', ') }} and {{ ns.beds[-1] }} need water"
             "{%- endif %}"),
     })
-    return {"input_text": texts, "input_select": selects,
+    return {"input_text": texts, "input_select": selects, "input_boolean": booleans,
+            # Outdoor season: the weather station's average over 24 hours.
+            "sensor": [{
+                "platform": "statistics",
+                "name": "Garden Outdoor Temperature 24h",
+                "unique_id": "garden_outdoor_temperature_24h",
+                "entity_id": "sensor.station_temperature",
+                "state_characteristic": "mean",
+                "max_age": {"hours": 24},
+                "sampling_size": 3000,
+                "keep_last_sample": True,
+            }],
             "template": [{"sensor": sensors, "binary_sensor": binaries}]}
 
 

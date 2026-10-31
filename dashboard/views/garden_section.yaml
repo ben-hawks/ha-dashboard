@@ -97,11 +97,13 @@ cards:
           color: var(--primary-text-color)
       - type: state-label
         entity: sensor.garden_1_status
+        attribute: label
         style:
           left: 70.7%
           top: 64.4%
           font-size: 13px
           color: var(--secondary-text-color)
+          white-space: nowrap
       - type: state-label
         entity: sensor.garden_1_soil_temperature
         style:
@@ -158,6 +160,15 @@ cards:
             top: 45.0%
             color: '#3b82f6'
             --mdc-icon-size: 28px
+      - type: state-icon
+        entity: input_boolean.garden_1_outdoors
+        tap_action:
+          action: toggle
+        style:
+          left: 6.7%
+          top: 87.5%
+          color: var(--secondary-text-color)
+          --mdc-icon-size: 20px
       - type: conditional
         conditions:
         - entity: binary_sensor.garden_1_battery_low
@@ -252,11 +263,13 @@ cards:
           color: var(--primary-text-color)
       - type: state-label
         entity: sensor.garden_2_status
+        attribute: label
         style:
           left: 70.7%
           top: 64.4%
           font-size: 13px
           color: var(--secondary-text-color)
+          white-space: nowrap
       - type: state-label
         entity: sensor.garden_2_soil_temperature
         style:
@@ -313,6 +326,15 @@ cards:
             top: 45.0%
             color: '#3b82f6'
             --mdc-icon-size: 28px
+      - type: state-icon
+        entity: input_boolean.garden_2_outdoors
+        tap_action:
+          action: toggle
+        style:
+          left: 6.7%
+          top: 87.5%
+          color: var(--secondary-text-color)
+          --mdc-icon-size: 20px
       - type: conditional
         conditions:
         - entity: binary_sensor.garden_2_battery_low
@@ -407,11 +429,13 @@ cards:
           color: var(--primary-text-color)
       - type: state-label
         entity: sensor.garden_3_status
+        attribute: label
         style:
           left: 70.7%
           top: 64.4%
           font-size: 13px
           color: var(--secondary-text-color)
+          white-space: nowrap
       - type: state-label
         entity: sensor.garden_3_soil_temperature
         style:
@@ -468,6 +492,15 @@ cards:
             top: 45.0%
             color: '#3b82f6'
             --mdc-icon-size: 28px
+      - type: state-icon
+        entity: input_boolean.garden_3_outdoors
+        tap_action:
+          action: toggle
+        style:
+          left: 6.7%
+          top: 87.5%
+          color: var(--secondary-text-color)
+          --mdc-icon-size: 20px
       - type: conditional
         conditions:
         - entity: binary_sensor.garden_3_battery_low
@@ -562,11 +595,13 @@ cards:
           color: var(--primary-text-color)
       - type: state-label
         entity: sensor.garden_4_status
+        attribute: label
         style:
           left: 70.7%
           top: 64.4%
           font-size: 13px
           color: var(--secondary-text-color)
+          white-space: nowrap
       - type: state-label
         entity: sensor.garden_4_soil_temperature
         style:
@@ -623,6 +658,15 @@ cards:
             top: 45.0%
             color: '#3b82f6'
             --mdc-icon-size: 28px
+      - type: state-icon
+        entity: input_boolean.garden_4_outdoors
+        tap_action:
+          action: toggle
+        style:
+          left: 6.7%
+          top: 87.5%
+          color: var(--secondary-text-color)
+          --mdc-icon-size: 20px
       - type: conditional
         conditions:
         - entity: binary_sensor.garden_4_battery_low

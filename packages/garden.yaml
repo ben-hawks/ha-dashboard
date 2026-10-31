@@ -86,8 +86,45 @@ input_select:
     - Sunflower
     - Flowers
     - Succulent
+input_boolean:
+  garden_1_outdoors:
+    name: Garden 1 outdoors
+    icon: mdi:home-switch-outline
+  garden_2_outdoors:
+    name: Garden 2 outdoors
+    icon: mdi:home-switch-outline
+  garden_3_outdoors:
+    name: Garden 3 outdoors
+    icon: mdi:home-switch-outline
+  garden_4_outdoors:
+    name: Garden 4 outdoors
+    icon: mdi:home-switch-outline
+sensor:
+- platform: statistics
+  name: Garden Outdoor Temperature 24h
+  unique_id: garden_outdoor_temperature_24h
+  entity_id: sensor.station_temperature
+  state_characteristic: mean
+  max_age:
+    hours: 24
+  sampling_size: 3000
+  keep_last_sample: true
 template:
 - sensor:
+  - name: Garden Indoor Season
+    unique_id: garden_indoor_season
+    icon: mdi:home-thermometer-outline
+    state: '{%- set rise = as_datetime(state_attr(''sun.sun'', ''next_rising'')) %}{%- set set_ = as_datetime(state_attr(''sun.sun'', ''next_setting'')) %}{%- if is_state(''sun.sun'', ''above_horizon'') %}{%- set rise = rise - timedelta(days=1) %}{%- endif %}{%- set hours = (set_ - rise).total_seconds() / 3600 %}{%- set pts = [[10, 0.75], [14, 1.0]] %}{%- set x = hours %}{%- set ns = namespace(y=pts[0][1]) %}{%- for i in range(pts | count) %}{%- if x >= pts[i][0] %}{% set ns.y = pts[i][1] %}{% endif %}{%- if i > 0 and pts[i - 1][0] <= x < pts[i][0] %}{%- set ns.y = pts[i - 1][1] + (x - pts[i - 1][0]) / (pts[i][0] - pts[i - 1][0]) * (pts[i][1] - pts[i - 1][1]) %}{%- endif %}{%- endfor %}{{ ns.y | round(2) }}'
+    attributes:
+      daylight_hours: '{%- set rise = as_datetime(state_attr(''sun.sun'', ''next_rising'')) %}{%- set set_ = as_datetime(state_attr(''sun.sun'', ''next_setting'')) %}{%- if is_state(''sun.sun'', ''above_horizon'') %}{%- set rise = rise - timedelta(days=1) %}{%- endif %}{%- set hours = (set_ - rise).total_seconds() / 3600 %}{{ hours | round(1) }}'
+      season: '{%- set rise = as_datetime(state_attr(''sun.sun'', ''next_rising'')) %}{%- set set_ = as_datetime(state_attr(''sun.sun'', ''next_setting'')) %}{%- if is_state(''sun.sun'', ''above_horizon'') %}{%- set rise = rise - timedelta(days=1) %}{%- endif %}{%- set hours = (set_ - rise).total_seconds() / 3600 %}{{ ''Short days, slow growth'' if hours < 11 else ''Growing'' }}'
+  - name: Garden Outdoor Season
+    unique_id: garden_outdoor_season
+    icon: mdi:sun-thermometer-outline
+    state: '{%- set t = states(''sensor.garden_outdoor_temperature_24h'') | float(states(''sensor.station_temperature'') | float(65)) %}{%- set pts = [[40, 0.6], [60, 1.0], [80, 1.0], [95, 1.2]] %}{%- set x = t %}{%- set ns = namespace(y=pts[0][1]) %}{%- for i in range(pts | count) %}{%- if x >= pts[i][0] %}{% set ns.y = pts[i][1] %}{% endif %}{%- if i > 0 and pts[i - 1][0] <= x < pts[i][0] %}{%- set ns.y = pts[i - 1][1] + (x - pts[i - 1][0]) / (pts[i][0] - pts[i - 1][0]) * (pts[i][1] - pts[i - 1][1]) %}{%- endif %}{%- endfor %}{{ ns.y | round(2) }}'
+    attributes:
+      average_temperature: '{%- set t = states(''sensor.garden_outdoor_temperature_24h'') | float(states(''sensor.station_temperature'') | float(65)) %}{{ t | round(1) }}'
+      season: '{%- set t = states(''sensor.garden_outdoor_temperature_24h'') | float(states(''sensor.station_temperature'') | float(65)) %}{{ ''Dormant'' if t < 45 else ''Cool, slow growth'' if t < 60 else ''Growing'' if t <= 80 else ''Hot, drinks more'' }}'
   - name: Garden 1 Moisture
     unique_id: garden_1_moisture
     icon: mdi:water-percent
@@ -137,7 +174,13 @@ template:
     unique_id: garden_1_status
     icon: mdi:sprout
     availability: '{{ has_value(''sensor.garden_1_moisture'') }}'
-    state: '{% set limits = {''Seedling'': [30, 70], ''Lettuce'': [35, 70], ''Tomato'': [30, 65], ''Pepper'': [30, 65], ''Carrot'': [30, 65], ''Herbs'': [25, 60], ''Cucumber'': [35, 75], ''Strawberry'': [35, 70], ''Blueberry'': [40, 75], ''Raspberry'': [35, 70], ''Sunflower'': [25, 60], ''Flowers'': [30, 70], ''Succulent'': [10, 40]} %}{% set t = limits.get(states(''input_select.garden_1_plant''), [30, 70]) %}{% set m = states(''sensor.garden_1_moisture'') | float(0) %}{{ ''Dry'' if m < t[0] else ''Wet'' if m > t[1] else ''Good'' }}'
+    state: '{%- set base = {''Seedling'': [30, 70], ''Lettuce'': [35, 70], ''Tomato'': [30, 65], ''Pepper'': [30, 65], ''Carrot'': [30, 65], ''Herbs'': [25, 60], ''Cucumber'': [35, 75], ''Strawberry'': [35, 70], ''Blueberry'': [40, 75], ''Raspberry'': [35, 70], ''Sunflower'': [25, 60], ''Flowers'': [30, 70], ''Succulent'': [10, 40]}.get(states(''input_select.garden_1_plant''), [30, 70]) %}{%- set where = ''outdoor'' if is_state(''input_boolean.garden_1_outdoors'', ''on'') else ''indoor'' %}{%- set f = states(''sensor.garden_'' ~ where ~ ''_season'') | float(1) %}{%- set dry = (base[0] * f) | round(0) | int %}{%- set wet = [[(base[1] * f) | round(0) | int, 95] | min, dry + 15] | max %}{%- set m = states(''sensor.garden_1_moisture'') | float(0) %}{{ ''Dry'' if m < dry else ''Wet'' if m > wet else ''Good'' }}'
+    attributes:
+      dry_below: '{%- set base = {''Seedling'': [30, 70], ''Lettuce'': [35, 70], ''Tomato'': [30, 65], ''Pepper'': [30, 65], ''Carrot'': [30, 65], ''Herbs'': [25, 60], ''Cucumber'': [35, 75], ''Strawberry'': [35, 70], ''Blueberry'': [40, 75], ''Raspberry'': [35, 70], ''Sunflower'': [25, 60], ''Flowers'': [30, 70], ''Succulent'': [10, 40]}.get(states(''input_select.garden_1_plant''), [30, 70]) %}{%- set where = ''outdoor'' if is_state(''input_boolean.garden_1_outdoors'', ''on'') else ''indoor'' %}{%- set f = states(''sensor.garden_'' ~ where ~ ''_season'') | float(1) %}{%- set dry = (base[0] * f) | round(0) | int %}{%- set wet = [[(base[1] * f) | round(0) | int, 95] | min, dry + 15] | max %}{%- set m = states(''sensor.garden_1_moisture'') | float(0) %}{{ dry }}'
+      wet_above: '{%- set base = {''Seedling'': [30, 70], ''Lettuce'': [35, 70], ''Tomato'': [30, 65], ''Pepper'': [30, 65], ''Carrot'': [30, 65], ''Herbs'': [25, 60], ''Cucumber'': [35, 75], ''Strawberry'': [35, 70], ''Blueberry'': [40, 75], ''Raspberry'': [35, 70], ''Sunflower'': [25, 60], ''Flowers'': [30, 70], ''Succulent'': [10, 40]}.get(states(''input_select.garden_1_plant''), [30, 70]) %}{%- set where = ''outdoor'' if is_state(''input_boolean.garden_1_outdoors'', ''on'') else ''indoor'' %}{%- set f = states(''sensor.garden_'' ~ where ~ ''_season'') | float(1) %}{%- set dry = (base[0] * f) | round(0) | int %}{%- set wet = [[(base[1] * f) | round(0) | int, 95] | min, dry + 15] | max %}{%- set m = states(''sensor.garden_1_moisture'') | float(0) %}{{ wet }}'
+      location: '{{ ''Outdoors'' if is_state(''input_boolean.garden_1_outdoors'', ''on'') else ''Indoors'' }}'
+      season: '{{ state_attr(''sensor.garden_'' ~ (''outdoor'' if is_state(''input_boolean.garden_1_outdoors'', ''on'') else ''indoor'') ~ ''_season'', ''season'') }}'
+      label: '{%- set base = {''Seedling'': [30, 70], ''Lettuce'': [35, 70], ''Tomato'': [30, 65], ''Pepper'': [30, 65], ''Carrot'': [30, 65], ''Herbs'': [25, 60], ''Cucumber'': [35, 75], ''Strawberry'': [35, 70], ''Blueberry'': [40, 75], ''Raspberry'': [35, 70], ''Sunflower'': [25, 60], ''Flowers'': [30, 70], ''Succulent'': [10, 40]}.get(states(''input_select.garden_1_plant''), [30, 70]) %}{%- set where = ''outdoor'' if is_state(''input_boolean.garden_1_outdoors'', ''on'') else ''indoor'' %}{%- set f = states(''sensor.garden_'' ~ where ~ ''_season'') | float(1) %}{%- set dry = (base[0] * f) | round(0) | int %}{%- set wet = [[(base[1] * f) | round(0) | int, 95] | min, dry + 15] | max %}{%- set m = states(''sensor.garden_1_moisture'') | float(0) %}{{ (''Dry'' if m < dry else ''Wet'' if m > wet else ''Good'') ~ '' · aim '' ~ dry ~ ''–'' ~ wet ~ ''%'' }}'
   - name: Garden 2 Moisture
     unique_id: garden_2_moisture
     icon: mdi:water-percent
@@ -187,7 +230,13 @@ template:
     unique_id: garden_2_status
     icon: mdi:sprout
     availability: '{{ has_value(''sensor.garden_2_moisture'') }}'
-    state: '{% set limits = {''Seedling'': [30, 70], ''Lettuce'': [35, 70], ''Tomato'': [30, 65], ''Pepper'': [30, 65], ''Carrot'': [30, 65], ''Herbs'': [25, 60], ''Cucumber'': [35, 75], ''Strawberry'': [35, 70], ''Blueberry'': [40, 75], ''Raspberry'': [35, 70], ''Sunflower'': [25, 60], ''Flowers'': [30, 70], ''Succulent'': [10, 40]} %}{% set t = limits.get(states(''input_select.garden_2_plant''), [30, 70]) %}{% set m = states(''sensor.garden_2_moisture'') | float(0) %}{{ ''Dry'' if m < t[0] else ''Wet'' if m > t[1] else ''Good'' }}'
+    state: '{%- set base = {''Seedling'': [30, 70], ''Lettuce'': [35, 70], ''Tomato'': [30, 65], ''Pepper'': [30, 65], ''Carrot'': [30, 65], ''Herbs'': [25, 60], ''Cucumber'': [35, 75], ''Strawberry'': [35, 70], ''Blueberry'': [40, 75], ''Raspberry'': [35, 70], ''Sunflower'': [25, 60], ''Flowers'': [30, 70], ''Succulent'': [10, 40]}.get(states(''input_select.garden_2_plant''), [30, 70]) %}{%- set where = ''outdoor'' if is_state(''input_boolean.garden_2_outdoors'', ''on'') else ''indoor'' %}{%- set f = states(''sensor.garden_'' ~ where ~ ''_season'') | float(1) %}{%- set dry = (base[0] * f) | round(0) | int %}{%- set wet = [[(base[1] * f) | round(0) | int, 95] | min, dry + 15] | max %}{%- set m = states(''sensor.garden_2_moisture'') | float(0) %}{{ ''Dry'' if m < dry else ''Wet'' if m > wet else ''Good'' }}'
+    attributes:
+      dry_below: '{%- set base = {''Seedling'': [30, 70], ''Lettuce'': [35, 70], ''Tomato'': [30, 65], ''Pepper'': [30, 65], ''Carrot'': [30, 65], ''Herbs'': [25, 60], ''Cucumber'': [35, 75], ''Strawberry'': [35, 70], ''Blueberry'': [40, 75], ''Raspberry'': [35, 70], ''Sunflower'': [25, 60], ''Flowers'': [30, 70], ''Succulent'': [10, 40]}.get(states(''input_select.garden_2_plant''), [30, 70]) %}{%- set where = ''outdoor'' if is_state(''input_boolean.garden_2_outdoors'', ''on'') else ''indoor'' %}{%- set f = states(''sensor.garden_'' ~ where ~ ''_season'') | float(1) %}{%- set dry = (base[0] * f) | round(0) | int %}{%- set wet = [[(base[1] * f) | round(0) | int, 95] | min, dry + 15] | max %}{%- set m = states(''sensor.garden_2_moisture'') | float(0) %}{{ dry }}'
+      wet_above: '{%- set base = {''Seedling'': [30, 70], ''Lettuce'': [35, 70], ''Tomato'': [30, 65], ''Pepper'': [30, 65], ''Carrot'': [30, 65], ''Herbs'': [25, 60], ''Cucumber'': [35, 75], ''Strawberry'': [35, 70], ''Blueberry'': [40, 75], ''Raspberry'': [35, 70], ''Sunflower'': [25, 60], ''Flowers'': [30, 70], ''Succulent'': [10, 40]}.get(states(''input_select.garden_2_plant''), [30, 70]) %}{%- set where = ''outdoor'' if is_state(''input_boolean.garden_2_outdoors'', ''on'') else ''indoor'' %}{%- set f = states(''sensor.garden_'' ~ where ~ ''_season'') | float(1) %}{%- set dry = (base[0] * f) | round(0) | int %}{%- set wet = [[(base[1] * f) | round(0) | int, 95] | min, dry + 15] | max %}{%- set m = states(''sensor.garden_2_moisture'') | float(0) %}{{ wet }}'
+      location: '{{ ''Outdoors'' if is_state(''input_boolean.garden_2_outdoors'', ''on'') else ''Indoors'' }}'
+      season: '{{ state_attr(''sensor.garden_'' ~ (''outdoor'' if is_state(''input_boolean.garden_2_outdoors'', ''on'') else ''indoor'') ~ ''_season'', ''season'') }}'
+      label: '{%- set base = {''Seedling'': [30, 70], ''Lettuce'': [35, 70], ''Tomato'': [30, 65], ''Pepper'': [30, 65], ''Carrot'': [30, 65], ''Herbs'': [25, 60], ''Cucumber'': [35, 75], ''Strawberry'': [35, 70], ''Blueberry'': [40, 75], ''Raspberry'': [35, 70], ''Sunflower'': [25, 60], ''Flowers'': [30, 70], ''Succulent'': [10, 40]}.get(states(''input_select.garden_2_plant''), [30, 70]) %}{%- set where = ''outdoor'' if is_state(''input_boolean.garden_2_outdoors'', ''on'') else ''indoor'' %}{%- set f = states(''sensor.garden_'' ~ where ~ ''_season'') | float(1) %}{%- set dry = (base[0] * f) | round(0) | int %}{%- set wet = [[(base[1] * f) | round(0) | int, 95] | min, dry + 15] | max %}{%- set m = states(''sensor.garden_2_moisture'') | float(0) %}{{ (''Dry'' if m < dry else ''Wet'' if m > wet else ''Good'') ~ '' · aim '' ~ dry ~ ''–'' ~ wet ~ ''%'' }}'
   - name: Garden 3 Moisture
     unique_id: garden_3_moisture
     icon: mdi:water-percent
@@ -237,7 +286,13 @@ template:
     unique_id: garden_3_status
     icon: mdi:sprout
     availability: '{{ has_value(''sensor.garden_3_moisture'') }}'
-    state: '{% set limits = {''Seedling'': [30, 70], ''Lettuce'': [35, 70], ''Tomato'': [30, 65], ''Pepper'': [30, 65], ''Carrot'': [30, 65], ''Herbs'': [25, 60], ''Cucumber'': [35, 75], ''Strawberry'': [35, 70], ''Blueberry'': [40, 75], ''Raspberry'': [35, 70], ''Sunflower'': [25, 60], ''Flowers'': [30, 70], ''Succulent'': [10, 40]} %}{% set t = limits.get(states(''input_select.garden_3_plant''), [30, 70]) %}{% set m = states(''sensor.garden_3_moisture'') | float(0) %}{{ ''Dry'' if m < t[0] else ''Wet'' if m > t[1] else ''Good'' }}'
+    state: '{%- set base = {''Seedling'': [30, 70], ''Lettuce'': [35, 70], ''Tomato'': [30, 65], ''Pepper'': [30, 65], ''Carrot'': [30, 65], ''Herbs'': [25, 60], ''Cucumber'': [35, 75], ''Strawberry'': [35, 70], ''Blueberry'': [40, 75], ''Raspberry'': [35, 70], ''Sunflower'': [25, 60], ''Flowers'': [30, 70], ''Succulent'': [10, 40]}.get(states(''input_select.garden_3_plant''), [30, 70]) %}{%- set where = ''outdoor'' if is_state(''input_boolean.garden_3_outdoors'', ''on'') else ''indoor'' %}{%- set f = states(''sensor.garden_'' ~ where ~ ''_season'') | float(1) %}{%- set dry = (base[0] * f) | round(0) | int %}{%- set wet = [[(base[1] * f) | round(0) | int, 95] | min, dry + 15] | max %}{%- set m = states(''sensor.garden_3_moisture'') | float(0) %}{{ ''Dry'' if m < dry else ''Wet'' if m > wet else ''Good'' }}'
+    attributes:
+      dry_below: '{%- set base = {''Seedling'': [30, 70], ''Lettuce'': [35, 70], ''Tomato'': [30, 65], ''Pepper'': [30, 65], ''Carrot'': [30, 65], ''Herbs'': [25, 60], ''Cucumber'': [35, 75], ''Strawberry'': [35, 70], ''Blueberry'': [40, 75], ''Raspberry'': [35, 70], ''Sunflower'': [25, 60], ''Flowers'': [30, 70], ''Succulent'': [10, 40]}.get(states(''input_select.garden_3_plant''), [30, 70]) %}{%- set where = ''outdoor'' if is_state(''input_boolean.garden_3_outdoors'', ''on'') else ''indoor'' %}{%- set f = states(''sensor.garden_'' ~ where ~ ''_season'') | float(1) %}{%- set dry = (base[0] * f) | round(0) | int %}{%- set wet = [[(base[1] * f) | round(0) | int, 95] | min, dry + 15] | max %}{%- set m = states(''sensor.garden_3_moisture'') | float(0) %}{{ dry }}'
+      wet_above: '{%- set base = {''Seedling'': [30, 70], ''Lettuce'': [35, 70], ''Tomato'': [30, 65], ''Pepper'': [30, 65], ''Carrot'': [30, 65], ''Herbs'': [25, 60], ''Cucumber'': [35, 75], ''Strawberry'': [35, 70], ''Blueberry'': [40, 75], ''Raspberry'': [35, 70], ''Sunflower'': [25, 60], ''Flowers'': [30, 70], ''Succulent'': [10, 40]}.get(states(''input_select.garden_3_plant''), [30, 70]) %}{%- set where = ''outdoor'' if is_state(''input_boolean.garden_3_outdoors'', ''on'') else ''indoor'' %}{%- set f = states(''sensor.garden_'' ~ where ~ ''_season'') | float(1) %}{%- set dry = (base[0] * f) | round(0) | int %}{%- set wet = [[(base[1] * f) | round(0) | int, 95] | min, dry + 15] | max %}{%- set m = states(''sensor.garden_3_moisture'') | float(0) %}{{ wet }}'
+      location: '{{ ''Outdoors'' if is_state(''input_boolean.garden_3_outdoors'', ''on'') else ''Indoors'' }}'
+      season: '{{ state_attr(''sensor.garden_'' ~ (''outdoor'' if is_state(''input_boolean.garden_3_outdoors'', ''on'') else ''indoor'') ~ ''_season'', ''season'') }}'
+      label: '{%- set base = {''Seedling'': [30, 70], ''Lettuce'': [35, 70], ''Tomato'': [30, 65], ''Pepper'': [30, 65], ''Carrot'': [30, 65], ''Herbs'': [25, 60], ''Cucumber'': [35, 75], ''Strawberry'': [35, 70], ''Blueberry'': [40, 75], ''Raspberry'': [35, 70], ''Sunflower'': [25, 60], ''Flowers'': [30, 70], ''Succulent'': [10, 40]}.get(states(''input_select.garden_3_plant''), [30, 70]) %}{%- set where = ''outdoor'' if is_state(''input_boolean.garden_3_outdoors'', ''on'') else ''indoor'' %}{%- set f = states(''sensor.garden_'' ~ where ~ ''_season'') | float(1) %}{%- set dry = (base[0] * f) | round(0) | int %}{%- set wet = [[(base[1] * f) | round(0) | int, 95] | min, dry + 15] | max %}{%- set m = states(''sensor.garden_3_moisture'') | float(0) %}{{ (''Dry'' if m < dry else ''Wet'' if m > wet else ''Good'') ~ '' · aim '' ~ dry ~ ''–'' ~ wet ~ ''%'' }}'
   - name: Garden 4 Moisture
     unique_id: garden_4_moisture
     icon: mdi:water-percent
@@ -287,11 +342,17 @@ template:
     unique_id: garden_4_status
     icon: mdi:sprout
     availability: '{{ has_value(''sensor.garden_4_moisture'') }}'
-    state: '{% set limits = {''Seedling'': [30, 70], ''Lettuce'': [35, 70], ''Tomato'': [30, 65], ''Pepper'': [30, 65], ''Carrot'': [30, 65], ''Herbs'': [25, 60], ''Cucumber'': [35, 75], ''Strawberry'': [35, 70], ''Blueberry'': [40, 75], ''Raspberry'': [35, 70], ''Sunflower'': [25, 60], ''Flowers'': [30, 70], ''Succulent'': [10, 40]} %}{% set t = limits.get(states(''input_select.garden_4_plant''), [30, 70]) %}{% set m = states(''sensor.garden_4_moisture'') | float(0) %}{{ ''Dry'' if m < t[0] else ''Wet'' if m > t[1] else ''Good'' }}'
+    state: '{%- set base = {''Seedling'': [30, 70], ''Lettuce'': [35, 70], ''Tomato'': [30, 65], ''Pepper'': [30, 65], ''Carrot'': [30, 65], ''Herbs'': [25, 60], ''Cucumber'': [35, 75], ''Strawberry'': [35, 70], ''Blueberry'': [40, 75], ''Raspberry'': [35, 70], ''Sunflower'': [25, 60], ''Flowers'': [30, 70], ''Succulent'': [10, 40]}.get(states(''input_select.garden_4_plant''), [30, 70]) %}{%- set where = ''outdoor'' if is_state(''input_boolean.garden_4_outdoors'', ''on'') else ''indoor'' %}{%- set f = states(''sensor.garden_'' ~ where ~ ''_season'') | float(1) %}{%- set dry = (base[0] * f) | round(0) | int %}{%- set wet = [[(base[1] * f) | round(0) | int, 95] | min, dry + 15] | max %}{%- set m = states(''sensor.garden_4_moisture'') | float(0) %}{{ ''Dry'' if m < dry else ''Wet'' if m > wet else ''Good'' }}'
+    attributes:
+      dry_below: '{%- set base = {''Seedling'': [30, 70], ''Lettuce'': [35, 70], ''Tomato'': [30, 65], ''Pepper'': [30, 65], ''Carrot'': [30, 65], ''Herbs'': [25, 60], ''Cucumber'': [35, 75], ''Strawberry'': [35, 70], ''Blueberry'': [40, 75], ''Raspberry'': [35, 70], ''Sunflower'': [25, 60], ''Flowers'': [30, 70], ''Succulent'': [10, 40]}.get(states(''input_select.garden_4_plant''), [30, 70]) %}{%- set where = ''outdoor'' if is_state(''input_boolean.garden_4_outdoors'', ''on'') else ''indoor'' %}{%- set f = states(''sensor.garden_'' ~ where ~ ''_season'') | float(1) %}{%- set dry = (base[0] * f) | round(0) | int %}{%- set wet = [[(base[1] * f) | round(0) | int, 95] | min, dry + 15] | max %}{%- set m = states(''sensor.garden_4_moisture'') | float(0) %}{{ dry }}'
+      wet_above: '{%- set base = {''Seedling'': [30, 70], ''Lettuce'': [35, 70], ''Tomato'': [30, 65], ''Pepper'': [30, 65], ''Carrot'': [30, 65], ''Herbs'': [25, 60], ''Cucumber'': [35, 75], ''Strawberry'': [35, 70], ''Blueberry'': [40, 75], ''Raspberry'': [35, 70], ''Sunflower'': [25, 60], ''Flowers'': [30, 70], ''Succulent'': [10, 40]}.get(states(''input_select.garden_4_plant''), [30, 70]) %}{%- set where = ''outdoor'' if is_state(''input_boolean.garden_4_outdoors'', ''on'') else ''indoor'' %}{%- set f = states(''sensor.garden_'' ~ where ~ ''_season'') | float(1) %}{%- set dry = (base[0] * f) | round(0) | int %}{%- set wet = [[(base[1] * f) | round(0) | int, 95] | min, dry + 15] | max %}{%- set m = states(''sensor.garden_4_moisture'') | float(0) %}{{ wet }}'
+      location: '{{ ''Outdoors'' if is_state(''input_boolean.garden_4_outdoors'', ''on'') else ''Indoors'' }}'
+      season: '{{ state_attr(''sensor.garden_'' ~ (''outdoor'' if is_state(''input_boolean.garden_4_outdoors'', ''on'') else ''indoor'') ~ ''_season'', ''season'') }}'
+      label: '{%- set base = {''Seedling'': [30, 70], ''Lettuce'': [35, 70], ''Tomato'': [30, 65], ''Pepper'': [30, 65], ''Carrot'': [30, 65], ''Herbs'': [25, 60], ''Cucumber'': [35, 75], ''Strawberry'': [35, 70], ''Blueberry'': [40, 75], ''Raspberry'': [35, 70], ''Sunflower'': [25, 60], ''Flowers'': [30, 70], ''Succulent'': [10, 40]}.get(states(''input_select.garden_4_plant''), [30, 70]) %}{%- set where = ''outdoor'' if is_state(''input_boolean.garden_4_outdoors'', ''on'') else ''indoor'' %}{%- set f = states(''sensor.garden_'' ~ where ~ ''_season'') | float(1) %}{%- set dry = (base[0] * f) | round(0) | int %}{%- set wet = [[(base[1] * f) | round(0) | int, 95] | min, dry + 15] | max %}{%- set m = states(''sensor.garden_4_moisture'') | float(0) %}{{ (''Dry'' if m < dry else ''Wet'' if m > wet else ''Good'') ~ '' · aim '' ~ dry ~ ''–'' ~ wet ~ ''%'' }}'
   - name: Garden Needs Water
     unique_id: garden_needs_water
     icon: mdi:watering-can
-    state: '{%- set ns = namespace(beds=[]) %}{%- for c in [1, 2, 3, 4] %}{%- if is_state(''sensor.garden_'' ~ c ~ ''_status'', ''Dry'') and states(''sensor.garden_'' ~ c ~ ''_moisture'') | float(0) > 0 %}{%- set ns.beds = ns.beds + [states(''sensor.garden_'' ~ c ~ ''_name'')] %}{%- endif %}{%- endfor %}{%- if not ns.beds %}OK{%- elif ns.beds | count == 1 %}{{ ns.beds[0] }} needs water{%- else %}{{ ns.beds[:-1] | join('', '') }} and {{ ns.beds[-1] }} need water{%- endif %}'
+    state: '{%- set ns = namespace(beds=[]) %}{%- set rain = range(1, 6 + 1) | map(''string'') | map(''regex_replace'', ''^'', ''sensor.forecast_hour_'') | map(''states'') | select(''in'', [''Rain'', ''Storm'']) | list | count > 0 %}{%- for c in [1, 2, 3, 4] %}{%- if is_state(''sensor.garden_'' ~ c ~ ''_status'', ''Dry'') and states(''sensor.garden_'' ~ c ~ ''_moisture'') | float(0) > 0 and not (rain and is_state(''input_boolean.garden_'' ~ c ~ ''_outdoors'', ''on'')) %}{%- set ns.beds = ns.beds + [states(''sensor.garden_'' ~ c ~ ''_name'')] %}{%- endif %}{%- endfor %}{%- if not ns.beds %}OK{%- elif ns.beds | count == 1 %}{{ ns.beds[0] }} needs water{%- else %}{{ ns.beds[:-1] | join('', '') }} and {{ ns.beds[-1] }} need water{%- endif %}'
   binary_sensor:
   - name: Garden 1 Battery Low
     unique_id: garden_1_battery_low
