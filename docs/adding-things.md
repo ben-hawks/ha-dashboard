@@ -20,8 +20,12 @@ themes/wall_tablet.yaml        colours
   follow the season: indoors by day length (shorter days, drier target),
   outdoors by the last 24 hours' average temperature (dormant when cold,
   wetter in a heat wave), and by each bed's soil temperature (cold soil,
-  slow roots). The status line shows this season's target, e.g.
-  "Good · aim 30–56%". A dry bed shows in the Home alert banner ("Tomatoes
+  slow roots). How much the season matters depends on the plant: succulents
+  and the berries rest harder in winter, lettuce, carrots and seedlings
+  hardly at all. The status line shows this season's target, e.g.
+  "Good · aim 30–56%". The 3-day graph plots moisture against that target
+  (bottom third drier, middle on target, top wetter), so its colours follow
+  the target too. A dry bed shows in the Home alert banner ("Tomatoes
   needs water"), except an outdoor bed while rain is forecast within 6 hours;
   a probe reading exactly 0% is treated as not in the ground and ignored.
   The season settings are `SEASON` in `tools/garden.py`. To add a probe,

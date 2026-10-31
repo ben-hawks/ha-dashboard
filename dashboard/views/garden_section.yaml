@@ -184,8 +184,8 @@ cards:
             --mdc-icon-size: 22px
     - type: custom:mini-graph-card
       entities:
-      - entity: sensor.garden_1_moisture
-        name: Moisture · 3 days
+      - entity: sensor.garden_1_target_position
+        name: Moisture vs. target · 3 days
       hours_to_show: 72
       points_per_hour: 1
       hour24: false
@@ -207,9 +207,9 @@ cards:
       color_thresholds:
       - value: 0
         color: '#ffb347'
-      - value: 30
+      - value: 33.3
         color: '#6fdc8c'
-      - value: 70
+      - value: 66.7
         color: '#6aa9ff'
       color_thresholds_transition: smooth
   - type: vertical-stack
@@ -350,8 +350,8 @@ cards:
             --mdc-icon-size: 22px
     - type: custom:mini-graph-card
       entities:
-      - entity: sensor.garden_2_moisture
-        name: Moisture · 3 days
+      - entity: sensor.garden_2_target_position
+        name: Moisture vs. target · 3 days
       hours_to_show: 72
       points_per_hour: 1
       hour24: false
@@ -373,9 +373,9 @@ cards:
       color_thresholds:
       - value: 0
         color: '#ffb347'
-      - value: 30
+      - value: 33.3
         color: '#6fdc8c'
-      - value: 70
+      - value: 66.7
         color: '#6aa9ff'
       color_thresholds_transition: smooth
   - type: vertical-stack
@@ -516,8 +516,8 @@ cards:
             --mdc-icon-size: 22px
     - type: custom:mini-graph-card
       entities:
-      - entity: sensor.garden_3_moisture
-        name: Moisture · 3 days
+      - entity: sensor.garden_3_target_position
+        name: Moisture vs. target · 3 days
       hours_to_show: 72
       points_per_hour: 1
       hour24: false
@@ -539,9 +539,9 @@ cards:
       color_thresholds:
       - value: 0
         color: '#ffb347'
-      - value: 30
+      - value: 33.3
         color: '#6fdc8c'
-      - value: 70
+      - value: 66.7
         color: '#6aa9ff'
       color_thresholds_transition: smooth
   - type: vertical-stack
@@ -682,8 +682,8 @@ cards:
             --mdc-icon-size: 22px
     - type: custom:mini-graph-card
       entities:
-      - entity: sensor.garden_4_moisture
-        name: Moisture · 3 days
+      - entity: sensor.garden_4_target_position
+        name: Moisture vs. target · 3 days
       hours_to_show: 72
       points_per_hour: 1
       hour24: false
@@ -705,8 +705,8 @@ cards:
       color_thresholds:
       - value: 0
         color: '#ffb347'
-      - value: 30
+      - value: 33.3
         color: '#6fdc8c'
-      - value: 70
+      - value: 66.7
         color: '#6aa9ff'
       color_thresholds_transition: smooth

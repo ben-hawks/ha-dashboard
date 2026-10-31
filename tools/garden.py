@@ -264,6 +264,15 @@ PLANT_TYPES = {
 }
 DEFAULT_PLANT = "Seedling"
 
+# How strongly each plant follows the season (1 = as the SEASON factors
+# below, more = rests harder, less = keeps going). Succulents and the
+# deciduous berries go properly dormant; lettuce, carrots and seedlings keep
+# growing in cool weather and shouldn't be let dry out much.
+SEASON_SENSITIVITY = {
+    "Seedling": 0.5, "Lettuce": 0.5, "Carrot": 0.6, "Herbs": 0.8,
+    "Strawberry": 1.1, "Blueberry": 1.2, "Raspberry": 1.2, "Succulent": 1.4,
+}
+
 # How the plant's Dry/Wet levels scale with the season. Both levels are
 # multiplied by the factor, so in a slow season the soil may get drier
 # before it's "Dry", and it counts as "Wet" (too soggy) sooner.
@@ -338,15 +347,17 @@ def bar_svg(level):
 BAR_IMAGES = {str(level): data_uri(bar_svg(level)) for level in range(21)}
 
 
-def moisture_graph(moisture):
+def moisture_graph(position):
     """3-day moisture history (mini-graph-card, HACS): a smooth line that
-    shades from amber (dry) through green to blue (wet) over a soft fill, on
-    a fixed 0–100% scale. The colour breaks use the default plant's levels;
-    the Dry/Good/Wet badge above follows the bed's chosen plant."""
-    dry, wet = PLANT_TYPES[DEFAULT_PLANT][1:]
+    shades from amber (dry) through green to blue (wet) over a soft fill.
+    It plots sensor.garden_N_target_position, the moisture relative to the
+    bed's current target (0–33 drier, 33–67 on target, 67–100 wetter), so
+    the colour breaks follow the plant and the season; mini-graph-card's
+    own colour breaks can only be fixed numbers."""
+    dry, wet = 33.3, 66.7
     return {
         "type": "custom:mini-graph-card",
-        "entities": [{"entity": moisture, "name": "Moisture · 3 days"}],
+        "entities": [{"entity": position, "name": "Moisture vs. target · 3 days"}],
         "hours_to_show": 72,
         "points_per_hour": 1,
         "hour24": False,
@@ -426,7 +437,7 @@ def card_for(bed):
         "type": "vertical-stack",
         "cards": [
             {"type": "picture-elements", "image": data_uri(BLANK_SVG), "elements": elements},
-            moisture_graph(moisture),
+            moisture_graph(f"sensor.garden_{c}_target_position"),
         ],
     }
 
@@ -533,6 +544,10 @@ def limits(c):
                    f"states('sensor.garden_{c}_soil_temperature') | float(70)")
             + "{%- set f = (f if f > 1 else [f, ns.y] | min) if where == 'outdoor'"
               " else f * ns.y %}"
+            # The plant's sensitivity stretches or softens that, within limits.
+            + f"{{%- set s = {SEASON_SENSITIVITY}"
+              f".get(states('input_select.garden_{c}_plant'), 1) %}}"
+            + "{%- set f = [[1 + s * (f - 1), 0.4] | max, 1.3] | min %}"
             "{%- set dry = (base[0] * f) | round(0) | int %}"
             "{%- set wet = [[(base[1] * f) | round(0) | int, 95] | min, dry + 15] | max %}"
             f"{{%- set m = states('sensor.garden_{c}_moisture') | float(0) %}}")
@@ -606,12 +621,27 @@ def package():
                     "season": (f"{{{{ state_attr('sensor.garden_' ~ ('outdoor' if is_state("
                                f"'input_boolean.garden_{c}_outdoors', 'on') else 'indoor')"
                                " ~ '_season', 'season') }}"),
+                    "season_factor": limits(c) + "{{ f | round(2) }}",
                     # The card's status line, e.g. "Dry · aim 23–53%".
                     "label": limits(c) + ("{{ ('Dry' if m < dry else 'Wet' if m > wet else 'Good')"
                                           " ~ ' · aim ' ~ dry ~ '–' ~ wet ~ '%' }}"),
                 },
             },
         ]
+        # For the graph: moisture placed on the bed's target, 0–100 with the
+        # target range in the middle third, whatever the target is today.
+        sensors.append({
+            "name": f"Garden {c} Target Position",
+            "unique_id": f"garden_{c}_target_position",
+            "icon": "mdi:water-percent",
+            "state_class": "measurement",
+            "availability": f"{{{{ has_value('sensor.garden_{c}_moisture') }}}}",
+            "state": limits(c) + (
+                "{%- if m <= dry %}{{ (m / [dry, 1] | max * 33.3) | round(1) }}"
+                "{%- elif m <= wet %}{{ (33.3 + (m - dry) / (wet - dry) * 33.4) | round(1) }}"
+                "{%- else %}{{ (66.7 + (m - wet) / [100 - wet, 1] | max * 33.3) | round(1) }}"
+                "{%- endif %}"),
+        })
         binaries.append({
             "name": f"Garden {c} Battery Low",
             "unique_id": f"garden_{c}_battery_low",
