@@ -18,8 +18,8 @@ notify:
   - platform: group
     name: laundry
     services:
-      - action: mobile_app_ben_phone    # TODO: Ben's phone
-      - action: mobile_app_megan_phone  # TODO: Megan's phone
+      - action: mobile_app_pixel_11       # Ben
+      - action: mobile_app_pixel_11_meg   # Megan
 
 input_select:
   washer_state:

@@ -36,11 +36,11 @@ power.
 
 1. Install the package: add `laundry: !include ha-dashboard/packages/laundry.yaml`
    under `homeassistant: packages:` (see [install.md](install.md)).
-2. **Pick the phones.** Install the Home Assistant Companion app on each
-   phone and log in. Then in `packages/laundry.yaml`, at the top under
-   `notify:`, replace the two `mobile_app_…` placeholders with the real names
-   (Developer Tools → Actions, search "mobile_app"; use the part after
-   `notify.`). Add or remove lines for more or fewer phones.
+2. **Phones.** Notifications go to Ben's (`mobile_app_pixel_11`) and
+   Megan's (`mobile_app_pixel_11_meg`) Pixels, listed at the top of
+   `packages/laundry.yaml` under `notify:`. To add a phone, install the
+   Companion app on it, find its name under Developer Tools → Actions
+   (search "mobile_app"; use the part after `notify.`) and add a line.
 3. Check configuration and restart. Test the notification from Developer
    Tools → Actions:
 
