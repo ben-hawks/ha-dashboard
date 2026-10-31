@@ -1,4 +1,5 @@
 # Coop exhaust fan: ESP32-WROOM-32E 4-relay board + DHT22.
+# Source: github.com/ben-hawks/ha-dashboard, esphome/coop-fan.yaml
 #
 # The fan decides for itself, on the board, so it keeps working if Wi-Fi or
 # Home Assistant is down:
@@ -25,9 +26,9 @@
 #   Power             The 7-30V input can share the fan's 12 V or 24 V supply.
 #                     Use either that or N/L mains, not both.
 #
-# Secrets (in ESPHome's secrets.yaml): wifi_ssid, wifi_password,
-# coop_fan_api_key (32 random bytes, base64; the ESPHome "New device" wizard
-# makes one) and coop_fan_ota_password.
+# The copy in the ESPHome add-on has its own API key in place of
+# !secret coop_fan_api_key (the "New device" wizard made it). Wi-Fi and the
+# setup hotspot use the add-on's existing secrets.
 
 substitutions:
   name: coop-fan
@@ -56,7 +57,6 @@ api:
 
 ota:
   - platform: esphome
-    password: !secret coop_fan_ota_password
 
 wifi:
   ssid: !secret wifi_ssid
@@ -64,6 +64,7 @@ wifi:
   # If it can't join Wi-Fi it makes its own network for setup.
   ap:
     ssid: Coop Fan Setup
+    password: !secret fallback_ap_password
 
 captive_portal:
 
