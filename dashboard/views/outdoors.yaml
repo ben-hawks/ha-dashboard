@@ -79,8 +79,9 @@ sections:
                   - type: tile
                     entity: sensor.shed_battery_time_left
                     name: Time left
-              # The AC and DC outlet switches, found by the power station's
-              # serial number so a re-added device doesn't break them.
+              # The AC and DC outlet switches (not their _eco mode twins),
+              # found by the power station's serial number so a re-added
+              # device doesn't break them.
               - type: custom:auto-entities
                 show_empty: false
                 card:
@@ -90,12 +91,12 @@ sections:
                 card_param: cards
                 filter:
                   include:
-                    - entity_id: "switch.*el30v22533005590342*_ac*"
+                    - entity_id: "switch.*el30v22533005590342*_ac"
                       options:
                         type: tile
                         name: AC outlets
                         icon: mdi:power-socket-us
-                    - entity_id: "switch.*el30v22533005590342*_dc*"
+                    - entity_id: "switch.*el30v22533005590342*_dc"
                       options:
                         type: tile
                         name: DC outlets
