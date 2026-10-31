@@ -45,8 +45,12 @@ existing one rather than creating a second.
 
 ```yaml
 homeassistant:
-  # Every file in ha-dashboard/packages/ (wall_tablet.yaml, garden.yaml, …).
-  packages: !include_dir_named ha-dashboard/packages
+  # One line per file in ha-dashboard/packages/. (`packages: !include_dir_named
+  # ha-dashboard/packages` also works and picks up new files on its own, but
+  # the Studio Code Server extension flags it with a schema warning.)
+  packages:
+    wall_tablet: !include ha-dashboard/packages/wall_tablet.yaml
+    garden: !include ha-dashboard/packages/garden.yaml
 
 frontend:
   themes: !include_dir_merge_named ha-dashboard/themes
