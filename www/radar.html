@@ -3,7 +3,7 @@
      /local/radar.html (copy this file to /config/www/), so it shares the
      dashboard's origin and can read zone.home's location from the page that
      embeds it, then opens Windy's radar map there.
-     Options: ?zoom=7 (default 7, about 300 km across). -->
+     Options: ?zoom=9 (default 9, about 90 km across on the wall tablet). -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Weather radar</title>
@@ -16,7 +16,7 @@
 <body>Loading radar…</body>
 <script>
   const params = new URLSearchParams(location.search);
-  const zoom = params.get("zoom") || "7";
+  const zoom = params.get("zoom") || "9";
 
   function hass() {
     try {
