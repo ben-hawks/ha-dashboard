@@ -71,26 +71,25 @@ sections:
                 square: false
                 cards:
                   - type: tile
-                    entity: sensor.el30v22533005590342_battery_level
+                    entity: sensor.shed_el30v2_el30v22533005590342_battery_level
                     name: Battery
                     features:
                       - type: bar-gauge
                   - type: tile
-                    entity: sensor.el30v22533005590342_battery_time_in_minutes
+                    entity: sensor.shed_el30v2_el30v22533005590342_battery_time_in_minutes
                     name: Time left
                     icon: mdi:timer-sand
                   - type: tile
-                    entity: switch.el30v22533005590342_ac
+                    entity: switch.shed_el30v2_el30v22533005590342_ac
                     name: AC outlets
                     icon: mdi:power-socket-us
                   - type: tile
-                    entity: switch.el30v22533005590342_dc
+                    entity: switch.shed_el30v2_el30v22533005590342_dc
                     name: DC outlets
                     icon: mdi:usb-port
-              # Solar coming in, with the last 24 hours behind it
-              # (sensor.shed_solar_power finds the Bluetti's input sensor).
+              # Solar coming in, with the last 24 hours behind it.
               - type: tile
-                entity: sensor.shed_solar_power
+                entity: sensor.shed_el30v2_el30v22533005590342_photovoltaics_input_power
                 name: Solar input
                 color: amber
                 features:

@@ -183,7 +183,7 @@ sections:
         name: UPS status
         icon: mdi:power-plug-outline
       - type: tile
-        entity: sensor.el30v22533005590342_battery_level
+        entity: sensor.shed_el30v2_el30v22533005590342_battery_level
         name: Shed battery
         features:
           - type: bar-gauge
