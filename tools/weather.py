@@ -619,11 +619,14 @@ def templates():
         "state": (
             "{% set rain = states('sensor.station_rain_rate') | float(0) %}"
             # The gateway's own rain flag (binary_sensor.…_rain_state_piezo)
-            # reacts sooner than the rate.
+            # reacts sooner than the rate, but the WS90 also sets it when its
+            # surface is just wet (dew, a damp evening). So it only counts
+            # once some rain has actually been measured in the last hour.
             "{% set flag = states.binary_sensor | map(attribute='entity_id')"
             f" | select('search', '{GATEWAY}_rain_state(_piezo)?$') | select('is_state', 'on')"
             " | list | count > 0 %}"
-            "{% set wet = flag or rain > 0 %}"
+            f"{{% set hour = (({find('hourly_rain(_piezo)?')}) | map('float') | list + [0]) | max %}}"
+            "{% set wet = rain > 0 or (flag and hour > 0) %}"
             "{% set temp = states('sensor.station_temperature') | float(99) %}"
             # The WS90's piezo rain sensor misses most dry snow, so also trust
             # the forecast's current condition when it's cold enough.
