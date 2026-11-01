@@ -85,6 +85,13 @@ ROWS = [("Rain today", "rain_today"), ("Rain rate", "rain_rate"),
 ROW_Y0, ROW_DY, ROW_X_LABEL, ROW_X_VALUE = 170, 24, 182, 390
 
 
+def entity_id(key):
+    """A reading's helper sensor. Home Assistant names it after the helper's
+    name, not its unique_id: "Station Rain This Month" →
+    sensor.station_rain_this_month."""
+    return "sensor." + "station_" + READINGS[key][0].lower().replace(" ", "_")
+
+
 def data_uri(svg):
     return "data:image/svg+xml;base64," + base64.b64encode(svg.encode()).decode()
 
@@ -363,7 +370,7 @@ def hero_card():
          "style": {**at(cx, cy + r + 27), **small, "font-size": "12px"}},
     ]
     for i, (_, key) in enumerate(ROWS):
-        elements.append({"type": "state-label", "entity": f"sensor.station_{key}",
+        elements.append({"type": "state-label", "entity": entity_id(key),
                          "style": {**at(ROW_X_VALUE, ROW_Y0 + i * ROW_DY), **right, **big,
                                    "font-size": "14px", "font-weight": "500"}})
     return {"type": "picture-elements", "image": data_uri(base_svg()),

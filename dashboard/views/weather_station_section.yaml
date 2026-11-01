@@ -167,7 +167,7 @@ cards:
         font-size: 14px
         font-weight: '500'
     - type: state-label
-      entity: sensor.station_rain_month
+      entity: sensor.station_rain_this_month
       style:
         left: 97.5%
         top: 74.7%
