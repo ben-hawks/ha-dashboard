@@ -573,6 +573,11 @@ def templates():
             s["device_class"] = device_class
         if key in ("rain_today", "rain_month"):
             s["state_class"] = "total_increasing"
+        if key.startswith("rain"):
+            # The gateway reports a tipping-bucket and a piezo (WS90) value
+            # for each; the unused gauge sits at 0, so take the larger. Two
+            # decimals, so light rain shows (0.04 in, not 0 in).
+            s["state"] = (f"{{{{ '%.2f' | format(({find(suffix)}) | map('float') | max) }}}}")
         sensors.append(s)
     sensors.append({
         "name": "Station Wind Compass", "unique_id": "station_wind_compass",
