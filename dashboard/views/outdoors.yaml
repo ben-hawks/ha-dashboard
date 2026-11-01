@@ -3,8 +3,12 @@
 #   Garden        one card per bed                       (tools/garden.py)
 #   Coop & shed   chicken coop sensors | shed power station
 # Each band lays its cards out with a grid card, so the columns stay even and
-# in the same order on any screen width. Weather and Garden have no headings
-# so both fit on the 1280×800 wall tablet without scrolling.
+# in the same order. Weather and Garden have no headings so both fit on the
+# 1280×800 wall tablet without scrolling.
+#
+# Phones: each band also has a stacked copy of its cards (one per row),
+# shown below 768 px wide instead of the side-by-side grid. Same view, same
+# cards; the copies reuse the originals (&anchors / *aliases).
 title: Outdoors
 path: outdoors
 type: sections
@@ -23,10 +27,14 @@ sections:
         square: false
         grid_options:
           columns: full
+        visibility:
+          - condition: screen
+            media_query: "(min-width: 768px)"
         cards:
           # Coop sensors, picked up from the Chicken Coop area so they keep
           # working if their entity IDs change.
-          - type: vertical-stack
+          - &coop_stack
+            type: vertical-stack
             cards:
               - type: heading
                 heading: Chicken coop
@@ -61,7 +69,8 @@ sections:
                   content: No coop sensors found in the Chicken Coop area.
 
           # Power station in the shed.
-          - type: vertical-stack
+          - &shed_stack
+            type: vertical-stack
             cards:
               - type: heading
                 heading: Shed power
@@ -161,3 +170,14 @@ sections:
                     unit: W
                     color: "#6aa9ff"
                     show_fill: false
+
+      # Phones: the coop and shed one under the other.
+      - <<: *coop_stack
+        grid_options: &phone_width
+          columns: full
+        visibility: &phone
+          - condition: screen
+            media_query: "(max-width: 767px)"
+      - <<: *shed_stack
+        grid_options: *phone_width
+        visibility: *phone

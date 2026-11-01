@@ -8,9 +8,12 @@ cards:
   square: false
   grid_options:
     columns: full
+  visibility:
+  - condition: screen
+    media_query: '(min-width: 768px)'
   cards:
   - type: vertical-stack
-    cards:
+    cards: &id008
     - type: picture-elements
       image: data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMDAgMTYwIj48L3N2Zz4=
       elements:
@@ -213,7 +216,7 @@ cards:
         color: '#6aa9ff'
       color_thresholds_transition: smooth
   - type: vertical-stack
-    cards:
+    cards: &id009
     - type: picture-elements
       image: data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMDAgMTYwIj48L3N2Zz4=
       elements:
@@ -379,7 +382,7 @@ cards:
         color: '#6aa9ff'
       color_thresholds_transition: smooth
   - type: vertical-stack
-    cards:
+    cards: &id011
     - type: picture-elements
       image: data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMDAgMTYwIj48L3N2Zz4=
       elements:
@@ -545,7 +548,7 @@ cards:
         color: '#6aa9ff'
       color_thresholds_transition: smooth
   - type: vertical-stack
-    cards:
+    cards: &id012
     - type: picture-elements
       image: data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMDAgMTYwIj48L3N2Zz4=
       elements:
@@ -710,3 +713,25 @@ cards:
       - value: 66.7
         color: '#6aa9ff'
       color_thresholds_transition: smooth
+- type: vertical-stack
+  cards: *id008
+  grid_options:
+    columns: full
+  visibility: &id010
+  - condition: screen
+    media_query: '(max-width: 767px)'
+- type: vertical-stack
+  cards: *id009
+  grid_options:
+    columns: full
+  visibility: *id010
+- type: vertical-stack
+  cards: *id011
+  grid_options:
+    columns: full
+  visibility: *id010
+- type: vertical-stack
+  cards: *id012
+  grid_options:
+    columns: full
+  visibility: *id010

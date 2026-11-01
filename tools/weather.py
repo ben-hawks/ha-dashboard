@@ -530,10 +530,26 @@ def radar_card():
     ]}
 
 
+# Wide screens (the wall tablet, a PC) get the band side by side; phones get
+# the same cards stacked. Home Assistant shows whichever matches the screen
+# (a card's "screen" visibility condition), so it's one view either way. The
+# phone copy reuses the same card definitions (YAML aliases in the output).
+WIDE = [{"condition": "screen", "media_query": "(min-width: 768px)"}]
+NARROW = [{"condition": "screen", "media_query": "(max-width: 767px)"}]
+
+
 def section():
     """The Weather band across the top of Outdoors: station card | forecast |
     24 h graphs. A grid card keeps the three columns even (grid_options widths
     in a multi-column section are counted out of 36, not 12)."""
+    hero = {k: v for k, v in hero_card().items() if k != "grid_options"}
+    forecast, radar = forecast_card(), radar_card()
+    graphs = weather_graphs()
+    # Forecast, or the radar while the switch is on. Only one shows, so the
+    # grid keeps three columns.
+    show_forecast = [{"condition": "state", "entity": RADAR_SWITCH, "state_not": "on"}]
+    show_radar = [{"condition": "state", "entity": RADAR_SWITCH, "state": "on"}]
+    full = {"columns": "full"}
     return {
         "type": "grid",
         "column_span": 3,
@@ -541,17 +557,21 @@ def section():
             # No heading: the band needs to fit above the Garden on the
             # 1280×800 wall tablet without scrolling.
             {"type": "grid", "columns": 3, "square": False,
-             "grid_options": {"columns": "full"},
+             "grid_options": full, "visibility": WIDE,
              "cards": [
-                 {k: v for k, v in hero_card().items() if k != "grid_options"},
-                 # Forecast, or the radar while the switch is on. Only one
-                 # shows, so the grid keeps three columns.
-                 {"type": "conditional", "card": forecast_card(), "conditions": [
-                     {"condition": "state", "entity": RADAR_SWITCH, "state_not": "on"}]},
-                 {"type": "conditional", "card": radar_card(), "conditions": [
-                     {"condition": "state", "entity": RADAR_SWITCH, "state": "on"}]},
-                 {"type": "grid", "columns": 2, "square": False, "cards": weather_graphs()},
+                 hero,
+                 {"type": "conditional", "card": forecast, "conditions": show_forecast},
+                 {"type": "conditional", "card": radar, "conditions": show_radar},
+                 {"type": "grid", "columns": 2, "square": False, "cards": graphs},
              ]},
+            # Phones: one under another.
+            {**hero, "grid_options": full, "visibility": NARROW},
+            {"type": "conditional", "card": forecast, "grid_options": full,
+             "conditions": show_forecast + NARROW},
+            {"type": "conditional", "card": radar, "grid_options": full,
+             "conditions": show_radar + NARROW},
+            {"type": "grid", "columns": 2, "square": False, "cards": graphs,
+             "grid_options": full, "visibility": NARROW},
         ],
     }
 

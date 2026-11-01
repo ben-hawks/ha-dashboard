@@ -442,10 +442,17 @@ def card_for(bed):
     }
 
 
+# Wide screens get the beds side by side; phones get them stacked (see
+# WIDE / NARROW in tools/weather.py; one view either way).
+WIDE = [{"condition": "screen", "media_query": "(min-width: 768px)"}]
+NARROW = [{"condition": "screen", "media_query": "(max-width: 767px)"}]
+
+
 def section():
     # The beds sit in a grid card that always splits evenly, up to four per
     # row. (Sizing them with grid_options doesn't work here: in a section
     # spanning 3 columns, Home Assistant counts card widths out of 36, not 12.)
+    cards = [card_for(b) for b in BEDS]
     return {
         "type": "grid",
         "column_span": 3,
@@ -453,8 +460,12 @@ def section():
         # tablet without scrolling.
         "cards": [
             {"type": "grid", "columns": min(len(BEDS), 4), "square": False,
-             "grid_options": {"columns": "full"},
-             "cards": [card_for(b) for b in BEDS]},
+             "grid_options": {"columns": "full"}, "visibility": WIDE,
+             "cards": cards},
+        ] + [
+            # Phones: one bed under another.
+            {**card, "grid_options": {"columns": "full"}, "visibility": NARROW}
+            for card in cards
         ],
     }
 
