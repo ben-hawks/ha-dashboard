@@ -178,8 +178,10 @@ sections:
       #      area: give each Jellyfin device its TV's area once it appears
       #      (Settings → Devices → Jellyfin)
       #   2. its Google Cast entity (YouTube, anything cast from a phone)
-      #   3. its Android TV Remote entity: at least the app's name (Netflix,
-      #      Sling, ...). Skipped on the home screen and screensaver.
+      #   3. its "now playing" player from Android's media sessions over ADB
+      #      (Netflix, Sling, Dropout, ...; packages/tv.yaml, tools/tv.py)
+      #   4. its Android TV Remote entity: at least the app's name.
+      #      Skipped on the home screen and screensaver.
       - type: custom:auto-entities
         show_empty: false
         grid_options:
@@ -193,11 +195,11 @@ sections:
           template: >-
             {%- set tvs = [
               {'area': 'Living Room', 'cast': 'media_player.main_room_tv',
-               'remote': 'media_player.main_room_tv_2'},
+               'remote': 'media_player.main_room_tv_2', 'key': 'main_room_tv'},
               {'area': 'Game Room', 'cast': 'media_player.bedroom_tv_2',
-               'remote': 'media_player.game_room_tv'},
+               'remote': 'media_player.game_room_tv', 'key': 'game_room_tv'},
               {'area': 'Bedroom', 'cast': 'media_player.bedroom_tv_2_2',
-               'remote': 'media_player.bedroom_tv_3'},
+               'remote': 'media_player.bedroom_tv_3', 'key': 'bedroom_tv'},
             ] %}
             {%- set active = ['playing', 'paused', 'buffering'] %}
             {%- set ns = namespace(cards=[]) %}
@@ -212,6 +214,8 @@ sections:
                 {%- set pick = jellyfin[0] %}
               {%- elif states(tv.cast) in active %}
                 {%- set pick = tv.cast %}
+              {%- elif states('sensor.tv_' ~ tv.key ~ '_session') in ['playing', 'paused'] %}
+                {%- set pick = 'media_player.' ~ tv.key ~ '_now_playing' %}
               {%- elif states(tv.remote) not in ['off', 'unavailable', 'unknown']
                        and 'launcher' not in app and 'dream' not in app %}
                 {%- set pick = tv.remote %}
@@ -236,6 +240,8 @@ sections:
           exclude:
             - integration: jellyfin
             - integration: androidtv_remote
+            - integration: androidtv
+            - integration: universal
             - entity_id: media_player.main_room_tv
             - entity_id: media_player.bedroom_tv_2
             - entity_id: media_player.bedroom_tv_2_2
