@@ -172,7 +172,14 @@ sections:
               - heat_cool
               - "off"
 
-      # Whatever is playing right now, anywhere in the house.
+      # Now playing on each TV, while it's in use: artwork, title and
+      # controls from the richest source available, in this order:
+      #   1. the TV's Jellyfin player (official app or Wholphin), found by
+      #      area: give each Jellyfin device its TV's area once it appears
+      #      (Settings → Devices → Jellyfin)
+      #   2. its Google Cast entity (YouTube, anything cast from a phone)
+      #   3. its Android TV Remote entity: at least the app's name (Netflix,
+      #      Sling, ...). Skipped on the home screen and screensaver.
       - type: custom:auto-entities
         show_empty: false
         grid_options:
@@ -183,6 +190,55 @@ sections:
           square: false
         card_param: cards
         filter:
+          template: >-
+            {%- set tvs = [
+              {'area': 'Living Room', 'cast': 'media_player.main_room_tv',
+               'remote': 'media_player.main_room_tv_2'},
+              {'area': 'Game Room', 'cast': 'media_player.bedroom_tv_2',
+               'remote': 'media_player.game_room_tv'},
+              {'area': 'Bedroom', 'cast': 'media_player.bedroom_tv_2_2',
+               'remote': 'media_player.bedroom_tv_3'},
+            ] %}
+            {%- set active = ['playing', 'paused', 'buffering'] %}
+            {%- set ns = namespace(cards=[]) %}
+            {%- for tv in tvs %}
+              {%- set jellyfin = integration_entities('jellyfin')
+                    | select('match', 'media_player\\.')
+                    | select('in', area_entities(tv.area))
+                    | select('is_state', active) | list %}
+              {%- set app = state_attr(tv.remote, 'app_id') or '' %}
+              {%- set pick = none %}
+              {%- if jellyfin %}
+                {%- set pick = jellyfin[0] %}
+              {%- elif states(tv.cast) in active %}
+                {%- set pick = tv.cast %}
+              {%- elif states(tv.remote) not in ['off', 'unavailable', 'unknown']
+                       and 'launcher' not in app and 'dream' not in app %}
+                {%- set pick = tv.remote %}
+              {%- endif %}
+              {%- if pick %}
+                {%- set ns.cards = ns.cards + [{'type': 'media-control', 'entity': pick}] %}
+              {%- endif %}
+            {%- endfor %}
+            {{ ns.cards | tojson }}
+
+      # Speakers playing anywhere in the house (the TVs are above).
+      - type: custom:auto-entities
+        show_empty: false
+        grid_options:
+          columns: full
+        card:
+          type: grid
+          columns: 1
+          square: false
+        card_param: cards
+        filter:
+          exclude:
+            - integration: jellyfin
+            - integration: androidtv_remote
+            - entity_id: media_player.main_room_tv
+            - entity_id: media_player.bedroom_tv_2
+            - entity_id: media_player.bedroom_tv_2_2
           include:
             - domain: media_player
               state: playing
