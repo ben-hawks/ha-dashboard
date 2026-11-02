@@ -13,6 +13,8 @@ It's meant to be easy for anyone in the house, not just whoever set it up.
 - **Chicken counting feasibility test:** [docs/chicken-vision-test.md](docs/chicken-vision-test.md)
 - **Frigate for the chicken cameras (Arc server):** [docs/frigate.md](docs/frigate.md)
 - **Training our own hen model:** [docs/hen-model.md](docs/hen-model.md)
+- **Coop fan controller enclosure and sensor shield (3D print):** [hardware/coop-fan-enclosure](hardware/coop-fan-enclosure/README.md)
+- **Tablet wall mount (3D print):** [hardware/tablet-wall-mount](hardware/tablet-wall-mount/README.md)
 - **Adding devices, rooms, tabs and alerts:** [docs/adding-things.md](docs/adding-things.md)
 - **Room-by-room heating/cooling (zoning):** [docs/hvac-zoning.md](docs/hvac-zoning.md)
 
