@@ -221,8 +221,9 @@ sections:
                 {%- set pick = jellyfin[0] %}
               {%- elif states(tv.cast) in active %}
                 {%- set pick = tv.cast %}
-              {%- elif states('sensor.tv_' ~ tv.key ~ '_session') in ['playing', 'paused']
-                       or states('media_player.' ~ tv.key ~ '_now_playing') in active %}
+              {%- elif (states('sensor.tv_' ~ tv.key ~ '_session') in ['playing', 'paused']
+                        or states('media_player.' ~ tv.key ~ '_now_playing') in active)
+                       and has_value('media_player.' ~ tv.key ~ '_now_playing') %}
                 {%- set pick = 'media_player.' ~ tv.key ~ '_now_playing' %}
               {%- elif states(tv.adb) in active %}
                 {%- set pick = tv.adb %}
