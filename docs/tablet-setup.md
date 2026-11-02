@@ -92,7 +92,7 @@ Rebooting from Home Assistant needs Fully to be the tablet's **device owner**
 on the tablet (true without Google apps):
 
 ```sh
-adb shell dpm set-device-owner de.ozerov.fully/.DeviceOwnerReceiver
+adb shell dpm set-device-owner de.ozerov.fully/.MyDeviceAdmin
 ```
 
 It should say `Success: Device owner set`. To undo it later, use Fully's
