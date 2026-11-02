@@ -3,7 +3,7 @@
 //
 // Inspired by Kreato 3D's "Lenovo Tab M10 HD 2 Gen wall mount" (cults3d):
 // a holder that the tablet snaps into, sliding sideways onto a plate that is
-// screwed to the wall and held home by magnets. Redrawn from scratch.
+// held home by magnets. Redrawn from scratch; the plate hides behind the holder.
 //
 // Two parts:  PART = "holder"  - tablet snaps into it (print back-down)
 //             PART = "plate"   - screws to the wall (print back-down)
@@ -34,31 +34,36 @@ lip_drop = 1.0;      // chamfer starts this far below the tablet's front face
 plug_depth = 15;     // room from tablet edge outwards for the plug head
 plug_len   = 60;     // room along the edge (plug head + cable bend, up or down)
 cover_t    = 1.6;    // front cover of the housing
-cable_d    = 5.5;    // cable exit notch width
-exit_top    = true;  // cable exit notch in top of housing
-exit_bottom = true;  // cable exit notch in bottom of housing
+edge_r     = 2;      // rounded-over front outer edge of the holder
+cable_d    = 5.5;    // cable channel width
+exit_top    = true;  // cable channel to the top edge
+exit_bottom = true;  // cable channel to the bottom edge
 
 /* ---- Other edge cut-outs (tablet edge positions, from the centre line) ---- */
 speaker_from = 33;   // speaker grilles on both short edges, |y| range
 speaker_to   = 58;
 jack_y       = 15;   // 3.5 mm jack on the non-port short edge (+/- y, both cut)
 jack_w       = 9;
-// Power/volume buttons: on the TOP long edge, near the non-port end
-// (portrait right edge). Distance from the non-port end of the tablet:
-btn_from = 18;
-btn_to   = 80;
+// Power + volume buttons and mics: on the TOP long edge, measured from the
+// non-port (headphone jack / rear camera) end of the tablet.
+btn_from = 45;
+btn_to   = 112;
 btn_cut  = true;
+mic_at   = [124, 168, 219];   // mic holes (keeps voice assistants hearing you)
+mic_d    = 2.5;
 
 /* ---- Slide / plate ---- */
+// The plate hides completely behind the holder. Its rails grip a 45 deg bevel
+// along the holder's top and bottom back edges; the holder slides on from the
+// left and stops when the rails reach the un-bevelled left end.
 plate_w    = 200;    // plate length along X (rails length)
-plate_t    = 4;      // plate base thickness
-dt         = 3;      // dovetail size (flange 3 mm out, 3 mm tall, 45 deg)
+plate_t    = 3;      // plate base thickness
+dt         = 4;      // dovetail bevel size (45 deg)
 dt_clr     = 0.3;    // dovetail clearance
-rail_w     = 2.5;    // rail wall thickness outside the dovetail
-stop_len   = 6;      // end stop at the port end of the rails
+rail_tip   = 0.8;    // minimum rail thickness at its top
 screw_d    = 4.5;    // screw clearance
 screw_head = 9;      // countersink diameter
-screws = [[-85,50],[-85,-50],[85,50],[85,-50],[0,60],[0,-60]];
+screws = [[-85,50],[-85,-50],[85,50],[85,-50],[0,58],[0,-58]];
 
 /* ---- Magnets (12 x 2..3 mm discs) ---- */
 mag_d = 12.3;        // pocket diameter (12 mm magnet + clearance)
@@ -78,10 +83,8 @@ port_z  = back_t + tab_t/2;
 hs_x0   = Wi/2;                           // housing interior starts at tablet edge
 hs_x1   = Wi/2 + clr + plug_depth;        // housing interior end
 hs_y    = plug_len/2;
-hs_out  = hs_x1 + wall;
-flange_x0 = -plate_w/2;
-flange_x1 =  plate_w/2 - stop_len - dt_clr;
-plate_h   = Ho + 2*(dt + dt_clr + rail_w);
+hs_out  = hs_x1 + wall;                   // right outer edge of the holder
+bevel_x0 = -plate_w/2 - dt_clr;           // bevel starts here (rail stop)
 
 module rrect(w, h, r) {
     r2 = max(r, 0.01);
@@ -91,43 +94,48 @@ module rrect(w, h, r) {
 module slab(w, h, r, z, t=e) translate([0,0,z]) linear_extrude(t) rrect(w,h,r);
 module box(x0,x1,y0,y1,z0,z1) translate([x0,y0,z0]) cube([x1-x0,y1-y0,z1-z0]);
 
-// Dovetail flange on the holder: triangle, 'dt' out at z=0, 0 at z=dt.
-module flange_prism(x0, x1, y_edge, s) {   // s=+1 top edge, -1 bottom edge
-    translate([x0,0,0]) rotate([90,0,90]) linear_extrude(x1-x0)
-        polygon([[y_edge - s*1, 0], [y_edge + s*dt, 0], [y_edge, dt], [y_edge - s*1, dt]]);
+// Holder outline: the tablet frame, extended on the port side to take the plug.
+module outline() translate([(hs_out - Wo/2)/2, 0]) rrect(hs_out + Wo/2, Ho, ro);
+
+// Outline extruded with a rounded-over front edge (stepped, 0.2 mm steps).
+module rounded_body() {
+    n = ceil(edge_r/0.2);
+    linear_extrude(H_tot - edge_r + e) outline();
+    for (i=[0:n-1]) {
+        z = H_tot - edge_r + i*edge_r/n;
+        dz = (i+1)*edge_r/n;
+        inset = edge_r - sqrt(max(edge_r*edge_r - dz*dz, 0));
+        translate([0,0,z]) linear_extrude(edge_r/n + e) offset(delta=-inset) outline();
+    }
+}
+
+// 45 deg bevel along a top (s=1) / bottom (s=-1) back edge, from x0 rightwards.
+module bevel_cut(s) {
+    translate([bevel_x0, 0, 0]) rotate([90,0,90]) linear_extrude(hs_out - bevel_x0 + 1)
+        polygon([[s*(Ho/2 - dt), -1], [s*(Ho/2 + 1), -1], [s*(Ho/2 + 1), dt + 1], [s*(Ho/2), dt], [s*(Ho/2 - dt), 0]]);
 }
 
 module holder() {
     difference() {
-        union() {
-            linear_extrude(H_tot) rrect(Wo, Ho, ro);
-            // plug housing
-            translate([0,0,0]) linear_extrude(H_tot)
-                hull() {
-                    translate([Wo/2-ro, 0]) square([1, 2*hs_y+2*wall], center=true);
-                    translate([hs_out-3, hs_y+wall-3]) circle(r=3);
-                    translate([hs_out-3, -(hs_y+wall-3)]) circle(r=3);
-                }
-            // dovetail flanges top & bottom
-            flange_prism(flange_x0, flange_x1,  Ho/2,  1);
-            flange_prism(flange_x0, flange_x1, -Ho/2, -1);
-        }
+        rounded_body();
+        for (s=[-1,1]) bevel_cut(s);
+
         // tablet cavity
         translate([0,0,back_t]) linear_extrude(lip_z0 - back_t + e) rrect(Wi, Hi, ri);
         // 45 deg lip chamfer, then front window
         hull() { slab(Wi, Hi, ri, lip_z0); slab(Wi-2*lip, Hi-2*lip, ri-lip, lip_z0+lip-e); }
         translate([0,0,lip_z0]) linear_extrude(H_tot) rrect(Wi-2*lip, Hi-2*lip, ri-lip);
 
-        // plug housing interior + window into the tablet cavity (open at back)
+        // plug housing (open at the back, so the plug goes in from behind)
         box(hs_x0 - 1, hs_x1, -hs_y, hs_y, -1, H_tot - cover_t);
-        // cable exits (open from the back so the cable can be laid in)
+        // cable channels in the back of the extension, out to the top/bottom edge
         for (s=[-1,1]) if ((s>0 && exit_top) || (s<0 && exit_bottom))
-            box(hs_x1 - cable_d - 1, hs_x1 - 1, s>0 ? hs_y-1 : -hs_y-wall-1,
-                s>0 ? hs_y+wall+1 : -hs_y+1, -1, port_z + cable_d/2);
+            box(hs_x1 - cable_d, hs_x1, s>0 ? 0 : -Ho/2-1, s>0 ? Ho/2+1 : 0,
+                -1, port_z + cable_d/2);
 
-        // speaker grilles, both short edges
+        // speaker grilles, both short edges (straight out through the side extension)
         for (sx=[-1,1], sy=[-1,1])
-            box(sx>0 ? Wi/2-1 : -Wo/2-1, sx>0 ? Wo/2+1 : -Wi/2+1,
+            box(sx>0 ? Wi/2-1 : -Wo/2-1, sx>0 ? hs_out + 1 : -Wi/2+1,
                 sy>0 ? speaker_from : -speaker_to, sy>0 ? speaker_to : -speaker_from,
                 back_t + 1.5, cav_top - 1.5);
         // headphone jack (non-port edge); both possible positions
@@ -138,9 +146,12 @@ module holder() {
         if (btn_cut)
             box(-Wi/2 + btn_from, -Wi/2 + btn_to, Hi/2-1, Ho/2+1, back_t + 1.5, cav_top - 1.2);
 
+        // mic holes
+        for (m=mic_at) translate([-Wi/2 + m, Hi/2 - 1, port_z]) rotate([-90,0,0]) cylinder(d=mic_d, h=wall+2, $fn=24);
+
         // back windows (saves plastic, clears the rear camera bump)
         for (sx=[-1,1]) translate([sx*42, 0, -1]) linear_extrude(back_t+2) rrect(60, Hi-24, 6);
-        translate([-(Wi/2-4+98)/2 - 0, 0, -1]) linear_extrude(back_t+2) rrect(Wi/2-4-98, Hi-12, 4);
+        translate([-(Wi/2-4+98)/2, 0, -1]) linear_extrude(back_t+2) rrect(Wi/2-4-98, Hi-12, 4);
 
         // magnet pockets (open to the back)
         for (p=mag_xy) translate([p[0],p[1],-e]) cylinder(d=mag_d, h=mag_t+0.2);
@@ -150,13 +161,8 @@ module holder() {
 module plate() {
     difference() {
         union() {
-            linear_extrude(plate_t) rrect(plate_w, plate_h, 4);
+            linear_extrude(plate_t) rrect(plate_w, Ho, 3);
             for (s=[-1,1]) rail(s);
-            // end stop at the port end
-            for (s=[-1,1])
-                box(plate_w/2 - stop_len, plate_w/2,
-                    s>0 ? Ho/2 - 4 : -(plate_h/2), s>0 ? plate_h/2 : -(Ho/2 - 4),
-                    plate_t - e, plate_t + dt);
         }
         // windows
         for (sx=[-1,1]) translate([sx*40, 0, -1]) linear_extrude(plate_t+2) rrect(56, 96, 6);
@@ -170,13 +176,12 @@ module plate() {
     }
 }
 
-// Rail along the top (s=1) or bottom (s=-1): 45 deg undercut over the flange.
+// Rail along the top (s=1) or bottom (s=-1), flush with the holder's outside,
+// its inner face 45 deg to grip the holder's bevel.
 module rail(s) {
-    yi0 = s*(Ho/2 + dt + dt_clr);       // inner face at z = plate_t
-    yi1 = s*(Ho/2 + dt_clr);            // inner face at z = plate_t + dt
-    yo  = s*(plate_h/2);
+    h = dt - dt_clr - rail_tip;
     translate([-plate_w/2, 0, plate_t - e]) rotate([90,0,90]) linear_extrude(plate_w)
-        polygon([[yi0, 0], [yo, 0], [yo, dt], [yi1, dt]]);
+        polygon([[s*(Ho/2 - dt + dt_clr), 0], [s*Ho/2, 0], [s*Ho/2, h], [s*(Ho/2 - dt + dt_clr + h), h]]);
 }
 
 module oriented() { if (PORT_RIGHT) children(); else mirror([1,0,0]) children(); }

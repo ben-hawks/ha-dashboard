@@ -8,33 +8,36 @@ stay on charge.
 
 | File | What it is | Print |
 |------|-----------|-------|
-| `m10-holder.stl` | Tablet holder. The tablet snaps in behind a 2 mm, 45° lip | Back face down, no supports |
-| `m10-plate.stl`  | Wall plate. 6 countersunk holes for 4 mm screws | Back face down, no supports |
+| `m10-holder.stl` | Tablet holder. The tablet snaps in behind a 2 mm, 45° lip. The front edge is rounded, and the right-hand border is wider to hold the plug | Back face down, no supports |
+| `m10-plate.stl`  | Wall plate. 6 countersunk holes for 4 mm screws. It sits fully hidden behind the holder | Back face down, no supports |
 
 PETG is a good choice because the holder has to flex a little when the tablet
 snaps in. Use 3 to 4 walls and about 20 % infill.
 
 ## How it goes together
 
-1. Screw the plate to the wall, with the rails at the top and bottom and the
-   end stops on the right.
+1. Screw the plate to the wall, with the rails along the top and bottom.
 2. Glue two 12 mm magnets into the plate (the default pocket is for
    12 × 2 mm discs) and two into the back of the holder. Check the polarity
    first so each pair attracts.
 3. Snap the tablet into the holder, with the USB-C port on the housing side.
 4. Plug the right-angle USB-C plug in from behind, through the open back of the
-   housing. The cable leaves through the notch at the top or the bottom.
-5. Slide the holder onto the rails from the left until it hits the stops. The
-   magnets hold it there.
+   housing. Lay the cable in the channel on the back that runs to the top or
+   bottom edge.
+5. Slide the holder onto the rails from the left. The rails grip a 45° bevel
+   along the holder's top and bottom back edges. The holder stops when the
+   rails reach the un-bevelled left end, and the magnets hold it there. To
+   remove it, slide it to the left.
 
 ## Tablet details used
 
 - 241.54 × 149.38 × 8.25 mm, with about 9 mm corner radius (estimated)
 - USB-C is centred on one short edge, with speaker grilles on both short edges
   and the 3.5 mm jack on the other short edge
-- **Unverified:** the power and volume buttons are assumed to be on the top
-  long edge near the jack end (`btn_from`/`btn_to`). Check this against your
-  tablet before printing.
+- The power and volume buttons are on the top long edge, about 45 to 112 mm
+  from the jack end. There are mic holes about 124, 168 and 219 mm from that
+  end. These were measured from product photos, so check them against your
+  tablet.
 
 ## Adjusting
 
@@ -44,7 +47,9 @@ Open the `.scad` file in OpenSCAD and change the parameters at the top:
   whole mount.
 - `plug_depth` / `plug_len` set the space for the plug head and the cable bend.
   The defaults are 15 mm out from the tablet edge and 60 mm along it.
-- `cable_d`, `exit_top`, `exit_bottom` control the cable exit notches.
+- `cable_d`, `exit_top`, `exit_bottom` control the cable channels.
+- `edge_r` sets the rounding on the front edge.
+- `btn_from`/`btn_to` and `mic_at` set the button slot and the mic holes.
 - `clr` is the tablet clearance and `lip` is how much the lip overlaps the
   bezel.
 - For 3 mm magnets, set `mag_t = 3` and `back_t = 4`.
