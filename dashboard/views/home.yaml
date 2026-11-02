@@ -180,8 +180,9 @@ sections:
       #   2. its Google Cast entity (YouTube, anything cast from a phone)
       #   3. its "now playing" player from Android's media sessions over ADB
       #      (Netflix, Sling, Dropout, ...; packages/tv.yaml, tools/tv.py)
-      #   4. its Android TV Remote entity: at least the app's name.
-      #      Skipped on the home screen and screensaver.
+      #   4. the same player without a title, when the TV itself says
+      #      something is playing or paused: at least the app's name.
+      # A TV that's just on (home screen, settings, screensaver) gets no card.
       - type: custom:auto-entities
         show_empty: false
         grid_options:
@@ -194,12 +195,9 @@ sections:
         filter:
           template: >-
             {%- set tvs = [
-              {'area': 'Living Room', 'cast': 'media_player.main_room_tv',
-               'remote': 'media_player.main_room_tv_2', 'key': 'main_room_tv'},
-              {'area': 'Game Room', 'cast': 'media_player.bedroom_tv_2',
-               'remote': 'media_player.game_room_tv', 'key': 'game_room_tv'},
-              {'area': 'Bedroom', 'cast': 'media_player.bedroom_tv_2_2',
-               'remote': 'media_player.bedroom_tv_3', 'key': 'bedroom_tv'},
+              {'area': 'Living Room', 'cast': 'media_player.main_room_tv', 'key': 'main_room_tv'},
+              {'area': 'Game Room', 'cast': 'media_player.bedroom_tv_2', 'key': 'game_room_tv'},
+              {'area': 'Bedroom', 'cast': 'media_player.bedroom_tv_2_2', 'key': 'bedroom_tv'},
             ] %}
             {%- set active = ['playing', 'paused', 'buffering'] %}
             {%- set ns = namespace(cards=[]) %}
@@ -208,17 +206,14 @@ sections:
                     | select('match', 'media_player\\.')
                     | select('in', area_entities(tv.area))
                     | select('is_state', active) | list %}
-              {%- set app = state_attr(tv.remote, 'app_id') or '' %}
               {%- set pick = none %}
               {%- if jellyfin %}
                 {%- set pick = jellyfin[0] %}
               {%- elif states(tv.cast) in active %}
                 {%- set pick = tv.cast %}
-              {%- elif states('sensor.tv_' ~ tv.key ~ '_session') in ['playing', 'paused'] %}
+              {%- elif states('sensor.tv_' ~ tv.key ~ '_session') in ['playing', 'paused']
+                       or states('media_player.' ~ tv.key ~ '_now_playing') in active %}
                 {%- set pick = 'media_player.' ~ tv.key ~ '_now_playing' %}
-              {%- elif states(tv.remote) not in ['off', 'unavailable', 'unknown']
-                       and 'launcher' not in app and 'dream' not in app %}
-                {%- set pick = tv.remote %}
               {%- endif %}
               {%- if pick %}
                 {%- set ns.cards = ns.cards + [{'type': 'media-control', 'entity': pick}] %}
@@ -226,7 +221,9 @@ sections:
             {%- endfor %}
             {{ ns.cards | tojson }}
 
-      # Speakers playing anywhere in the house (the TVs are above).
+      # Speakers playing anywhere in the house (the TVs are above). A speaker
+      # carrying a TV's sound reports "playing" a title of "TV" whenever the
+      # TV is on; that's left out too.
       - type: custom:auto-entities
         show_empty: false
         grid_options:
@@ -242,6 +239,8 @@ sections:
             - integration: androidtv_remote
             - integration: androidtv
             - integration: universal
+            - attributes:
+                media_title: TV
             - entity_id: media_player.main_room_tv
             - entity_id: media_player.bedroom_tv_2
             - entity_id: media_player.bedroom_tv_2_2
