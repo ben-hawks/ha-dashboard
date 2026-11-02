@@ -13,6 +13,12 @@ rest_command:
     content_type: application/json; charset=utf-8
     payload: '{{ payload | to_json }}'
     timeout: 5
+  tvoverlay_notification_settings:
+    url: http://{{ host }}:5001/set/notifications
+    method: post
+    content_type: application/json; charset=utf-8
+    payload: '{{ payload | to_json }}'
+    timeout: 5
 script:
   tv_popup:
     alias: 'TVs: pop-up'
@@ -137,6 +143,13 @@ script:
           then:
           - variables:
               host: '{%- set ns = namespace(ip=none) %}{%- for e in [repeat.item.remote, repeat.item.adb] %}{%- set dev = device_id(e) %}{%- if dev and not ns.ip %}{%- for t in device_entities(dev) | select(''match'', ''device_tracker\.'') %}{%- set ip = state_attr(t, ''ip'') or state_attr(t, ''ip_address'') %}{%- if ip and not ns.ip %}{% set ns.ip = ip %}{% endif %}{%- endfor %}{%- endif %}{%- endfor %}{{ ns.ip or repeat.item.ip }}'
+          - action: rest_command.tvoverlay_notification_settings
+            data:
+              host: '{{ host }}'
+              payload:
+                displayFixedNotifications: true
+                fixedNotificationsVisibility: 90
+            continue_on_error: true
           - repeat:
               for_each: '{{ badges }}'
               sequence:

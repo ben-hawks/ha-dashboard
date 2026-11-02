@@ -203,6 +203,13 @@ def badges_script():
             {"repeat": {"for_each": targets(), "sequence": [{
                 "if": [{"condition": "template", "value_template": ON}],
                 "then": [{"variables": {"host": HOST}},
+                         # Badges default to the clock's visibility, which is
+                         # 0 while the clock is hidden: give them their own.
+                         {"action": "rest_command.tvoverlay_notification_settings",
+                          "data": {"host": "{{ host }}", "payload": {
+                              "displayFixedNotifications": True,
+                              "fixedNotificationsVisibility": 90}},
+                          "continue_on_error": True},
                          {"repeat": {"for_each": "{{ badges }}", "sequence": [{
                              "action": "rest_command.tvoverlay_fixed",
                              "data": {"host": "{{ host }}",
@@ -328,6 +335,7 @@ def package():
         "rest_command": {
             "tvoverlay_notify": rest_command("notify"),
             "tvoverlay_fixed": rest_command("notify_fixed"),
+            "tvoverlay_notification_settings": rest_command("set/notifications"),
         },
         "script": {"tv_popup": popup_script(), "tv_badges": badges_script()},
         "automation": automations(),
