@@ -46,8 +46,8 @@ TV_IPS = {
 HA_URL = None                 # e.g. "http://192.168.1.10:8123"
 # The doorbell: the entity that changes when it's pressed (UniFi Protect:
 # event.<name>_doorbell, or binary_sensor.<name>_doorbell) and its camera.
-DOORBELL_TRIGGER = None       # e.g. "event.front_doorbell_doorbell"
-DOORBELL_CAMERA = None        # e.g. "camera.front_doorbell_high_resolution_channel"
+DOORBELL_TRIGGER = "binary_sensor.front_doorbell_doorbell"
+DOORBELL_CAMERA = "camera.front_doorbell_high_resolution_channel"
 
 # Colours (hex) used on the TV.
 RED, BLUE, AMBER, GREEN = "#e5484d", "#3b82f6", "#f5a524", "#30a46c"
