@@ -9,7 +9,7 @@ POSTs to it:
 Messages only go to TVs that are on (their ADB player isn't off), so a TV
 in standby doesn't make a send fail.
 
-Pop-ups:  doorbell (with a camera snapshot), a new household alert, laundry
+Pop-ups:  doorbell (with the camera's picture), a new household alert, laundry
           done, hens too hot/cold
 Badges:   outside temperature, alerts, laundry waiting, coop comfort;
           refreshed when they change, every 10 minutes, and when a TV turns
@@ -41,9 +41,11 @@ TV_IPS = {
     "game_room_tv": None,
     "bedroom_tv": None,
 }
-# Home Assistant's address as the TVs reach it, for pictures (the doorbell
-# snapshot is saved under /config/www/tvoverlay/ and served from /local/).
-HA_URL = None                 # e.g. "http://192.168.1.10:8123"
+# Home Assistant's address as the TVs reach it, for the doorbell picture.
+# The TV loads the camera's own picture link (/api/camera_proxy/...), which
+# carries a short-lived access token, so no snapshot file is left in www/
+# (anything there can be fetched without logging in).
+HA_URL = "https://ha.archer.industries"
 # The doorbell: the entity that changes when it's pressed (UniFi Protect:
 # event.<name>_doorbell, or binary_sensor.<name>_doorbell) and its camera.
 DOORBELL_TRIGGER = "binary_sensor.front_doorbell_doorbell"
@@ -290,12 +292,10 @@ def automations():
                 "{{ trigger.to_state.state not in ['unknown', 'unavailable', 'off']"
                 " and trigger.from_state is not none }}")}],
             "actions": [
-                {"action": "camera.snapshot", "target": {"entity_id": DOORBELL_CAMERA},
-                 "data": {"filename": "/config/www/tvoverlay/doorbell.jpg"},
-                 "continue_on_error": True},
                 popup("Someone's at the door", "Front doorbell", "mdi:doorbell-video",
                       AMBER, 25, corner="top_end", id="doorbell",
-                      image=f"{HA_URL}/local/tvoverlay/doorbell.jpg?t={{{{ now().timestamp() | int }}}}"),
+                      image=(f"{HA_URL}{{{{ state_attr('{DOORBELL_CAMERA}', 'entity_picture') }}}}"
+                             "&t={{ now().timestamp() | int }}")),
                 {"delay": "00:00:30"},
             ],
         })

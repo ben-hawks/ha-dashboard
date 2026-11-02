@@ -232,3 +232,26 @@ automation:
       large_icon: mdi:egg
       color: '{{ ''#3b82f6'' if trigger.to_state.state == ''Very cold'' else ''#e5484d'' }}'
       seconds: 20
+- id: tv_overlay_doorbell
+  alias: 'TVs: doorbell pop-up with a snapshot'
+  mode: single
+  max_exceeded: silent
+  triggers:
+  - trigger: state
+    entity_id: binary_sensor.front_doorbell_doorbell
+  conditions:
+  - condition: template
+    value_template: '{{ trigger.to_state.state not in [''unknown'', ''unavailable'', ''off''] and trigger.from_state is not none }}'
+  actions:
+  - action: script.tv_popup
+    data:
+      title: Someone's at the door
+      message: Front doorbell
+      small_icon: mdi:doorbell-video
+      large_icon: mdi:doorbell-video
+      color: '#f5a524'
+      seconds: 25
+      corner: top_end
+      id: doorbell
+      image: https://ha.archer.industries{{ state_attr('camera.front_doorbell_high_resolution_channel', 'entity_picture') }}&t={{ now().timestamp() | int }}
+  - delay: 00:00:30

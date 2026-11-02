@@ -10,7 +10,7 @@ What you get:
 
 | | |
 |---|---|
-| Pop-ups | Doorbell (with a camera snapshot), a new household alert (the Home tab's red banner), laundry done, hens too hot or too cold |
+| Pop-ups | Doorbell (with the camera's picture), a new household alert (the Home tab's red banner), laundry done, hens too hot or too cold |
 | Corner badges | Outside temperature, alerts, laundry waiting to be emptied, coop comfort |
 | Watchdog | When a TV turns on, TvOverlay is started if it isn't running (you land back on the home screen) and the badges are sent again |
 
@@ -74,10 +74,10 @@ your router keeps these from changing.
 ## 4. Settings
 
 In `tools/tvoverlay.py`, fill in `TV_IPS`, `HA_URL` (Home Assistant's address
-as the TVs reach it, e.g. `http://192.168.1.10:8123`) and, for the doorbell,
-`DOORBELL_TRIGGER` and `DOORBELL_CAMERA`; run `python3 tools/tvoverlay.py`.
-The doorbell snapshot is saved to `/config/www/tvoverlay/`; create that folder
-once (`mkdir -p /config/www/tvoverlay`).
+as the TVs reach it) and, for the doorbell, `DOORBELL_TRIGGER` and
+`DOORBELL_CAMERA`; run `python3 tools/tvoverlay.py`. The doorbell pop-up
+loads the camera's picture through its own link, which carries a short-lived
+access token, so no snapshot is saved anywhere.
 
 Then **Developer Tools → YAML → All YAML configuration** (new `rest_command`s
 need a restart the first time).
