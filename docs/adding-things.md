@@ -32,6 +32,9 @@ themes/wall_tablet.yaml        colours
   or add a plant type or change its levels, edit `BEDS` / `PLANT_TYPES` in
   `tools/garden.py` and run
   `python3 tools/garden.py` (`--gallery out.html` previews every picture).
+- **TV pop-ups and corner badges**: doorbell, alerts, laundry and coop on the
+  TVs through TvOverlay; setup and the ADB commands are in
+  [tvoverlay.md](tvoverlay.md).
 - **Low batteries**: any battery sensor under 20% shows up in the alert
   banner and on **Devices**. To leave a device out, give its battery entity
   the label **Hide from tablet** in Home Assistant.
