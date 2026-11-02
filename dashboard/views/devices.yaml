@@ -361,3 +361,13 @@ sections:
         features:
           - type: select-options
             style: buttons
+      # Keeps Fully Kiosk in front and reboots a stuck tablet
+      # (packages/wall_tablet.yaml). Off while working on a tablet; it turns
+      # itself back on after an hour.
+      - type: tile
+        entity: input_boolean.tablet_watchdog
+        name: Watchdog (off while working on a tablet)
+        grid_options:
+          columns: full
+        features:
+          - type: toggle

@@ -37,6 +37,12 @@ input_boolean:
   outdoors_radar:
     name: Show weather radar
     icon: mdi:radar
+  # Off while someone works on a tablet outside Fully Kiosk, so the
+  # watchdog below doesn't keep pulling the dashboard back up.
+  tablet_watchdog:
+    name: Tablet watchdog
+    icon: mdi:shield-refresh-outline
+    initial: true
 
 # ---------------------------------------------------------------------------
 # Hidden alerts: keys of alerts someone tapped away (script.alerts_hide).
@@ -275,6 +281,131 @@ automation:
               - action: input_boolean.turn_off
                 target:
                   entity_id: input_boolean.outdoors_radar
+
+  # -------------------------------------------------------------------------
+  # Tablets (Fully Kiosk): keep the dashboard up for days on end. Works for
+  # every tablet added with the Fully Kiosk Browser integration; their
+  # buttons are found by name, so nothing here needs your entity IDs.
+  # -------------------------------------------------------------------------
+  - id: tablets_nightly_browser_restart
+    alias: "Tablets: reboot every night"
+    description: >-
+      The dashboard slowly uses up a small tablet's memory over a few days
+      (the 3D floor plan, cameras) until the browser crashes, and keeps
+      crashing until the tablet restarts. A reboot each night clears it
+      (about a minute). Rebooting needs Fully Kiosk to be the tablet's device
+      owner (docs/tablet-setup.md); without that, the browser is restarted.
+    mode: single
+    triggers:
+      - trigger: time
+        at: "03:45:00"
+    variables:
+      fully: "{{ integration_entities('fully_kiosk') | reject('is_state', 'unavailable') | list }}"
+      restart: >-
+        {{ fully | select('match', 'button\..*_restart_browser$') | list }}
+      reboot: >-
+        {{ fully | select('match', 'button\..*_reboot_device$') | list }}
+    conditions:
+      - condition: template
+        value_template: "{{ restart | count + reboot | count > 0 }}"
+    actions:
+      # The restart first: it's all that happens if rebooting isn't allowed.
+      - action: button.press
+        target:
+          entity_id: "{{ restart }}"
+        continue_on_error: true
+      - delay: "00:00:30"
+      - action: button.press
+        target:
+          entity_id: "{{ reboot }}"
+        continue_on_error: true
+
+  - id: tablets_watchdog
+    alias: "Tablets: bring the dashboard back if Fully Kiosk isn't in front"
+    description: >-
+      Checks each tablet every minute. If something other than Fully Kiosk
+      has been in front for 3 minutes (a crash dropped it to the home
+      screen, or a pop-up took over), it's brought back to the front; after
+      6 minutes the browser is restarted, and after 12 the tablet reboots
+      (once a browser crash starts, it tends to repeat until a reboot).
+      Turn "Tablet watchdog" off on the Devices tab while working on a
+      tablet.
+    mode: single
+    max_exceeded: silent
+    triggers:
+      - trigger: time_pattern
+        minutes: /1
+    conditions:
+      - condition: state
+        entity_id: input_boolean.tablet_watchdog
+        state: "on"
+    actions:
+      - repeat:
+          for_each: >-
+            {{ integration_entities('fully_kiosk') | select('match', 'sensor\..*_foreground_app$')
+               | list }}
+          sequence:
+            - variables:
+                app: "{{ states(repeat.item) }}"
+                away: >-
+                  {{ (now() - states[repeat.item].last_changed).total_seconds() / 60
+                     if states[repeat.item] is not none else 0 }}
+                device: "{{ device_id(repeat.item) }}"
+                front: >-
+                  {{ device_entities(device) | select('match', 'button\..*_bring_to_foreground$')
+                     | first | default('') }}
+                restart: >-
+                  {{ device_entities(device) | select('match', 'button\..*_restart_browser$')
+                     | first | default('') }}
+                reboot: >-
+                  {{ device_entities(device) | select('match', 'button\..*_reboot_device$')
+                     | first | default('') }}
+            - choose:
+                # Fully's own app (de.ozerov.fully) is in front: all good.
+                - conditions:
+                    - condition: template
+                      value_template: >-
+                        {{ app in ['unknown', 'unavailable', ''] or 'ozerov.fully' in app }}
+                  sequence: []
+                # Rebooting takes a minute or two, which resets "away".
+                - conditions:
+                    - condition: template
+                      value_template: "{{ away >= 12 and reboot != '' }}"
+                  sequence:
+                    - action: button.press
+                      target:
+                        entity_id: "{{ reboot }}"
+                      continue_on_error: true
+                - conditions:
+                    - condition: template
+                      value_template: "{{ 6 <= away < 7 and restart != '' }}"
+                  sequence:
+                    - action: button.press
+                      target:
+                        entity_id: "{{ restart }}"
+                      continue_on_error: true
+                - conditions:
+                    - condition: template
+                      value_template: "{{ 3 <= away < 4 and front != '' }}"
+                  sequence:
+                    - action: button.press
+                      target:
+                        entity_id: "{{ front }}"
+                      continue_on_error: true
+
+  - id: tablets_watchdog_back_on
+    alias: "Tablets: turn the watchdog back on after an hour"
+    description: In case someone forgets after working on a tablet.
+    mode: restart
+    triggers:
+      - trigger: state
+        entity_id: input_boolean.tablet_watchdog
+        to: "off"
+        for: "01:00:00"
+    actions:
+      - action: input_boolean.turn_on
+        target:
+          entity_id: input_boolean.tablet_watchdog
 
 # ---------------------------------------------------------------------------
 # Light groups (one tile controls a whole room)

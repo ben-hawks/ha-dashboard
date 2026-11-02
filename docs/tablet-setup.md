@@ -22,6 +22,14 @@ that apps come from the Play Store.
    adb shell settings put system user_rotation 1            # 0/1/2/3 = 0°/90°/180°/270°
    ```
    Try `1` first; if it's sideways or upside down, try `0` or `3`.
+   Then make every app follow that, so nothing can turn it portrait (the
+   home screen and setup screens otherwise can, e.g. after a crash or a
+   reboot):
+   ```sh
+   adb shell cmd window fixed-to-user-rotation enabled
+   ```
+   All three are kept across reboots. Fully's own **Screen Orientation**
+   setting (below) is a third lock on top.
 5. **Developer options → USB debugging**: on, for installing apps with `adb`.
 
 ## 2. Fully Kiosk Browser
@@ -64,6 +72,39 @@ scale** (try 90–110%).
 using the tablet's IP and the remote admin password. This adds the tablet's
 screen brightness, screen on/off, and a reload button to Home Assistant, so
 automations can dim it at night or wake it when the doorbell rings.
+
+## 5. Staying up for days
+
+Over a few days the dashboard (the 3D floor plan especially) uses up the
+tablet's memory until the browser crashes, and keeps crashing after reopening
+until the tablet restarts. `packages/wall_tablet.yaml` handles that for every
+tablet with the Fully Kiosk integration:
+
+- **Nightly reboot** at 3:45 (about a minute of black screen).
+- **Watchdog**, every minute: if something other than Fully has been in
+  front for 3 minutes, Fully is brought back; at 6 minutes the browser is
+  restarted; at 12 the tablet reboots. Turn **Devices → Tablet → Watchdog**
+  off while you're working in a tablet's settings (it comes back on by
+  itself after an hour).
+
+Rebooting from Home Assistant needs Fully to be the tablet's **device owner**
+(without it, only the browser is restarted). Once, over USB, with no accounts
+on the tablet (true without Google apps):
+
+```sh
+adb shell dpm set-device-owner de.ozerov.fully/.DeviceOwnerReceiver
+```
+
+It should say `Success: Device owner set`. To undo it later, use Fully's
+**Device Management → Remove Device Owner** (or the equivalent in your
+version) before uninstalling Fully.
+
+Test it in **Developer Tools → Actions**: `button.press` on the tablet's
+**Reboot device** button. If it doesn't reboot, check the device-owner step.
+
+The watchdog only sees which app is in front. A page that's gone blank while
+Fully stays in front (a renderer crash) is reloaded by Fully's **Auto Reload
+on Page Error**, so turn that on too (Web Auto Reload).
 
 ## Light and dark mode
 
