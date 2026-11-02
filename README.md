@@ -10,6 +10,9 @@ It's meant to be easy for anyone in the house, not just whoever set it up.
 - **Chicken Command Center (coop tablet):** [docs/coop-tablet.md](docs/coop-tablet.md)
 - **Laundry monitor (washer & dryer notifications):** [docs/laundry.md](docs/laundry.md)
 - **Drip watering (Vivosun drip kit on an Athom plug):** [docs/drip.md](docs/drip.md)
+- **Chicken counting feasibility test:** [docs/chicken-vision-test.md](docs/chicken-vision-test.md)
+- **Frigate for the chicken cameras (Arc server):** [docs/frigate.md](docs/frigate.md)
+- **Training our own hen model:** [docs/hen-model.md](docs/hen-model.md)
 - **Adding devices, rooms, tabs and alerts:** [docs/adding-things.md](docs/adding-things.md)
 
 ## Tabs
@@ -54,6 +57,9 @@ tools/coop.py                coop screen's animated scene, chicken comfort + hel
 tools/laundry_profile.py     suggests washer/dryer thresholds from a cycle's power history
 esphome/laundry-*.yaml       washer/dryer Athom smart plugs (mirrors of the ESPHome Device Builder copies)
 esphome/drip-pump.yaml       drip pump Athom smart plug, with a 15 min failsafe (mirror, as above)
+tools/chicken_vision_test.py hen detection/door-counting test on exported camera clips (not part of HA)
+frigate/                     Frigate NVR for the chicken cameras: docker compose + config (runs on the Arc server)
+hen_model/                   our own hen detection model: harvest frames, label (Label Studio), train, export for Frigate
 ```
 
 ## Requirements

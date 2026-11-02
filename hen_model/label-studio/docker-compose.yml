@@ -1,0 +1,26 @@
+# Label Studio, for labelling the hen model's training frames.
+# Source: github.com/ben-hawks/ha-dashboard, hen_model/label-studio/
+#
+# In Portainer: Stacks > Add stack, paste this file, and set the environment
+# variables below. Then open http://<server>:8085. See docs/hen-model.md.
+
+services:
+  label-studio:
+    container_name: label-studio
+    image: heartexlabs/label-studio:1.23.0
+    restart: unless-stopped
+    ports:
+      - "8085:8080"
+    volumes:
+      # Label Studio's own database and settings. Must be writable by the
+      # container's user (uid 1001): sudo chown -R 1001:1001 <folder>
+      - ${LS_DATA_PATH:?is missing, set it to Label Studio's own folder}:/label-studio/data
+      # The shared hen-model folder (harvested frames). Read-only: Label
+      # Studio only shows the images; labels live in its database.
+      - ${HENS_PATH:?is missing, set it to the shared hen-model folder}:/hens:ro
+    environment:
+      LABEL_STUDIO_LOCAL_FILES_SERVING_ENABLED: "true"
+      LABEL_STUDIO_LOCAL_FILES_DOCUMENT_ROOT: /hens
+      # First login, created on first start; change the password afterwards.
+      LABEL_STUDIO_USERNAME: ${LS_USERNAME:?is missing, set it to your email for the first login}
+      LABEL_STUDIO_PASSWORD: ${LS_PASSWORD:?is missing, set a password for the first login}

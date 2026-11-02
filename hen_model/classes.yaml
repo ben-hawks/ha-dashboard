@@ -1,0 +1,35 @@
+# The hen model's classes: what Frigate will see on the chicken cameras once
+# the custom model replaces the stock one. Source: github.com/ben-hawks/ha-dashboard
+#
+# The order is the class number in every label file. Once labelling has
+# started, only ever add new classes at the end; never reorder or remove.
+#
+# prompts:      what the pre-labelling model (YOLOE) is asked to look for;
+#               it's only a first guess for you to correct.
+# open_images:  Open Images classes that supply extra public training images
+#               for animals that rarely show up on our cameras.
+classes:
+  - name: hen
+    prompts: [chicken, hen]
+    open_images: [Chicken]
+  - name: person
+    prompts: [person]
+    open_images: [Person]
+  - name: cat
+    prompts: [cat]
+    open_images: [Cat]
+  - name: dog
+    prompts: [dog]
+    open_images: [Dog]
+  - name: fox
+    prompts: [fox]
+    open_images: [Fox]
+  - name: raccoon
+    prompts: [raccoon]
+    open_images: [Raccoon]
+  - name: skunk
+    prompts: [skunk]
+    open_images: [Skunk]
+  - name: raptor # hawks, owls, eagles: anything that hunts hens from the air
+    prompts: [hawk, owl, eagle]
+    open_images: [Eagle, Falcon, Owl]
