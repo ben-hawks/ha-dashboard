@@ -6,6 +6,8 @@ Writes:
                                         illustration, moisture, status,
                                         soil temperature, EC and a 3-day
                                         moisture graph
+  packages/drip.yaml                    drip watering: when and how long each
+                                        pump runs (DRIP_ZONES / DRIP below)
   packages/garden.yaml                  per bed: a name box
                                         (input_text.garden_1_name), a plant
                                         dropdown (input_select.garden_1_plant)
@@ -291,6 +293,86 @@ SEASON = {
     "rain_hours": 6,
 }
 
+# Jinja: rain = true when a rain/storm picture is in the next few hours.
+RAIN_SOON = (
+    f"{{%- set rain = range(1, {SEASON['rain_hours']} + 1)"
+    " | map('string') | map('regex_replace', '^', 'sensor.forecast_hour_')"
+    f" | map('states') | select('in', {SEASON['rain_pictures']}) | list | count > 0 %}}")
+
+# ---------------------------------------------------------------------------
+# Drip watering: a Vivosun drip kit's pump on an Athom smart plug
+# (esphome/drip-pump.yaml). Written to packages/drip.yaml; see docs/drip.md.
+# ---------------------------------------------------------------------------
+
+# One entry per pump (= per plug). The pump is on/off only and waters every
+# bed on it at once; each feed line's manual valve sets how much its bed
+# gets. So the driest bed (against its own Dry level) decides when it runs,
+# it doesn't run while any bed is already Wet, and the plan's valve_hint
+# says which valve to turn when the beds drift apart. A second pump would be
+# a second entry.
+DRIP_ZONES = [
+    {"zone": 1, "name": "Garden drip", "switch": "switch.drip_pump_switch",
+     "power": "sensor.drip_pump_power", "beds": [1, 2, 3, 4]},
+]
+
+DRIP = {
+    # A run, in minutes. Short runs with a soak in between ("cycle and
+    # soak") let the water spread to the probe before the next look, so a
+    # bed is never flooded on one reading.
+    "pulse_min": 1,
+    "pulse_max": 8,
+    "manual_min": 3,           # "Water now" runs at least this long
+    "soak": 45,                # minutes after a run before looking again
+    # After a run, keep topping up (run, soak, look) toward the target for
+    # this many minutes, not just until the bed is above Dry.
+    "session": 120,
+    # Fill to this far between the bed's Dry and Wet levels (0.5 = middle).
+    "target": 0.5,
+    "daily_max": 30,           # minutes of pumping per pump per day
+    # How long a run is: minutes per 1% of moisture missing. Starts here
+    # and is learned from each run (how much the bed rose after soaking).
+    "minutes_per_percent": 0.5,
+    "learn_range": (0.05, 5),
+    "learn_weight": 0.3,       # how much one run moves the learned value
+    "min_rise": 1,             # % rise that counts as "the water got there"
+    "no_response": 3,          # runs without a rise before it stops (Problem)
+    # Watering windows, in hours of the day. Outdoors in the early morning
+    # (less evaporation, leaves dry by day) and, in a heat wave (outdoor
+    # season above 1), again in the early evening. A bed far below Dry
+    # (under dry × critical) waters any time in the critical window.
+    "windows": {"outdoor": [(5, 9)], "outdoor_hot": [(17, 19.5)],
+                "indoor": [(7, 19)], "critical": (6, 21)},
+    "critical": 0.7,
+    # Outdoors: no watering at or below these (°F): lines and soil freeze.
+    "freeze_air": 38,
+    "freeze_soil": 35,
+    # The pump draws a few watts; under this while on means it's unplugged
+    # from the plug or dead.
+    "pump_min_watts": 1.0,
+    # The plug turns itself off after this long (esphome/drip-pump.yaml
+    # max_run), whatever Home Assistant does; HA does the same.
+    "failsafe": 15,
+    # Salty soil (EC above the plant's level below): once a day, one run is
+    # this much longer to wash salts past the roots. Indoors only if the
+    # pots drain somewhere it's fine to overflow.
+    "flush_factor": 1.5,
+    "flush_indoors": False,
+}
+
+# Soil EC (µS/cm) above which a bed counts as salty, by plant. From the
+# plants' salt tolerance (saturated-paste EC, so a probe in moist soil
+# usually reads lower and this errs towards flushing less). Starting points.
+EC_FLUSH_ABOVE = {
+    "Seedling": 1000, "Lettuce": 1300, "Tomato": 2500, "Pepper": 1500,
+    "Carrot": 1000, "Herbs": 1500, "Cucumber": 2500, "Strawberry": 1000,
+    "Blueberry": 1000, "Raspberry": 1000, "Sunflower": 2500, "Flowers": 1500,
+    "Succulent": 3000,
+}
+
+
+def drip_zone_of(channel):
+    return next((z for z in DRIP_ZONES if channel in z["beds"]), None)
+
 
 def plant_svg(kind):
     return ('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 160">'
@@ -426,6 +508,29 @@ def card_for(bed):
         "style": {**at(20, 140), "color": "var(--secondary-text-color)",
                   "--mdc-icon-size": "20px"},
     })
+    # Drip pump, if this bed is on one: tap to switch Auto on/off, hold for
+    # what it's doing and why. Hidden until the plug exists (on/off).
+    zone = drip_zone_of(c)
+    if zone:
+        ids, sw = drip_ids(zone), zone["switch"]
+        for conds, icon, color, title in [
+            ([{"entity": sw, "state": "on"}], "mdi:sprinkler-variant", "#6aa9ff", "Watering"),
+            ([{"entity": sw, "state": "off"}, {"entity": ids["auto"], "state": "on"},
+              {"entity": ids["plan"], "state": "Problem"}],
+             "mdi:water-pump", "#e0a03a", "Watering needs a look"),
+            ([{"entity": sw, "state": "off"}, {"entity": ids["auto"], "state": "on"},
+              {"entity": ids["plan"], "state_not": "Problem"}],
+             "mdi:water-pump", "#46d0c0", "Auto watering on"),
+            ([{"entity": sw, "state": "off"}, {"entity": ids["auto"], "state": "off"}],
+             "mdi:water-pump-off", "var(--secondary-text-color)", "Auto watering off"),
+        ]:
+            elements.append({
+                "type": "conditional", "conditions": conds,
+                "elements": [{"type": "icon", "icon": icon, "entity": ids["auto"], "title": title,
+                              "tap_action": {"action": "toggle"},
+                              "hold_action": {"action": "more-info", "entity": ids["plan"]},
+                              "style": {**at(18, 112), "color": color, "--mdc-icon-size": "20px"}}],
+            })
     elements.append({
         "type": "conditional",
         "conditions": [{"entity": f"binary_sensor.garden_{c}_battery_low", "state": "on"}],
@@ -663,15 +768,20 @@ def package():
     # One line for the Home alert banner. A probe reading exactly 0% is
     # taken to be out of the ground (or not set up yet), not a dry bed.
     channels = [b["channel"] for b in BEDS]
+    # Beds on a drip pump with Auto on are left to it, unless it's stuck
+    # (Problem: its own alert) or used up today's limit (Limit).
+    drip_of = {c: z["zone"] for z in DRIP_ZONES for c in z["beds"]}
     dry = (
         "{%- set ns = namespace(beds=[], channels=[]) %}"
         # Rain in the next few hours waters the outdoor beds for us.
-        f"{{%- set rain = range(1, {SEASON['rain_hours']} + 1)"
-        " | map('string') | map('regex_replace', '^', 'sensor.forecast_hour_')"
-        f" | map('states') | select('in', {SEASON['rain_pictures']}) | list | count > 0 %}}"
+        + RAIN_SOON
+        + f"{{%- set drip = {drip_of} %}}"
         f"{{%- for c in {channels} %}}"
+        "{%- set z = drip.get(c) %}"
+        "{%- set dripping = z is not none and is_state('input_boolean.drip_' ~ z ~ '_auto', 'on')"
+        " and states('sensor.drip_' ~ z ~ '_plan') not in ['Problem', 'Limit', 'unknown', 'unavailable'] %}"
         "{%- if is_state('sensor.garden_' ~ c ~ '_status', 'Dry')"
-        " and states('sensor.garden_' ~ c ~ '_moisture') | float(0) > 0"
+        " and states('sensor.garden_' ~ c ~ '_moisture') | float(0) > 0 and not dripping"
         " and not (rain and is_state('input_boolean.garden_' ~ c ~ '_outdoors', 'on')) %}"
         "{%- set ns.beds = ns.beds + [states('sensor.garden_' ~ c ~ '_name')] %}"
         "{%- set ns.channels = ns.channels + [c] %}"
@@ -703,6 +813,349 @@ def package():
             "template": [{"sensor": sensors, "binary_sensor": binaries}]}
 
 
+# ---------------------------------------------------------------------------
+# Drip package: when and how long each pump runs
+# ---------------------------------------------------------------------------
+
+def drip_ids(zone):
+    z = zone["zone"]
+    return {
+        "auto": f"input_boolean.drip_{z}_auto",
+        "mpp": f"input_number.drip_{z}_minutes_per_percent",
+        "misses": f"input_number.drip_{z}_no_response",
+        "last": f"input_datetime.drip_{z}_last_run",
+        "flushed": f"input_datetime.drip_{z}_last_flush",
+        "runtime": f"sensor.drip_{z}_runtime_today",
+        "plan": f"sensor.drip_{z}_plan",
+        "rises": f"input_text.drip_{z}_last_rises",
+        "pulse": f"script.drip_{z}_pulse",
+        "now": f"script.drip_{z}_water_now",
+    }
+
+
+def learned(mpp):
+    """Jinja: the learned minutes per %, or the default before the first run
+    (a new input_number starts at its minimum)."""
+    lo = DRIP["learn_range"][0]
+    return (f"{{%- set mpp = states('{mpp}') | float(0) %}}"
+            f"{{%- set mpp = mpp if mpp > {lo} else {DRIP['minutes_per_percent']} %}}")
+
+
+def drip_logic(zone):
+    """Jinja: decide what the pump should do now → p.state, p.reason, plus
+    the driest bed (ns.*), the run length (minutes) and flush."""
+    d, w, ids = DRIP, DRIP["windows"], drip_ids(zone)
+    sw = zone["switch"]
+
+    def rule(cond, state, reason, first=False):
+        return (f"{{%- {'if' if first else 'elif'} {cond} %}}"
+                f"{{%- set p.state = '{state}' %}}{{%- set p.reason = {reason} %}}")
+
+    return (
+        f"{{%- set ec_max = {EC_FLUSH_ABOVE} %}}"
+        "{%- set ns = namespace(valid=0, wet=[], bed=0, name='', m=0, dry=0, wetl=100,"
+        " gap=999, salty=false, outdoor=false, cold_soil=false,"
+        " lo=9, lo_name='', hi=-9, hi_name='') %}"
+        f"{{%- for c in {zone['beds']} %}}"
+        "{%- set s = 'sensor.garden_' ~ c %}"
+        "{%- set out = is_state('input_boolean.garden_' ~ c ~ '_outdoors', 'on') %}"
+        "{%- if out %}{% set ns.outdoor = true %}"
+        f"{{%- if states(s ~ '_soil_temperature') | float(60) <= {d['freeze_soil']} %}}"
+        "{% set ns.cold_soil = true %}{% endif %}{%- endif %}"
+        # A probe reading 0% is out of the ground (or not set up): ignored.
+        "{%- set m = states(s ~ '_moisture') | float(0) %}"
+        "{%- if m > 0 and has_value(s ~ '_status') %}"
+        "{%- set dry = state_attr(s ~ '_status', 'dry_below') | float(30) %}"
+        "{%- set wet = state_attr(s ~ '_status', 'wet_above') | float(70) %}"
+        "{%- set ns.valid = ns.valid + 1 %}"
+        "{%- if m > wet %}{% set ns.wet = ns.wet + [states(s ~ '_name')] %}{% endif %}"
+        # The driest bed, against its own Dry level, decides.
+        "{%- if m - dry < ns.gap %}{% set ns.gap = m - dry %}{% set ns.bed = c %}"
+        "{%- set ns.name = states(s ~ '_name') %}{% set ns.m = m %}"
+        "{%- set ns.dry = dry %}{% set ns.wetl = wet %}{% endif %}"
+        # Where it sits between its Dry (0) and Wet (1) levels. One bed near
+        # Wet while another is near Dry is something the pump can't fix (it
+        # waters both): that's a valve to turn.
+        "{%- set pos = (m - dry) / ([wet - dry, 1] | max) %}"
+        "{%- if pos < ns.lo %}{% set ns.lo = pos %}{% set ns.lo_name = states(s ~ '_name') %}{% endif %}"
+        "{%- if pos > ns.hi %}{% set ns.hi = pos %}{% set ns.hi_name = states(s ~ '_name') %}{% endif %}"
+        f"{{%- if (out or {d['flush_indoors']}) and states(s ~ '_conductivity') | float(0)"
+        " > ec_max.get(states('input_select.garden_' ~ c ~ '_plant'), 2000) %}"
+        "{% set ns.salty = true %}{% endif %}"
+        "{%- endif %}{%- endfor %}"
+        f"{{%- set target = ns.dry + (ns.wetl - ns.dry) * {d['target']} %}}"
+        # Weather (outdoor pumps only).
+        f"{{%- set cold = ns.outdoor and (ns.cold_soil or"
+        f" states('sensor.station_temperature') | float(60) <= {d['freeze_air']}) %}}"
+        "{%- set raining = ns.outdoor and states('sensor.station_rain_rate') | float(0) > 0 %}"
+        + RAIN_SOON + "{%- set rain = ns.outdoor and rain %}"
+        # Since the last run ended: soaking in, then topping up toward target.
+        f"{{%- set since = now().timestamp() - state_attr('{ids['last']}', 'timestamp') | float(0) %}}"
+        f"{{%- set soaking = since < {d['soak'] + 2} * 60 %}}"
+        f"{{%- set session = since < {d['soak'] + d['session']} * 60 %}}"
+        f"{{%- set critical = ns.valid > 0 and ns.m < ns.dry * {d['critical']} %}}"
+        "{%- set needs = ns.valid > 0 and (ns.m < ns.dry or (session and ns.m < target)) %}"
+        f"{{%- set left = {d['daily_max']} - states('{ids['runtime']}') | float(0) * 60 %}}"
+        # How long: the missing moisture × learned minutes per %.
+        + learned(ids["mpp"])
+        + f"{{%- set flush = ns.salty and states('{ids['flushed']}') != now().date() | string %}}"
+        f"{{%- set ff = {d['flush_factor']} if flush else 1 %}}"
+        f"{{%- set minutes = [[(target - ns.m) * mpp * ff, {d['pulse_min']}] | max,"
+        f" {d['pulse_max']} * ff, [left, 0] | max] | min | round(1) %}}"
+        # Watering windows.
+        "{%- set hot = states('sensor.garden_outdoor_season') | float(1) > 1 %}"
+        f"{{%- set wins = ({w['outdoor']} + ({w['outdoor_hot']} if hot else []))"
+        f" if ns.outdoor else {w['indoor']} %}}"
+        "{%- set h = now().hour + now().minute / 60 %}"
+        "{%- set wn = namespace(inside=false, next=none) %}"
+        "{%- for a, b in wins %}{% if a <= h < b %}{% set wn.inside = true %}{% endif %}"
+        "{% if wn.next is none and h < a %}{% set wn.next = a %}{% endif %}{% endfor %}"
+        f"{{%- set inside = wn.inside or (critical and {w['critical'][0]} <= h < {w['critical'][1]}) %}}"
+        "{%- set at = (today_at() + timedelta(hours=wn.next if wn.next is not none else wins[0][0]))"
+        ".strftime('%-I:%M %p') | replace(':00', '') %}"
+        "{%- set pct = ns.m | round(0) | int %}"
+        "{%- set hint = ('Turn ' ~ ns.hi_name ~ '\\'s valve down a little, or ' ~ ns.lo_name"
+        " ~ '\\'s up') if ns.valid > 1 and ns.hi > 0.85 and ns.lo < 0.15 else 'Valves look balanced' %}"
+        "{%- set p = namespace(state='OK', reason='') %}"
+        # First match wins.
+        + rule(f"is_state('{sw}', 'on')", "Watering", "'Watering now'", first=True)
+        + rule(f"states('{ids['misses']}') | float(0) >= {d['no_response']}", "Problem",
+               f"'Ran {d['no_response']} times and the soil didn\\'t get wetter: check the"
+               " water, pump and lines, then switch Auto off and on'")
+        + rule("ns.valid == 0", "Problem", "'No soil readings from its beds'")
+        + rule("not needs", "OK",
+               "ns.name ~ ' is fine (' ~ pct ~ '%, waters below ' ~ (ns.dry | int) ~ '%)'")
+        + rule("ns.wet", "Paused", "ns.wet | join(', ') ~ (' is' if ns.wet | count == 1"
+                                   " else ' are') ~ ' already wet'")
+        + rule("cold", "Paused", "'Too cold to water'")
+        + rule("raining", "Paused", "'Raining'")
+        + rule("rain and not critical", "Paused", "'Rain on the way'")
+        + rule(f"left < {d['pulse_min']}", "Limit",
+               f"'Used today\\'s {d['daily_max']} minutes; ' ~ ns.name ~ ' is at ' ~ pct ~ '%'")
+        + rule("soaking", "Waiting", "'Letting the last watering soak in'")
+        + rule("not inside", "Waiting", "ns.name ~ ' is dry (' ~ pct ~ '%), waters at ' ~ at")
+        + rule("true", "Water", "'Water ' ~ ns.name ~ ' for ' ~ '%g' | format(minutes) ~ ' min'"
+                                " ~ (' (flushing salts)' if flush else '')")
+        + "{%- endif %}"
+    )
+
+
+def drip_package():
+    d = DRIP
+    booleans, numbers, datetimes, texts, stats, sensors, scripts, autos = {}, {}, {}, {}, [], [], {}, []
+    for zone in DRIP_ZONES:
+        z, name, sw, ids = zone["zone"], zone["name"], zone["switch"], drip_ids(zone)
+        logic = drip_logic(zone)
+        booleans[f"drip_{z}_auto"] = {"name": f"{name} auto watering", "icon": "mdi:water-pump"}
+        numbers[f"drip_{z}_minutes_per_percent"] = {
+            "name": f"{name} minutes per percent", "icon": "mdi:timer-cog-outline",
+            "min": d["learn_range"][0], "max": d["learn_range"][1], "step": 0.01, "mode": "box",
+            "unit_of_measurement": "min/%"}
+        numbers[f"drip_{z}_no_response"] = {
+            "name": f"{name} runs without a rise", "icon": "mdi:water-alert-outline",
+            "min": 0, "max": 10, "step": 1, "mode": "box"}
+        # How much each bed rose after the last run, e.g. "Bed 1 +4%, Bed 2
+        # +1%": what each line's valve actually delivers.
+        texts[f"drip_{z}_last_rises"] = {"name": f"{name} last run rise per bed",
+                                         "icon": "mdi:valve", "max": 255}
+        datetimes[f"drip_{z}_last_run"] = {"name": f"{name} last run", "has_date": True,
+                                           "has_time": True, "icon": "mdi:history"}
+        datetimes[f"drip_{z}_last_flush"] = {"name": f"{name} last flush", "has_date": True,
+                                             "has_time": False, "icon": "mdi:shaker-outline"}
+        stats.append({
+            "platform": "history_stats", "name": f"Drip {z} Runtime Today",
+            "unique_id": f"drip_{z}_runtime_today", "entity_id": sw, "state": "on",
+            "type": "time", "start": "{{ today_at() }}", "end": "{{ now() }}"})
+        sensors.append({
+            "name": f"Drip {z} Plan",
+            "unique_id": f"drip_{z}_plan",
+            "icon": "mdi:water-pump",
+            "state": logic + "{{ p.state }}",
+            "attributes": {
+                "reason": logic + "{{ p.reason }}",
+                "bed": logic + "{{ ns.bed }}",
+                "minutes": logic + "{{ minutes }}",
+                "flush": logic + "{{ flush }}",
+                "moisture": logic + "{{ ns.m }}",
+                "target": logic + "{{ target | round(0) | int }}",
+                "valve_hint": logic + "{{ hint }}",
+                "last_run_rise": f"{{{{ states('{ids['rises']}') }}}}",
+                "minutes_today": f"{{{{ (states('{ids['runtime']}') | float(0) * 60) | round(1) }}}}",
+                "zone_name": name,
+            },
+        })
+        # One run: pump on, off, soak, then see how much the bed rose and
+        # learn from it. restart: "Water now" during a soak starts afresh.
+        bed0 = zone["beds"][0]
+        scripts[f"drip_{z}_pulse"] = {
+            "alias": f"{name}: one watering run",
+            "icon": "mdi:water-pump",
+            "mode": "restart",
+            "fields": {
+                "minutes": {"description": "How long to run the pump", "example": 4},
+                "bed": {"description": "The bed whose probe judges the run", "example": bed0},
+                "flush": {"description": "This is the day's salt flush", "example": False},
+            },
+            "sequence": [
+                {"variables": {
+                    "mins": f"{{{{ [[minutes | float({d['pulse_min']}), 0.2] | max,"
+                            f" {d['failsafe'] - 1}] | min }}}}",
+                    "probe": f"sensor.garden_{{{{ bed | int({bed0}) }}}}",
+                    "flushing": "{{ flush | default(false) | bool(false) }}",
+                }},
+                {"variables": {
+                    "m0": "{{ states(probe ~ '_moisture') | float(0) }}",
+                    "r0": "{{ states('sensor.station_rain_today') | float(0) }}",
+                    "before": (f"{{{{ {zone['beds']} | map('string') | map('regex_replace', '^', 'sensor.garden_')"
+                               " | map('regex_replace', '$', '_moisture') | map('states')"
+                               " | map('float', 0) | list }}"),
+                }},
+                {"action": "switch.turn_on", "target": {"entity_id": sw}},
+                {"delay": {"seconds": "{{ (mins * 60) | int }}"}},
+                {"action": "switch.turn_off", "target": {"entity_id": sw}},
+                {"action": "input_datetime.set_datetime", "target": {"entity_id": ids["last"]},
+                 "data": {"timestamp": "{{ now().timestamp() }}"}},
+                {"if": [{"condition": "template", "value_template": "{{ flushing }}"}],
+                 "then": [{"action": "input_datetime.set_datetime",
+                           "target": {"entity_id": ids["flushed"]},
+                           "data": {"date": "{{ now().date() }}"}}]},
+                {"delay": {"minutes": d["soak"]}},
+                {"variables": {
+                    "rise": "{{ states(probe ~ '_moisture') | float(0) - m0 }}",
+                    "rained": "{{ states('sensor.station_rain_today') | float(0) > r0 }}",
+                    "wet": "{{ state_attr(probe ~ '_status', 'wet_above') | float(70) }}",
+                }},
+                {"action": "input_text.set_value", "target": {"entity_id": ids["rises"]},
+                 "data": {"value": (
+                     "{%- set ns = namespace(out=[]) %}"
+                     f"{{%- for c in {zone['beds']} %}}"
+                     "{%- set m = states('sensor.garden_' ~ c ~ '_moisture') | float(0) %}"
+                     "{%- if m > 0 and before[loop.index0] > 0 %}"
+                     "{%- set r = (m - before[loop.index0]) | round(0) | int %}"
+                     "{%- set ns.out = ns.out + [states('sensor.garden_' ~ c ~ '_name') ~ ' '"
+                     " ~ ('+' if r >= 0 else '') ~ r ~ '%'] %}"
+                     "{%- endif %}{%- endfor %}"
+                     "{{ (ns.out | join(', ') ~ (' (rained)' if rained else ''))[:255] }}")}},
+                {"choose": [
+                    {"conditions": [{"condition": "template",
+                                     "value_template": f"{{{{ rise >= {d['min_rise']} or rained }}}}"}],
+                     "sequence": [
+                         {"action": "input_number.set_value", "target": {"entity_id": ids["misses"]},
+                          "data": {"value": 0}},
+                         # Learn minutes per % (not from flushes or rain).
+                         {"if": [{"condition": "template",
+                                  "value_template": "{{ rise >= 1 and not rained and not flushing }}"}],
+                          "then": [{"action": "input_number.set_value",
+                                    "target": {"entity_id": ids["mpp"]},
+                                    "data": {"value": learned(ids["mpp"]) + (
+                                        f"{{{{ [[mpp * {1 - d['learn_weight']} + mins / rise"
+                                        f" * {d['learn_weight']}, {d['learn_range'][0] + 0.01}] | max,"
+                                        f" {d['learn_range'][1]}] | min | round(2) }}}}")}}]},
+                     ]},
+                    # No rise although the bed had room for water.
+                    {"conditions": [{"condition": "template",
+                                     "value_template": "{{ m0 > 0 and m0 + rise < wet - 5 }}"}],
+                     "sequence": [{"action": "input_number.increment",
+                                   "target": {"entity_id": ids["misses"]}}]},
+                ]},
+            ],
+        }
+        scripts[f"drip_{z}_water_now"] = {
+            "alias": f"{name}: water now",
+            "icon": "mdi:watering-can-outline",
+            "mode": "single",
+            "sequence": [{"action": "script.turn_on", "target": {"entity_id": ids["pulse"]},
+                          "data": {"variables": {
+                              "minutes": f"{{{{ [state_attr('{ids['plan']}', 'minutes') | float(0),"
+                                         f" {d['manual_min']}] | max }}}}",
+                              "bed": f"{{{{ state_attr('{ids['plan']}', 'bed') | int({bed0}) or {bed0} }}}}",
+                              "flush": False}}}],
+        }
+        autos += [
+            {
+                "id": f"drip_{z}_auto_water",
+                "alias": f"Drip - {name}: water when the beds need it",
+                "mode": "single",
+                "triggers": [{"trigger": "time_pattern", "minutes": "/5"},
+                             {"trigger": "state", "entity_id": ids["plan"], "to": "Water"}],
+                "conditions": [
+                    {"condition": "state", "entity_id": ids["auto"], "state": "on"},
+                    {"condition": "state", "entity_id": ids["plan"], "state": "Water"},
+                    {"condition": "state", "entity_id": sw, "state": "off"},
+                    {"condition": "state", "entity_id": ids["pulse"], "state": "off"},
+                ],
+                "actions": [{"action": "script.turn_on", "target": {"entity_id": ids["pulse"]},
+                             "data": {"variables": {
+                                 "minutes": f"{{{{ state_attr('{ids['plan']}', 'minutes') }}}}",
+                                 "bed": f"{{{{ state_attr('{ids['plan']}', 'bed') }}}}",
+                                 "flush": f"{{{{ state_attr('{ids['plan']}', 'flush') }}}}"}}}],
+            },
+            {
+                # Belt and braces with the plug's own max_run.
+                "id": f"drip_{z}_failsafe",
+                "alias": f"Drip - {name}: never run longer than {d['failsafe']} min",
+                "triggers": [{"trigger": "state", "entity_id": sw, "to": "on",
+                              "for": {"minutes": d["failsafe"]}}],
+                "actions": [{"action": "switch.turn_off", "target": {"entity_id": sw}}],
+            },
+            {
+                # Switching Auto (back) on clears a Problem.
+                "id": f"drip_{z}_auto_on",
+                "alias": f"Drip - {name}: Auto on clears problems",
+                "triggers": [{"trigger": "state", "entity_id": ids["auto"], "to": "on"}],
+                "actions": [{"action": "input_number.set_value",
+                             "target": {"entity_id": ids["misses"]}, "data": {"value": 0}}],
+            },
+        ]
+        if zone.get("power"):
+            autos.append({
+                "id": f"drip_{z}_no_power",
+                "alias": f"Drip - {name}: stop if the pump draws no power",
+                "triggers": [{"trigger": "state", "entity_id": sw, "to": "on",
+                              "for": {"seconds": 30}}],
+                "conditions": [{"condition": "template", "value_template": (
+                    f"{{{{ is_number(states('{zone['power']}')) and"
+                    f" states('{zone['power']}') | float < {d['pump_min_watts']} }}}}")}],
+                "actions": [
+                    {"action": "script.turn_off", "target": {"entity_id": ids["pulse"]}},
+                    {"action": "switch.turn_off", "target": {"entity_id": sw}},
+                    {"action": "input_number.set_value", "target": {"entity_id": ids["misses"]},
+                     "data": {"value": d["no_response"]}},
+                ],
+            })
+    # A restart mid-run would otherwise leave a pump on (until the plug's
+    # own max_run).
+    autos.append({
+        "id": "drip_pumps_off_on_start",
+        "alias": "Drip - pumps off when Home Assistant starts",
+        "triggers": [{"trigger": "homeassistant", "event": "start"}],
+        "actions": [{"action": "switch.turn_off",
+                     "target": {"entity_id": [z["switch"] for z in DRIP_ZONES]},
+                     "continue_on_error": True}],
+    })
+    # For the Home alerts: pumps with Auto on that are stuck.
+    zones = [z["zone"] for z in DRIP_ZONES]
+    sensors.append({
+        "name": "Drip Problems",
+        "unique_id": "drip_problems",
+        "icon": "mdi:water-pump-off",
+        "state": (f"{{{{ {zones} | map('string') | map('regex_replace', '^', 'sensor.drip_')"
+                  " | map('regex_replace', '$', '_plan') | select('is_state', 'Problem')"
+                  " | list | count }}"),
+        "attributes": {"items": (
+            "{%- set ns = namespace(a=[]) %}"
+            f"{{%- for z in {zones} %}}"
+            "{%- if is_state('sensor.drip_' ~ z ~ '_plan', 'Problem')"
+            " and is_state('input_boolean.drip_' ~ z ~ '_auto', 'on') %}"
+            "{%- set ns.a = ns.a + [{'zone': z, 'text': state_attr('sensor.drip_' ~ z ~ '_plan',"
+            " 'zone_name') ~ ' needs a look'}] %}"
+            "{%- endif %}{%- endfor %}{{ ns.a }}")},
+    })
+    return {"input_boolean": booleans, "input_number": numbers, "input_datetime": datetimes,
+            "input_text": texts, "sensor": stats, "template": [{"sensor": sensors}], "script": scripts,
+            "automation": autos}
+
+
 def gallery(path):
     tiles = "".join(
         f'<figure style="margin:0;background:{bg};border-radius:14px;padding:6px">'
@@ -728,7 +1181,9 @@ def main():
               "# it, don't edit this file by hand.\n")
     write("dashboard/views/garden_section.yaml", header, section())
     write("packages/garden.yaml", header, package())
-    print("wrote dashboard/views/garden_section.yaml and packages/garden.yaml")
+    write("packages/drip.yaml", header.replace("BEDS / PLANT_TYPES", "DRIP_ZONES / DRIP"),
+          drip_package())
+    print("wrote dashboard/views/garden_section.yaml, packages/garden.yaml and packages/drip.yaml")
 
 
 if __name__ == "__main__":

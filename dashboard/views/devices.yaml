@@ -255,6 +255,69 @@ sections:
             entity: input_select.dryer_state
             state: Done
 
+  # Drip watering (packages/drip.yaml, from tools/garden.py). Hidden until
+  # the pump's plug is reporting.
+  - type: grid
+    visibility:
+      - condition: or
+        conditions:
+          - condition: state
+            entity: switch.drip_pump_switch
+            state: "on"
+          - condition: state
+            entity: switch.drip_pump_switch
+            state: "off"
+    cards:
+      - type: heading
+        heading: Drip watering
+        icon: mdi:water-pump
+      # What it's doing and why, e.g. "Bed 2 is dry (25%), waters at 5 AM".
+      - type: tile
+        entity: sensor.drip_1_plan
+        name: Garden drip
+        state_content: [state, reason]
+        grid_options: { columns: full }
+      - type: tile
+        entity: input_boolean.drip_1_auto
+        name: Auto watering
+        icon: mdi:water-pump
+      - type: tile
+        entity: script.drip_1_water_now
+        name: Water now
+        icon: mdi:watering-can-outline
+        color: blue
+        hide_state: true
+        tap_action:
+          action: perform-action
+          perform_action: script.drip_1_water_now
+      - type: tile
+        entity: sensor.drip_1_runtime_today
+        name: Pumped today
+        icon: mdi:timer-outline
+      - type: tile
+        entity: sensor.drip_pump_power
+        name: Pump power
+        icon: mdi:flash
+      # The feed-line valves: what each bed rose after the last run, and
+      # which valve to turn when the beds drift apart.
+      - type: tile
+        entity: sensor.drip_1_plan
+        name: Valves
+        icon: mdi:valve
+        state_content: valve_hint
+        grid_options: { columns: full }
+      - type: tile
+        entity: input_text.drip_1_last_rises
+        name: Last run, per bed
+        icon: mdi:chart-bar
+        grid_options: { columns: full }
+      # Learned from each run; you can set it by hand too.
+      - type: tile
+        entity: input_number.drip_1_minutes_per_percent
+        name: Minutes per 1% moisture
+        icon: mdi:timer-cog-outline
+        grid_options: { columns: full }
+
   - type: grid
     cards:
       - type: heading

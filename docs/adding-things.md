@@ -32,6 +32,10 @@ themes/wall_tablet.yaml        colours
   or add a plant type or change its levels, edit `BEDS` / `PLANT_TYPES` in
   `tools/garden.py` and run
   `python3 tools/garden.py` (`--gallery out.html` previews every picture).
+- **Drip watering**: the pump icon left of each bed's pot switches Auto
+  watering on/off (hold it for what the pump is doing and why). Beds on the
+  pump, run lengths, watering times and limits are `DRIP_ZONES` / `DRIP` in
+  `tools/garden.py`; see [drip.md](drip.md).
 - **Alerts on Home**: one tile per alert. Tap one to hide it until it
   clears and happens again (e.g. a bed is hidden until it's watered and
   dries out again); smoke/CO alerts can't be hidden. **Devices → Hidden

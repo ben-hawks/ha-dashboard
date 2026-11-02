@@ -9,6 +9,7 @@ It's meant to be easy for anyone in the house, not just whoever set it up.
 - **Floor Plan tab (NeonPlan 3D):** [docs/floorplan.md](docs/floorplan.md)
 - **Chicken Command Center (coop tablet):** [docs/coop-tablet.md](docs/coop-tablet.md)
 - **Laundry monitor (washer & dryer notifications):** [docs/laundry.md](docs/laundry.md)
+- **Drip watering (Vivosun drip kit on an Athom plug):** [docs/drip.md](docs/drip.md)
 - **Adding devices, rooms, tabs and alerts:** [docs/adding-things.md](docs/adding-things.md)
 
 ## Tabs
@@ -19,9 +20,9 @@ It's meant to be easy for anyone in the house, not just whoever set it up.
 | **Floor Plan** | 3D model of both floors (NeonPlan 3D): rooms light up with their lights, tap a room for its devices, smoke/CO alerts on the plan. A flat 2D version is kept as a fallback |
 | **Rooms** | Every light and speaker, grouped by room |
 | **Climate** | Thermostat, hallway temperature/humidity, Airthings air quality |
-| **Outdoors** | Weather band (station card, hourly + daily forecast, 24 h graphs; tap the forecast for a live radar map, which also appears by itself when rain, snow or storms are due) and the garden beds on one screen, then coop & shed. A card per garden bed (rename it and pick the plant on the dashboard from 13 illustrations incl. berries; dry beds raise a Home alert; moisture with plant-specific Dry/Good/Wet, soil temperature, EC, 3-day moisture graph), an illustrated WS90 weather station card (sky picture incl. snow, temperature, wind compass, rain, UV, pressure, 24 h graphs), chicken coop, shed power station |
+| **Outdoors** | Weather band (station card, hourly + daily forecast, 24 h graphs; tap the forecast for a live radar map, which also appears by itself when rain, snow or storms are due) and the garden beds on one screen, then coop & shed. A card per garden bed (rename it and pick the plant on the dashboard from 13 illustrations incl. berries; dry beds raise a Home alert; moisture with plant-specific Dry/Good/Wet, soil temperature, EC, 3-day moisture graph; a pump icon turns drip watering's Auto on/off), an illustrated WS90 weather station card (sky picture incl. snow, temperature, wind compass, rain, UV, pressure, 24 h graphs), chicken coop, shed power station |
 | **Safety** | Smoke/CO status per room, alarm hub; "Silence all alarms" appears only while one is going off |
-| **Devices** | Alerts, low batteries, offline devices, vacuum parts, cats, litter box and water fountain, laundry, backup power, shopping list, light/dark setting |
+| **Devices** | Alerts, low batteries, offline devices, vacuum parts, cats, litter box and water fountain, laundry, drip watering (what it's doing and why, Water now, valve hints), backup power, shopping list, light/dark setting |
 
 ## Design rules
 
@@ -42,15 +43,17 @@ dashboard/views/*.yaml       one file per tab
 dashboard/chicken_coop.yaml  Chicken Command Center (coop tablet)
 packages/wall_tablet.yaml    light groups, helpers, alert sensors, theme + hallway automations
 packages/garden.yaml         garden plant dropdowns + soil helper sensors (generated)
+packages/drip.yaml           drip watering: when and how long the pump runs (generated)
 packages/laundry.yaml        washer/dryer cycle detection + push notifications
 themes/wall_tablet.yaml      Aurora Dark + Aurora Light themes
 tools/entity_export.jinja    lists your entities (paste into Developer Tools → Template)
 tools/floorplan.py           traced house layout → 2D Floor Plan tab + NeonPlan 3D import file
-tools/garden.py              garden bed cards + their package (plant dropdowns, helper sensors)
+tools/garden.py              garden bed cards + their packages (plant dropdowns, helper sensors, drip watering)
 tools/weather.py             weather station card + its helper sensors (templates/weather_station.yaml)
 tools/coop.py                coop screen's animated scene, chicken comfort + helpers (templates/coop.yaml)
 tools/laundry_profile.py     suggests washer/dryer thresholds from a cycle's power history
 esphome/laundry-*.yaml       washer/dryer Athom smart plugs (mirrors of the ESPHome Device Builder copies)
+esphome/drip-pump.yaml       drip pump Athom smart plug, with a 15 min failsafe (mirror, as above)
 ```
 
 ## Requirements

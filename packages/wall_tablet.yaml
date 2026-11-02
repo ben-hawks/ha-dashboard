@@ -657,6 +657,11 @@ template:
               {%- set ns.a = ns.a + [{'key': 'garden_' ~ c, 'icon': 'mdi:watering-can', 'critical': false,
                                       'text': states('sensor.garden_' ~ c ~ '_name') ~ ' needs water'}] %}
             {%- endfor %}
+            {#- A drip pump that's stuck: no rise after watering, no power, no readings (packages/drip.yaml). #}
+            {%- for z in state_attr('sensor.drip_problems', 'items') or [] %}
+              {%- set ns.a = ns.a + [{'key': 'drip_' ~ z.zone, 'icon': 'mdi:water-pump-off', 'critical': false,
+                                      'text': z.text}] %}
+            {%- endfor %}
             {%- if states('sensor.dockstream_2_smart_cordless_fountain_remaining_water_2') | float(100) < 25 %}
               {%- set ns.a = ns.a + [{'key': 'fountain_water', 'text': 'Cat fountain needs water',
                                       'icon': 'mdi:fountain', 'critical': false}] %}
