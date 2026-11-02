@@ -329,6 +329,15 @@ def base_svg():
 # Dashboard section
 # ---------------------------------------------------------------------------
 
+def hit(cx, cy, w, h, entity):
+    """An invisible tap target of w×h (canvas units) centred on (cx, cy)
+    that opens `entity`'s details."""
+    blank = f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {w} {h}"></svg>'
+    return {"type": "image", "image": data_uri(blank),
+            "tap_action": {"action": "more-info", "entity": entity},
+            "style": {**at(cx, cy), "width": f"{w / W * 100:.1f}%"}}
+
+
 def hero_card():
     cx, cy, r = COMPASS
     small = {"font-size": "13px", "color": "var(--secondary-text-color)", "white-space": "nowrap"}
@@ -348,8 +357,15 @@ def hero_card():
         {"type": "image", "entity": "sensor.station_wind_compass",
          "image": data_uri(canvas("")),
          "state_image": {p: data_uri(wind_pointer(p)) for p in POINTS},
-         "tap_action": {"action": "more-info", "entity": "sensor.station_wind_direction"},
+         # Full-card layer: taps go to the targets below, not here.
+         "tap_action": {"action": "none"},
          "style": {"left": "50%", "top": "50%", "width": "100%"}},
+        # Tap targets: the compass opens wind direction; each row on the right
+        # opens its reading (label included, not just the number).
+        hit(cx, cy, 2 * r + 16, 2 * r + 16, "sensor.station_wind_direction"),
+        *[hit((ROW_X_LABEL - 6 + ROW_X_VALUE + 6) / 2, ROW_Y0 + i * ROW_DY,
+              ROW_X_VALUE - ROW_X_LABEL + 12, ROW_DY, entity_id(key))
+          for i, (_, key) in enumerate(ROWS)],
         # Temperature block, top right.
         {"type": "state-label", "entity": "sensor.station_temperature",
          "style": {**at(390, 48), **right, **big, "font-size": "46px", "font-weight": "600"}},

@@ -68,12 +68,65 @@ cards:
         NW: data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0MDAgMjkyIj48ZGVmcz48ZmlsdGVyIGlkPSJnbG93IiB4PSItMSIgeT0iLTEiIHdpZHRoPSIzIiBoZWlnaHQ9IjMiPjxmZUdhdXNzaWFuQmx1ciBzdGREZXZpYXRpb249IjQiLz48L2ZpbHRlcj48L2RlZnM+PGcgdHJhbnNmb3JtPSJyb3RhdGUoMzE1LjAgODUgMjA0KSI+PGNpcmNsZSBjeD0iODUiIGN5PSIxNTgiIHI9IjEwIiBmaWxsPSIjNWI5Y2Y2IiBvcGFjaXR5PSIwLjYiIGZpbHRlcj0idXJsKCNnbG93KSIvPjxwYXRoIGQ9Ik04NSAxNjkgTDc2IDE1MSBMOTQgMTUxIFoiIGZpbGw9IiM1YjljZjYiIHN0cm9rZT0iI2ZmZiIgc3Ryb2tlLXdpZHRoPSIxLjUiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz48L2c+PC9zdmc+
         NNW: data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0MDAgMjkyIj48ZGVmcz48ZmlsdGVyIGlkPSJnbG93IiB4PSItMSIgeT0iLTEiIHdpZHRoPSIzIiBoZWlnaHQ9IjMiPjxmZUdhdXNzaWFuQmx1ciBzdGREZXZpYXRpb249IjQiLz48L2ZpbHRlcj48L2RlZnM+PGcgdHJhbnNmb3JtPSJyb3RhdGUoMzM3LjUgODUgMjA0KSI+PGNpcmNsZSBjeD0iODUiIGN5PSIxNTgiIHI9IjEwIiBmaWxsPSIjNWI5Y2Y2IiBvcGFjaXR5PSIwLjYiIGZpbHRlcj0idXJsKCNnbG93KSIvPjxwYXRoIGQ9Ik04NSAxNjkgTDc2IDE1MSBMOTQgMTUxIFoiIGZpbGw9IiM1YjljZjYiIHN0cm9rZT0iI2ZmZiIgc3Ryb2tlLXdpZHRoPSIxLjUiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz48L2c+PC9zdmc+
       tap_action:
-        action: more-info
-        entity: sensor.station_wind_direction
+        action: none
       style:
         left: 50%
         top: 50%
         width: 100%
+    - type: image
+      image: data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMTYgMTE2Ij48L3N2Zz4=
+      tap_action:
+        action: more-info
+        entity: sensor.station_wind_direction
+      style:
+        left: 21.2%
+        top: 69.9%
+        width: 29.0%
+    - type: image
+      image: data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyMjAgMjQiPjwvc3ZnPg==
+      tap_action:
+        action: more-info
+        entity: sensor.station_rain_today
+      style:
+        left: 71.5%
+        top: 58.2%
+        width: 55.0%
+    - type: image
+      image: data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyMjAgMjQiPjwvc3ZnPg==
+      tap_action:
+        action: more-info
+        entity: sensor.station_rain_rate
+      style:
+        left: 71.5%
+        top: 66.4%
+        width: 55.0%
+    - type: image
+      image: data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyMjAgMjQiPjwvc3ZnPg==
+      tap_action:
+        action: more-info
+        entity: sensor.station_rain_this_month
+      style:
+        left: 71.5%
+        top: 74.7%
+        width: 55.0%
+    - type: image
+      image: data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyMjAgMjQiPjwvc3ZnPg==
+      tap_action:
+        action: more-info
+        entity: sensor.station_uv_index
+      style:
+        left: 71.5%
+        top: 82.9%
+        width: 55.0%
+    - type: image
+      image: data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyMjAgMjQiPjwvc3ZnPg==
+      tap_action:
+        action: more-info
+        entity: sensor.station_pressure
+      style:
+        left: 71.5%
+        top: 91.1%
+        width: 55.0%
     - type: state-label
       entity: sensor.station_temperature
       style:
