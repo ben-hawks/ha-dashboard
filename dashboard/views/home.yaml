@@ -179,8 +179,9 @@ sections:
       #   2. its Google Cast entity (YouTube, anything cast from a phone)
       #   3. its "now playing" player from Android's media sessions over ADB
       #      (Netflix, Sling, Dropout, ...; packages/tv.yaml, tools/tv.py)
-      #   4. the same player without a title, when the TV itself says
-      #      something is playing or paused: at least the app's name.
+      #   4. the TV's ADB player, when it says something is playing or
+      #      paused: at least the app's name (works even before
+      #      packages/tv.yaml is loaded).
       # A TV that's just on (home screen, settings, screensaver) gets no card.
       - type: custom:auto-entities
         show_empty: false
@@ -194,12 +195,15 @@ sections:
         filter:
           template: >-
             {%- set tvs = [
-              {'name': 'Main Room TV', 'area': 'Living Room',
-               'cast': 'media_player.main_room_tv', 'key': 'main_room_tv'},
-              {'name': 'Game Room TV', 'area': 'Game Room',
-               'cast': 'media_player.bedroom_tv_2', 'key': 'game_room_tv'},
-              {'name': 'Bedroom TV', 'area': 'Bedroom',
-               'cast': 'media_player.bedroom_tv_2_2', 'key': 'bedroom_tv'},
+              {'name': 'Main Room TV', 'area': 'Living Room', 'key': 'main_room_tv',
+               'cast': 'media_player.main_room_tv',
+               'adb': 'media_player.living_room_main_room_tv_adb'},
+              {'name': 'Game Room TV', 'area': 'Game Room', 'key': 'game_room_tv',
+               'cast': 'media_player.bedroom_tv_2',
+               'adb': 'media_player.game_room_game_room_tv_adb'},
+              {'name': 'Bedroom TV', 'area': 'Bedroom', 'key': 'bedroom_tv',
+               'cast': 'media_player.bedroom_tv_2_2',
+               'adb': 'media_player.bedroom_bedroom_tv_adb'},
             ] %}
             {%- set active = ['playing', 'paused', 'buffering'] %}
             {%- set ns = namespace(cards=[]) %}
@@ -220,6 +224,8 @@ sections:
               {%- elif states('sensor.tv_' ~ tv.key ~ '_session') in ['playing', 'paused']
                        or states('media_player.' ~ tv.key ~ '_now_playing') in active %}
                 {%- set pick = 'media_player.' ~ tv.key ~ '_now_playing' %}
+              {%- elif states(tv.adb) in active %}
+                {%- set pick = tv.adb %}
               {%- endif %}
               {%- if pick %}
                 {%- set ns.cards = ns.cards + [{'type': 'media-control', 'entity': pick}] %}
