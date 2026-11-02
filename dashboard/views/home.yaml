@@ -230,7 +230,7 @@ sections:
                      and states(session) in ['playing', 'paused']
                      and state_attr(session, 'title') %}
                 {%- set ns.cards = ns.cards + [{'type': 'vertical-stack', 'cards': [
-                      {'type': 'markdown', 'text_only': true, 'content':
+                      {'type': 'markdown', 'content':
                         '### ' ~ state_attr(session, 'title') ~ '\n'
                         ~ (state_attr(session, 'subtitle') ~ '\n\n' if state_attr(session, 'subtitle') else '')
                         ~ '<small>' ~ (state_attr(session, 'app') or 'Playing')
@@ -243,7 +243,10 @@ sections:
                 {%- set ns.cards = ns.cards + [{'type': 'media-control', 'entity': pick}] %}
               {%- endif %}
             {%- endfor %}
-            {{ ns.cards | tojson }}
+            {#- Home Assistant turns this into a list with Python's rules before
+                auto-entities sees it, so no JSON true/false/null in here, and
+                to_json (not tojson) keeps emoji in titles intact. #}
+            {{ ns.cards | to_json }}
 
       # Speakers playing anywhere in the house (the TVs are above). A speaker
       # carrying a TV's sound reports "playing" a title of "TV" whenever the
