@@ -102,6 +102,7 @@ template:
       minutes: 1
     attributes:
       app: '{%- set names = {''org.smarttube.beta'': ''SmartTube'', ''org.smarttube.stable'': ''SmartTube'', ''com.liskovsoft.smarttubetv.beta'': ''SmartTube'', ''com.liskovsoft.smarttubetv'': ''SmartTube'', ''com.google.android.youtube.tv'': ''YouTube'', ''com.netflix.ninja'': ''Netflix'', ''org.jellyfin.androidtv'': ''Jellyfin'', ''com.github.damontecres.wholphin'': ''Wholphin'', ''com.sling'': ''Sling TV'', ''com.collegehumor.chdropout'': ''Dropout'', ''ott.thetryguys'': ''2nd Try''} %}{%- set package = state_attr(''media_player.living_room_main_room_tv_adb'', ''app_id'') or state_attr(''media_player.living_room_main_room_tv_adb'', ''app_name'') or '''' %}{%- set name = names.get(package) or package %}{{ name or (this.attributes.app if this.attributes is defined and this.attributes.app is defined else '''') }}'
+      volume: '{%- set v = state_attr(''media_player.living_room_main_room_tv_adb'', ''volume_level'') %}{%- if state_attr(''media_player.living_room_main_room_tv_adb'', ''is_volume_muted'') %}Muted{%- elif v is number %}{{ (v * 100) | round(0) | int }}%{%- else %}{{ this.attributes.volume if this.attributes is defined and this.attributes.volume is defined else '''' }}{%- endif %}'
   - name: TV Game Room TV App Playing
     unique_id: tv_game_room_tv_app_playing
     icon: mdi:television-play
@@ -110,6 +111,7 @@ template:
       minutes: 1
     attributes:
       app: '{%- set names = {''org.smarttube.beta'': ''SmartTube'', ''org.smarttube.stable'': ''SmartTube'', ''com.liskovsoft.smarttubetv.beta'': ''SmartTube'', ''com.liskovsoft.smarttubetv'': ''SmartTube'', ''com.google.android.youtube.tv'': ''YouTube'', ''com.netflix.ninja'': ''Netflix'', ''org.jellyfin.androidtv'': ''Jellyfin'', ''com.github.damontecres.wholphin'': ''Wholphin'', ''com.sling'': ''Sling TV'', ''com.collegehumor.chdropout'': ''Dropout'', ''ott.thetryguys'': ''2nd Try''} %}{%- set package = state_attr(''media_player.game_room_game_room_tv_adb'', ''app_id'') or state_attr(''media_player.game_room_game_room_tv_adb'', ''app_name'') or '''' %}{%- set name = names.get(package) or package %}{{ name or (this.attributes.app if this.attributes is defined and this.attributes.app is defined else '''') }}'
+      volume: '{%- set v = state_attr(''media_player.game_room_game_room_tv_adb'', ''volume_level'') %}{%- if state_attr(''media_player.game_room_game_room_tv_adb'', ''is_volume_muted'') %}Muted{%- elif v is number %}{{ (v * 100) | round(0) | int }}%{%- else %}{{ this.attributes.volume if this.attributes is defined and this.attributes.volume is defined else '''' }}{%- endif %}'
   - name: TV Bedroom TV App Playing
     unique_id: tv_bedroom_tv_app_playing
     icon: mdi:television-play
@@ -118,3 +120,4 @@ template:
       minutes: 1
     attributes:
       app: '{%- set names = {''org.smarttube.beta'': ''SmartTube'', ''org.smarttube.stable'': ''SmartTube'', ''com.liskovsoft.smarttubetv.beta'': ''SmartTube'', ''com.liskovsoft.smarttubetv'': ''SmartTube'', ''com.google.android.youtube.tv'': ''YouTube'', ''com.netflix.ninja'': ''Netflix'', ''org.jellyfin.androidtv'': ''Jellyfin'', ''com.github.damontecres.wholphin'': ''Wholphin'', ''com.sling'': ''Sling TV'', ''com.collegehumor.chdropout'': ''Dropout'', ''ott.thetryguys'': ''2nd Try''} %}{%- set package = state_attr(''media_player.bedroom_bedroom_tv_adb'', ''app_id'') or state_attr(''media_player.bedroom_bedroom_tv_adb'', ''app_name'') or '''' %}{%- set name = names.get(package) or package %}{{ name or (this.attributes.app if this.attributes is defined and this.attributes.app is defined else '''') }}'
+      volume: '{%- set v = state_attr(''media_player.bedroom_bedroom_tv_adb'', ''volume_level'') %}{%- if state_attr(''media_player.bedroom_bedroom_tv_adb'', ''is_volume_muted'') %}Muted{%- elif v is number %}{{ (v * 100) | round(0) | int }}%{%- else %}{{ this.attributes.volume if this.attributes is defined and this.attributes.volume is defined else '''' }}{%- endif %}'

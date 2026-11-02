@@ -152,7 +152,7 @@ def session_sensor(tv):
 
 def app_playing(tv):
     """A steadier "the TV is playing something" for apps that don't report
-    a title: on while the ADB player says playing/paused, held on for a
+    a title (and the TV's volume, for the card): on while the ADB player says playing/paused, held on for a
     minute through its brief state flips, with the app's friendly name kept
     when the ADB attributes are momentarily blank."""
     adb = tv["adb"]
@@ -169,6 +169,13 @@ def app_playing(tv):
                     "{%- set name = names.get(package) or package %}"
                     "{{ name or (this.attributes.app if this.attributes is defined"
                     " and this.attributes.app is defined else '') }}"),
+            # The TV's volume for the card, e.g. "7%" or "Muted"; kept through
+            # the moments the ADB attributes are blank.
+            "volume": (f"{{%- set v = state_attr('{adb}', 'volume_level') %}}"
+                       f"{{%- if state_attr('{adb}', 'is_volume_muted') %}}Muted"
+                       "{%- elif v is number %}{{ (v * 100) | round(0) | int }}%"
+                       "{%- else %}{{ this.attributes.volume if this.attributes is defined"
+                       " and this.attributes.volume is defined else '' }}{%- endif %}"),
         },
     }
 

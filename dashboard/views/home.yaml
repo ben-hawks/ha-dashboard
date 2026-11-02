@@ -267,8 +267,8 @@ sections:
                       ['mdi:skip-previous', 'media_previous_track', 10],
                       ['mdi:play-pause', 'media_play_pause', 24],
                       ['mdi:skip-next', 'media_next_track', 38],
-                      ['mdi:volume-minus', 'volume_down', 76],
-                      ['mdi:volume-plus', 'volume_up', 90]] %}
+                      ['mdi:volume-minus', 'volume_down', 70],
+                      ['mdi:volume-plus', 'volume_up', 92]] %}
                   {%- set ns3.buttons = ns3.buttons + [{'type': 'icon', 'icon': icon,
                         'tap_action': {'action': 'perform-action',
                                        'perform_action': 'media_player.' ~ action,
@@ -297,7 +297,12 @@ sections:
                         {'type': 'state-label', 'entity': playing_app, 'attribute': 'app',
                          'style': dict(white, left='5%', top='24%', **{'font-size': '20px',
                                                                        'font-weight': '600'})},
-                      ]) + ns3.buttons}] %}
+                      ]) + ns3.buttons + [
+                        {'type': 'state-label', 'entity': playing_app, 'attribute': 'volume',
+                         'tap_action': {'action': 'more-info', 'entity': tv.adb},
+                         'style': {'left': '81%', 'top': '82%', 'color': 'white',
+                                   'font-size': '13px', 'opacity': '0.85'}},
+                      ]}] %}
               {%- elif pick %}
                 {%- set ns.cards = ns.cards + [{'type': 'media-control', 'entity': pick}] %}
               {%- endif %}
