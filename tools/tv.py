@@ -12,7 +12,8 @@ The ADB integration clears that attribute again on its next refresh, so the
 session sensors are trigger-based: they update when a reply arrives (or the
 TV turns off) and keep their value in between.
 
-Per TV this makes sensor.tv_<key>_session: playing / paused / idle, with
+Per TV this also makes binary_sensor.tv_<key>_app_playing (see
+app_playing), and sensor.tv_<key>_session: playing / paused / idle, with
 title, subtitle and app attributes (and a "sessions" summary of what the TV
 reported). The Home tab's "Now playing" card shows it with the TV's ADB
 player's controls underneath. (A Universal Media Player can't carry the
@@ -149,6 +150,29 @@ def session_sensor(tv):
     }
 
 
+def app_playing(tv):
+    """A steadier "the TV is playing something" for apps that don't report
+    a title: on while the ADB player says playing/paused, held on for a
+    minute through its brief state flips, with the app's friendly name kept
+    when the ADB attributes are momentarily blank."""
+    adb = tv["adb"]
+    return {
+        "name": f"TV {tv['name']} App Playing",
+        "unique_id": f"tv_{tv['key']}_app_playing",
+        "icon": "mdi:television-play",
+        "state": f"{{{{ states('{adb}') in ['playing', 'paused'] }}}}",
+        "delay_off": {"minutes": 1},
+        "attributes": {
+            "app": (f"{{%- set names = {APP_NAMES} %}}"
+                    f"{{%- set package = state_attr('{adb}', 'app_id')"
+                    f" or state_attr('{adb}', 'app_name') or '' %}}"
+                    "{%- set name = names.get(package) or package %}"
+                    "{{ name or (this.attributes.app if this.attributes is defined"
+                    " and this.attributes.app is defined else '') }}"),
+        },
+    }
+
+
 def package():
     adbs = [tv["adb"] for tv in TVS]
     return {
@@ -177,7 +201,8 @@ def package():
                 },
             }],
         }],
-        "template": [session_block(tv) for tv in TVS],
+        "template": [session_block(tv) for tv in TVS]
+                    + [{"binary_sensor": [app_playing(tv) for tv in TVS]}],
     }
 
 
