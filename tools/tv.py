@@ -8,6 +8,9 @@ their title and show there for the TV's own "now playing" display. The
 reply lands in the ADB entity's adb_response attribute; it's trimmed on the
 TV to the few lines needed, without the playback position, so it only
 changes (and gets recorded) when the programme or play/pause changes.
+The ADB integration clears that attribute again on its next refresh, so the
+session sensors are trigger-based: they update when a reply arrives (or the
+TV turns off) and keep their value in between.
 
 Per TV this makes:
   sensor.tv_<key>_session          playing / paused / idle, with title,
@@ -41,17 +44,24 @@ TVS = [
 # ("Title, Subtitle, Description").
 COMMAND = ("dumpsys media_session"
            " | grep -E 'package=|active=|state=PlaybackState|description='"
-           " | sed -E 's/, position=.*//'")
+           " | sed -E 's/, position=.*//'"
+           # Always some reply, so "nothing playing" still counts as an
+           # answer (an empty one looks like the integration clearing it).
+           "; echo done")
 
 # Android PlaybackState numbers.
 PLAYING, PAUSED, BUFFERING = 3, 2, 6
 
 
-def parse(adb):
+# The reply that triggered the update (see session_block).
+REPLY = "(trigger.to_state.attributes.get('adb_response') or '')"
+
+
+def parse():
     """Jinja: the most relevant session (playing, else paused/buffering) as
     `pick`, a dict with package, state and description."""
     return (
-        f"{{%- set lines = (state_attr('{adb}', 'adb_response') or '').split('\\n') %}}"
+        f"{{%- set lines = {REPLY}.split('\\n') %}}"
         "{%- set ns = namespace(sessions=[], cur={}) %}"
         "{%- for raw in lines %}{%- set l = raw | trim %}"
         "{%- if l.startswith('package=') %}"
@@ -71,22 +81,41 @@ def parse(adb):
     )
 
 
+def session_block(tv):
+    """A trigger-based template block for one TV: updates on each ADB reply
+    and when the TV goes off, and holds its value otherwise."""
+    adb = tv["adb"]
+    return {
+        "triggers": [
+            {"trigger": "state", "entity_id": adb, "attribute": "adb_response"},
+            {"trigger": "state", "entity_id": adb, "to": ["off", "unavailable"]},
+        ],
+        # Skip the moment the integration clears the reply (the TV's still on).
+        "conditions": [{
+            "condition": "template",
+            "value_template": ("{{ trigger.to_state.state in ['off', 'unavailable'] or "
+                               + REPLY + " != '' }}"),
+        }],
+        "sensor": [session_sensor(tv)],
+    }
+
+
 def session_sensor(tv):
     adb = tv["adb"]
     return {
         "name": f"TV {tv['name']} Session",
         "unique_id": f"tv_{tv['key']}_session",
         "icon": "mdi:television-play",
-        "state": parse(adb) + (
+        "state": parse() + (
             f"{{{{ 'playing' if pick.state == {PLAYING} else 'paused'"
             f" if pick.state in [{PAUSED}, {BUFFERING}] else 'idle' }}}}"),
         "attributes": {
-            "title": parse(adb) + "{{ parts[0] if parts[0] not in ['', 'null'] else '' }}",
-            "subtitle": parse(adb) + (
+            "title": parse() + "{{ parts[0] if parts[0] not in ['', 'null'] else '' }}",
+            "subtitle": parse() + (
                 "{{ parts[1] if parts | count > 1 and parts[1] not in ['', 'null'] else '' }}"),
             # The foreground app's name if that's the session shown, else
             # the session's package (e.g. paused YouTube behind Netflix).
-            "app": parse(adb) + (
+            "app": parse() + (
                 f"{{{{ (state_attr('{adb}', 'app_name') or pick.package)"
                 f" if not pick.package or state_attr('{adb}', 'app_id') == pick.package"
                 " else pick.package }}"),
@@ -141,7 +170,7 @@ def package():
                 },
             }],
         }],
-        "template": [{"sensor": [session_sensor(tv) for tv in TVS]}],
+        "template": [session_block(tv) for tv in TVS],
         "media_player": [now_playing(tv) for tv in TVS],
     }
 
