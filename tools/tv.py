@@ -62,6 +62,8 @@ APP_NAMES = {
     "org.jellyfin.androidtv": "Jellyfin",
     "com.github.damontecres.wholphin": "Wholphin",
     "com.sling": "Sling TV",
+    "com.collegehumor.chdropout": "Dropout",
+    "ott.thetryguys": "2nd Try",
 }
 
 
