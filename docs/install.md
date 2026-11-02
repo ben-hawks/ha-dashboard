@@ -55,6 +55,7 @@ homeassistant:
     drip: !include ha-dashboard/packages/drip.yaml
     laundry: !include ha-dashboard/packages/laundry.yaml
     tv: !include ha-dashboard/packages/tv.yaml
+    hvac_zones: !include ha-dashboard/packages/hvac_zones.yaml
 
 frontend:
   themes: !include_dir_merge_named ha-dashboard/themes

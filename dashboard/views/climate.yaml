@@ -21,6 +21,10 @@ sections:
               - heat_cool
               - "off"
 
+  # Room zoning (tools/hvac_zones.py): who's in control, house mode, rooms.
+  - !include hvac_zones_section.yaml
+  - !include hvac_zones_settings_section.yaml
+
   - type: grid
     cards:
       - type: heading
