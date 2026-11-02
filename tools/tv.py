@@ -12,13 +12,11 @@ The ADB integration clears that attribute again on its next refresh, so the
 session sensors are trigger-based: they update when a reply arrives (or the
 TV turns off) and keep their value in between.
 
-Per TV this makes:
-  sensor.tv_<key>_session          playing / paused / idle, with title,
-                                   subtitle and app attributes
-  media_player.<key>_now_playing   the ADB player with that title added
-                                   (Universal Media Player), so the Home
-                                   tab's media card can show it and its
-                                   controls still work
+Per TV this makes sensor.tv_<key>_session: playing / paused / idle, with
+title, subtitle and app attributes (and a "sessions" summary of what the TV
+reported). The Home tab's "Now playing" card shows it with the TV's ADB
+player's controls underneath. (A Universal Media Player can't carry the
+title: it only overrides state, volume and source, not the title.)
 
 To add a TV, add it to TVS (and to the Home tab's "Now playing" card in
 dashboard/views/home.yaml), then run:  python3 tools/tv.py
@@ -146,25 +144,6 @@ def session_sensor(tv):
     }
 
 
-def now_playing(tv):
-    session = f"sensor.tv_{tv['key']}_session"
-    return {
-        "platform": "universal",
-        "name": f"{tv['name']} Now Playing",
-        "unique_id": f"tv_{tv['key']}_now_playing",
-        "device_class": "tv",
-        "children": [tv["adb"]],
-        "state_template": (
-            f"{{{{ states('{session}') if states('{session}') in ['playing', 'paused']"
-            f" else states('{tv['adb']}') }}}}"),
-        "attributes": {
-            "media_title": f"{session}|title",
-            "media_artist": f"{session}|subtitle",
-            "app_name": f"{session}|app",
-        },
-    }
-
-
 def package():
     adbs = [tv["adb"] for tv in TVS]
     return {
@@ -194,7 +173,6 @@ def package():
             }],
         }],
         "template": [session_block(tv) for tv in TVS],
-        "media_player": [now_playing(tv) for tv in TVS],
     }
 
 

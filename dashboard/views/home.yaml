@@ -177,8 +177,9 @@ sections:
       #   1. the TV's Jellyfin player (official app or Wholphin), found by
       #      the TV's name (Jellyfin names it after the device) or by area
       #   2. its Google Cast entity (YouTube, anything cast from a phone)
-      #   3. its "now playing" player from Android's media sessions over ADB
-      #      (Netflix, Sling, Dropout, ...; packages/tv.yaml, tools/tv.py)
+      #   3. what its apps report to Android (Netflix, Sling, SmartTube,
+      #      Dropout, ...; sensor.tv_<key>_session from packages/tv.yaml):
+      #      title, subtitle and app, over the TV's ADB controls
       #   4. the TV's ADB player, when it says something is playing or
       #      paused: at least the app's name (works even before
       #      packages/tv.yaml is loaded).
@@ -221,14 +222,24 @@ sections:
                 {%- set pick = jellyfin[0] %}
               {%- elif states(tv.cast) in active %}
                 {%- set pick = tv.cast %}
-              {%- elif (states('sensor.tv_' ~ tv.key ~ '_session') in ['playing', 'paused']
-                        or states('media_player.' ~ tv.key ~ '_now_playing') in active)
-                       and has_value('media_player.' ~ tv.key ~ '_now_playing') %}
-                {%- set pick = 'media_player.' ~ tv.key ~ '_now_playing' %}
               {%- elif states(tv.adb) in active %}
                 {%- set pick = tv.adb %}
               {%- endif %}
-              {%- if pick %}
+              {%- set session = 'sensor.tv_' ~ tv.key ~ '_session' %}
+              {%- if not jellyfin and pick != tv.cast
+                     and states(session) in ['playing', 'paused']
+                     and state_attr(session, 'title') %}
+                {%- set ns.cards = ns.cards + [{'type': 'vertical-stack', 'cards': [
+                      {'type': 'markdown', 'text_only': true, 'content':
+                        '### ' ~ state_attr(session, 'title') ~ '\n'
+                        ~ (state_attr(session, 'subtitle') ~ '\n\n' if state_attr(session, 'subtitle') else '')
+                        ~ '<small>' ~ (state_attr(session, 'app') or 'Playing')
+                        ~ ' on ' ~ tv.name ~ '</small>'},
+                      {'type': 'tile', 'entity': tv.adb, 'name': tv.name,
+                       'icon': 'mdi:television-play', 'state_content': 'state',
+                       'features': [{'type': 'media-player-playback'},
+                                    {'type': 'media-player-volume-slider'}]}]}] %}
+              {%- elif pick %}
                 {%- set ns.cards = ns.cards + [{'type': 'media-control', 'entity': pick}] %}
               {%- endif %}
             {%- endfor %}
