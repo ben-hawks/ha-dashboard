@@ -46,7 +46,13 @@ script:
     - variables:
         payload: '{%- set p = {''title'': title | default(''''), ''message'': message | default(''''), ''source'': ''Home Assistant'', ''appTitle'': ''Home Assistant'', ''smallIcon'': small_icon | default(''mdi:home-assistant''), ''smallIconColor'': color | default(''#049cdb''), ''color'': color | default(''#049cdb''), ''duration'': seconds | default(12) | int, ''seconds'': seconds | default(12) | int} %}{%- if id is defined %}{% set p = dict(p, id=id) %}{% endif %}{%- if image is defined and image %}{% set p = dict(p, image=image) %}{% endif %}{%- if large_icon is defined %}{% set p = dict(p, largeIcon=large_icon) %}{% endif %}{%- if corner is defined %}{% set p = dict(p, corner=corner) %}{% endif %}{{ p }}'
     - repeat:
-        for_each: []
+        for_each:
+        - host: 192.168.1.250
+          adb: media_player.living_room_main_room_tv_adb
+        - host: 192.168.1.144
+          adb: media_player.game_room_game_room_tv_adb
+        - host: 192.168.1.234
+          adb: media_player.bedroom_bedroom_tv_adb
         sequence:
         - if:
           - condition: template
@@ -111,7 +117,13 @@ script:
           backgroundColor: '#99000000'
           shape: rounded
     - repeat:
-        for_each: []
+        for_each:
+        - host: 192.168.1.250
+          adb: media_player.living_room_main_room_tv_adb
+        - host: 192.168.1.144
+          adb: media_player.game_room_game_room_tv_adb
+        - host: 192.168.1.234
+          adb: media_player.bedroom_bedroom_tv_adb
         sequence:
         - if:
           - condition: template

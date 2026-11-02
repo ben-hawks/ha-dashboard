@@ -37,9 +37,9 @@ PORT = 5001
 # Each TV's IP address (keys from TVS in tools/tv.py). A TV left as None
 # gets nothing. Find them with the "ip" ADB command in docs/tvoverlay.md.
 TV_IPS = {
-    "main_room_tv": None,
-    "game_room_tv": None,
-    "bedroom_tv": None,
+    "main_room_tv": "192.168.1.250",
+    "game_room_tv": "192.168.1.144",
+    "bedroom_tv": "192.168.1.234",
 }
 # Home Assistant's address as the TVs reach it, for the doorbell picture.
 # The TV loads the camera's own picture link (/api/camera_proxy/...), which
