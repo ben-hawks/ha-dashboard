@@ -12,8 +12,9 @@ The ADB integration clears that attribute again on its next refresh, so the
 session sensors are trigger-based: they update when a reply arrives (or the
 TV turns off) and keep their value in between.
 
-Per TV this also makes binary_sensor.tv_<key>_app_playing (see
-app_playing), and sensor.tv_<key>_session: playing / paused / idle, with
+Per TV this also makes binary_sensor.tv_<key>_app_playing and
+sensor.tv_<key>_app (see app_playing / app_block), and
+sensor.tv_<key>_session: playing / paused / idle, with
 title, subtitle and app attributes (and a "sessions" summary of what the TV
 reported). The Home tab's "Now playing" card shows it with the TV's ADB
 player's controls underneath. (A Universal Media Player can't carry the
@@ -153,10 +154,8 @@ def session_sensor(tv):
 
 def app_playing(tv):
     """A steadier "the TV is playing something" for apps that don't report
-    a title (and the TV's volume, for the card): on while a known media app
-    is open, or the ADB player says playing/paused, held on for a minute
-    through its brief state flips, with the app's friendly name kept
-    when the ADB attributes are momentarily blank."""
+    a title: on while a known media app is open, or the ADB player says
+    playing/paused, held on for a minute through its brief state flips."""
     adb = tv["adb"]
     return {
         "name": f"TV {tv['name']} App Playing",
@@ -171,21 +170,34 @@ def app_playing(tv):
                   f" (package in {list(APP_NAMES)} and states('{adb}')"
                   " not in ['off', 'standby', 'unavailable', 'unknown']) }}"),
         "delay_off": {"minutes": 1},
-        "attributes": {
-            "app": (f"{{%- set names = {APP_NAMES} %}}"
-                    f"{{%- set package = state_attr('{adb}', 'app_id')"
-                    f" or state_attr('{adb}', 'app_name') or '' %}}"
-                    "{%- set name = names.get(package) or package %}"
-                    "{{ name or (this.attributes.app if this.attributes is defined"
-                    " and this.attributes.app is defined else '') }}"),
-            # The TV's volume for the card, e.g. "7%" or "Muted"; kept through
-            # the moments the ADB attributes are blank.
-            "volume": (f"{{%- set v = state_attr('{adb}', 'volume_level') %}}"
-                       f"{{%- if state_attr('{adb}', 'is_volume_muted') %}}Muted"
-                       "{%- elif v is number %}{{ (v * 100) | round(0) | int }}%"
-                       "{%- else %}{{ this.attributes.volume if this.attributes is defined"
-                       " and this.attributes.volume is defined else '' }}{%- endif %}"),
-        },
+    }
+
+
+def app_block(tv):
+    """sensor.tv_<key>_app: the open app's friendly name, with the TV's
+    volume ("7%" or "Muted") as an attribute, for the card. The ADB player
+    blanks these for a moment on every update, so this only updates when
+    both are actually there (trigger-based) and holds them otherwise."""
+    attrs = "trigger.to_state.attributes"
+    return {
+        "triggers": [{"trigger": "state", "entity_id": tv["adb"]}],
+        "conditions": [{
+            "condition": "template",
+            "value_template": (f"{{{{ ({attrs}.get('app_id') or {attrs}.get('app_name'))"
+                               f" and {attrs}.get('volume_level') is number }}}}"),
+        }],
+        "sensor": [{
+            "name": f"TV {tv['name']} App",
+            "unique_id": f"tv_{tv['key']}_app",
+            "icon": "mdi:application-outline",
+            "state": (f"{{%- set names = {APP_NAMES} %}}"
+                      f"{{%- set package = {attrs}.get('app_id') or {attrs}.get('app_name') %}}"
+                      "{{ names.get(package) or package }}"),
+            "attributes": {
+                "volume": (f"{{{{ 'Muted' if {attrs}.get('is_volume_muted') else"
+                           f" ({attrs}.get('volume_level') * 100) | round(0) | int ~ '%' }}}}"),
+            },
+        }],
     }
 
 
@@ -218,6 +230,7 @@ def package():
             }],
         }],
         "template": [session_block(tv) for tv in TVS]
+                    + [app_block(tv) for tv in TVS]
                     + [{"binary_sensor": [app_playing(tv) for tv in TVS]}],
     }
 
