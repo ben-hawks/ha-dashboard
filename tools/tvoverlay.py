@@ -34,8 +34,15 @@ PORT = 5001
 # ---------------------------------------------------------------------------
 # Settings
 # ---------------------------------------------------------------------------
-# Each TV's IP address (keys from TVS in tools/tv.py). A TV left as None
-# gets nothing. Find them with the "ip" ADB command in docs/tvoverlay.md.
+# Each TV's address is looked up when sending: the IP of a device tracker
+# (e.g. from UniFi Network) on the same Home Assistant device as the TV's
+# Android TV Remote or ADB entity, so a new DHCP address doesn't break it.
+# These fixed IPs are only the fallback. A TV left as None gets nothing.
+TV_REMOTES = {
+    "main_room_tv": "media_player.main_room_tv_2",
+    "game_room_tv": "media_player.game_room_tv",
+    "bedroom_tv": "media_player.bedroom_tv_3",
+}
 TV_IPS = {
     "main_room_tv": "192.168.1.250",
     "game_room_tv": "192.168.1.144",
@@ -63,9 +70,22 @@ SKY_ICONS = {
 
 
 def targets():
-    """The TVs with an IP: [{host, adb}] for the scripts' loops."""
-    return [{"host": TV_IPS[tv["key"]], "adb": tv["adb"]}
+    """The TVs with an IP: [{ip, adb, remote}] for the scripts' loops."""
+    return [{"ip": TV_IPS[tv["key"]], "adb": tv["adb"], "remote": TV_REMOTES[tv["key"]]}
             for tv in TVS if TV_IPS.get(tv["key"])]
+
+
+# Jinja: repeat.item's current IP from a device tracker on its devices, else
+# the fixed fallback.
+HOST = ("{%- set ns = namespace(ip=none) %}"
+        "{%- for e in [repeat.item.remote, repeat.item.adb] %}"
+        "{%- set dev = device_id(e) %}"
+        "{%- if dev and not ns.ip %}"
+        "{%- for t in device_entities(dev) | select('match', 'device_tracker\\.') %}"
+        "{%- set ip = state_attr(t, 'ip') or state_attr(t, 'ip_address') %}"
+        "{%- if ip and not ns.ip %}{% set ns.ip = ip %}{% endif %}"
+        "{%- endfor %}{%- endif %}{%- endfor %}"
+        "{{ ns.ip or repeat.item.ip }}")
 
 
 ON = ("{{ states(repeat.item.adb) not in "
@@ -118,7 +138,7 @@ def popup_script():
             {"repeat": {"for_each": targets(), "sequence": [{
                 "if": [{"condition": "template", "value_template": ON}],
                 "then": [{"action": "rest_command.tvoverlay_notify",
-                          "data": {"host": "{{ repeat.item.host }}",
+                          "data": {"host": HOST,
                                    "payload": "{{ payload }}"},
                           "continue_on_error": True}],
             }]}},
@@ -182,7 +202,7 @@ def badges_script():
             {"variables": {"badges": badges}},
             {"repeat": {"for_each": targets(), "sequence": [{
                 "if": [{"condition": "template", "value_template": ON}],
-                "then": [{"variables": {"host": "{{ repeat.item.host }}"}},
+                "then": [{"variables": {"host": HOST}},
                          {"repeat": {"for_each": "{{ badges }}", "sequence": [{
                              "action": "rest_command.tvoverlay_fixed",
                              "data": {"host": "{{ host }}",

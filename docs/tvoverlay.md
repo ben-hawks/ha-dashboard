@@ -68,8 +68,12 @@ data:
 The answer is in that entity's **adb_response** attribute (**Developer Tools →
 States**), e.g. `... inet 192.168.1.42/24 ...`: the IP is `192.168.1.42`.
 Repeat for `media_player.bedroom_bedroom_tv_adb` and
-`media_player.game_room_game_room_tv_adb`. Giving the TVs fixed addresses in
-your router keeps these from changing.
+`media_player.game_room_game_room_tv_adb`.
+
+These are only a fallback: each time it sends, Home Assistant looks up the
+TV's current IP from a device tracker (e.g. UniFi Network's) on the same
+device as the TV's Android TV Remote or ADB entity, so a new DHCP address
+doesn't break anything (`TV_REMOTES` in `tools/tvoverlay.py`).
 
 ## 4. Settings
 
