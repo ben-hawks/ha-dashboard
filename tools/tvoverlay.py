@@ -196,8 +196,8 @@ def badges_script():
     return {
         "alias": "TVs: refresh corner badges",
         "icon": "mdi:television-guide",
-        "mode": "queued",
-        "max": 3,
+        "mode": "single",
+        "max_exceeded": "silent",
         "sequence": [
             {"variables": {"badges": badges}},
             {"repeat": {"for_each": targets(), "sequence": [{
@@ -249,8 +249,9 @@ def automations():
         {
             "id": "tv_overlay_badges",
             "alias": "TVs: refresh corner badges when they change",
-            "mode": "queued",
-            "max": 2,
+            # A refresh still running covers the change; skip, don't queue.
+            "mode": "single",
+            "max_exceeded": "silent",
             "triggers": [
                 {"trigger": "state", "entity_id": [
                     "sensor.household_alerts", "input_select.washer_state",

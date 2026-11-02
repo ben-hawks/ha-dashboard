@@ -69,8 +69,8 @@ script:
   tv_badges:
     alias: 'TVs: refresh corner badges'
     icon: mdi:television-guide
-    mode: queued
-    max: 3
+    mode: single
+    max_exceeded: silent
     sequence:
     - variables:
         badges:
@@ -174,8 +174,8 @@ automation:
   - action: script.tv_badges
 - id: tv_overlay_badges
   alias: 'TVs: refresh corner badges when they change'
-  mode: queued
-  max: 2
+  mode: single
+  max_exceeded: silent
   triggers:
   - trigger: state
     entity_id:

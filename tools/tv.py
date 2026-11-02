@@ -94,7 +94,7 @@ def parse():
         "{%- if ns.cur %}{%- set ns.sessions = ns.sessions + [ns.cur] %}{%- endif %}"
         f"{{%- set pick = (ns.sessions | selectattr('state', 'eq', {PLAYING}) | list"
         f" + ns.sessions | selectattr('state', 'in', [{PAUSED}, {BUFFERING}]) | list"
-        " + [{}]) | first %}"
+        " + [{'package': '', 'state': 0, 'description': ''}]) | first %}"
         "{%- set parts = (pick.description or '').split(', ') %}"
     )
 
@@ -146,7 +146,7 @@ def session_sensor(tv):
             "sessions": parse() + (
                 "{%- set out = namespace(items=[]) %}"
                 "{%- for x in ns.sessions %}"
-                "{%- set out.items = out.items + [x.package ~ ' ' ~ (x.raw_state or '?')] %}"
+                "{%- set out.items = out.items + [x.package ~ ' ' ~ x.get('raw_state', '?')] %}"
                 "{%- endfor %}{{ out.items | join('; ') }}"),
         },
     }
