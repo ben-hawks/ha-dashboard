@@ -49,8 +49,22 @@ COMMAND = ("dumpsys media_session"
            # answer (an empty one looks like the integration clearing it).
            "; echo done")
 
-# Android PlaybackState numbers.
+# Android PlaybackState numbers. Newer Android prints them as e.g.
+# "state=PLAYING(3)", older as "state=3"; both are read.
 PLAYING, PAUSED, BUFFERING = 3, 2, 6
+
+# Friendly names for app packages, where the ADB integration doesn't know
+# them. Anything else shows its ADB app name, or its package.
+APP_NAMES = {
+    "org.smarttube.beta": "SmartTube", "org.smarttube.stable": "SmartTube",
+    "com.liskovsoft.smarttubetv.beta": "SmartTube",
+    "com.liskovsoft.smarttubetv": "SmartTube",
+    "com.google.android.youtube.tv": "YouTube",
+    "com.netflix.ninja": "Netflix",
+    "org.jellyfin.androidtv": "Jellyfin",
+    "com.github.damontecres.wholphin": "Wholphin",
+    "com.sling": "Sling TV",
+}
 
 
 # The reply that triggered the update (see session_block).
@@ -68,8 +82,9 @@ def parse():
         "{%- if ns.cur %}{%- set ns.sessions = ns.sessions + [ns.cur] %}{%- endif %}"
         "{%- set ns.cur = {'package': l[8:], 'state': 0, 'description': ''} %}"
         "{%- elif 'state=PlaybackState {state=' in l %}"
-        "{%- set ns.cur = dict(ns.cur, state=l.split('state=PlaybackState {state=')[1]"
-        ".split(',')[0] | int(0)) %}"
+        "{%- set token = l.split('state=PlaybackState {state=')[1].split(',')[0] | trim %}"
+        "{%- set ns.cur = dict(ns.cur, raw_state=token,"
+        " state=token.split('(')[-1].rstrip(')') | int(0)) %}"
         "{%- elif 'description=' in l %}"
         "{%- set ns.cur = dict(ns.cur, description=l.split('description=', 1)[1]) %}"
         "{%- endif %}{%- endfor %}"
@@ -113,12 +128,20 @@ def session_sensor(tv):
             "title": parse() + "{{ parts[0] if parts[0] not in ['', 'null'] else '' }}",
             "subtitle": parse() + (
                 "{{ parts[1] if parts | count > 1 and parts[1] not in ['', 'null'] else '' }}"),
-            # The foreground app's name if that's the session shown, else
-            # the session's package (e.g. paused YouTube behind Netflix).
+            # The shown session's app (e.g. paused YouTube behind Netflix),
+            # by friendly name where known.
             "app": parse() + (
-                f"{{{{ (state_attr('{adb}', 'app_name') or pick.package)"
-                f" if not pick.package or state_attr('{adb}', 'app_id') == pick.package"
-                " else pick.package }}"),
+                f"{{%- set names = {APP_NAMES} %}}"
+                f"{{%- set package = pick.package or state_attr('{adb}', 'app_id') or '' %}}"
+                f"{{{{ names.get(package) or (state_attr('{adb}', 'app_name')"
+                f" if state_attr('{adb}', 'app_id') == package else '') or package }}}}"),
+            # What the TV reported, for troubleshooting: "app state" per
+            # media session, e.g. "org.smarttube.beta PLAYING(3)".
+            "sessions": parse() + (
+                "{%- set out = namespace(items=[]) %}"
+                "{%- for x in ns.sessions %}"
+                "{%- set out.items = out.items + [x.package ~ ' ' ~ (x.raw_state or '?')] %}"
+                "{%- endfor %}{{ out.items | join('; ') }}"),
         },
     }
 
