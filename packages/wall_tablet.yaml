@@ -293,32 +293,51 @@ automation:
       The dashboard slowly uses up a small tablet's memory over a few days
       (the 3D floor plan, cameras) until the browser crashes, and keeps
       crashing until the tablet restarts. A reboot each night clears it
-      (about a minute). Rebooting needs Fully Kiosk to be the tablet's device
-      owner (docs/tablet-setup.md); without that, the browser is restarted.
+      (about a minute). Reboots go over ADB (the tablet's Android Debug
+      Bridge entity, listed below; docs/tablet-setup.md); a tablet without
+      one only gets its browser restarted.
     mode: single
     triggers:
       - trigger: time
         at: "03:45:00"
     variables:
-      fully: "{{ integration_entities('fully_kiosk') | reject('is_state', 'unavailable') | list }}"
+      # Each tablet's Android Debug Bridge entity. Add more tablets here.
+      tablet_adb: &tablet_adb
+        - media_player.kitchen_lenovo_m10hd_2nd_gen_adb
+      reachable: >-
+        {{ tablet_adb | reject('is_state', ['unavailable', 'unknown']) | list }}
+      # Fully's restart buttons, for tablets that can't be rebooted.
       restart: >-
-        {{ fully | select('match', 'button\..*_restart_browser$') | list }}
-      reboot: >-
-        {{ fully | select('match', 'button\..*_reboot_device$') | list }}
+        {%- set ns = namespace(out=[]) %}
+        {%- for b in integration_entities('fully_kiosk')
+                     | select('match', 'button\..*_restart_browser$')
+                     | reject('is_state', 'unavailable') %}
+        {%- set area = area_id(b) %}
+        {%- if not area or reachable | select('in', area_entities(area)) | list | count == 0 %}
+        {%- set ns.out = ns.out + [b] %}
+        {%- endif %}{%- endfor %}{{ ns.out }}
     conditions:
       - condition: template
-        value_template: "{{ restart | count + reboot | count > 0 }}"
+        value_template: "{{ reachable | count + restart | count > 0 }}"
     actions:
-      # The restart first: it's all that happens if rebooting isn't allowed.
-      - action: button.press
-        target:
-          entity_id: "{{ restart }}"
-        continue_on_error: true
-      - delay: "00:00:30"
-      - action: button.press
-        target:
-          entity_id: "{{ reboot }}"
-        continue_on_error: true
+      - if:
+          - condition: template
+            value_template: "{{ restart | count > 0 }}"
+        then:
+          - action: button.press
+            target:
+              entity_id: "{{ restart }}"
+            continue_on_error: true
+      - if:
+          - condition: template
+            value_template: "{{ reachable | count > 0 }}"
+        then:
+          - action: androidtv.adb_command
+            target:
+              entity_id: "{{ reachable }}"
+            data:
+              command: svc power reboot
+            continue_on_error: true
 
   - id: tablets_watchdog
     alias: "Tablets: bring the dashboard back if Fully Kiosk isn't in front"
@@ -357,9 +376,12 @@ automation:
                 restart: >-
                   {{ device_entities(device) | select('match', 'button\..*_restart_browser$')
                      | first | default('') }}
+                # The tablet's ADB entity: the one in the same area.
+                tablet_adb: *tablet_adb
                 reboot: >-
-                  {{ device_entities(device) | select('match', 'button\..*_reboot_device$')
-                     | first | default('') }}
+                  {%- set area = area_id(repeat.item) %}
+                  {{ (tablet_adb | select('in', area_entities(area)) | list + [''])
+                     | first if area else '' }}
             - choose:
                 # Fully's own app (de.ozerov.fully) is in front: all good.
                 - conditions:
@@ -372,9 +394,11 @@ automation:
                     - condition: template
                       value_template: "{{ away >= 12 and reboot != '' }}"
                   sequence:
-                    - action: button.press
+                    - action: androidtv.adb_command
                       target:
                         entity_id: "{{ reboot }}"
+                      data:
+                        command: svc power reboot
                       continue_on_error: true
                 - conditions:
                     - condition: template

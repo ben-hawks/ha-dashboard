@@ -87,20 +87,30 @@ tablet with the Fully Kiosk integration:
   off while you're working in a tablet's settings (it comes back on by
   itself after an hour).
 
-Rebooting from Home Assistant needs Fully to be the tablet's **device owner**
-(without it, only the browser is restarted). Once, over USB, with no accounts
-on the tablet (true without Google apps):
+Rebooting goes over ADB, because Fully's own **Reboot device** button needs
+it to be the device owner, which broke Wi-Fi on this tablet. HA's Android
+Debug Bridge integration can't use Android's **Wireless debugging** (it needs
+pairing), so turn on plain ADB on port 5555 and keep it on across reboots.
+Once, from a computer, with **Developer options → Rooted debugging** on:
 
 ```sh
-adb shell dpm set-device-owner de.ozerov.fully/.MyDeviceAdmin
+adb root
+adb shell setprop persist.adb.tcp.port 5555
+adb shell settings put global adb_enabled 1
+adb reboot
 ```
 
-It should say `Success: Device owner set`. To undo it later, use Fully's
-**Device Management → Remove Device Owner** (or the equivalent in your
-version) before uninstalling Fully.
+Then **Settings → Devices & services → Add integration → Android Debug
+Bridge** with the tablet's IP (give it a fixed one in the router) and port
+5555; tick **Always allow** on the tablet's prompt. Put the new entity in
+`tablet_adb` in `packages/wall_tablet.yaml` (the nightly reboot), and put the
+tablet's ADB device and its Fully Kiosk device in the same area, so the
+watchdog knows they're the same tablet. Rooted debugging can go off again
+afterwards.
 
-Test it in **Developer Tools → Actions**: `button.press` on the tablet's
-**Reboot device** button. If it doesn't reboot, check the device-owner step.
+Test in **Developer Tools → Actions**: `androidtv.adb_command` on that entity
+with `command: svc power reboot`. **Make sure Wi-Fi comes back on by itself
+after the reboot**, or the tablet drops off the network every night.
 
 The watchdog only sees which app is in front. A page that's gone blank while
 Fully stays in front (a renderer crash) is reloaded by Fully's **Auto Reload
