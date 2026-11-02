@@ -15,8 +15,9 @@ redrawn from scratch in OpenSCAD (`m10-wall-mount.scad`).
   plug acts as the end stop. The cable runs in a channel on the back out to the
   bottom edge (`cable_dir = 1` for the top). There is also an optional hole
   behind the pocket for a cable coming out of the wall.
-- **12 mm magnets** sit in pockets in the floor (12 × 2 mm by default) and hold
-  the tablet in place.
+- **10 × 2 mm magnets**: there are six pockets in the floor. The grooves carry
+  the tablet's weight, so the magnets only stop it creeping out of the open
+  end.
 - **Openings** for the right-hand speaker, the power/volume buttons and the
   three mic holes. The left speaker and the headphone jack are on the end that
   sticks out.
@@ -26,9 +27,10 @@ redrawn from scratch in OpenSCAD (`m10-wall-mount.scad`).
 1. **Measure your plug** with it pushed into the tablet, and set `plug_L` (from
    the tablet edge to the far end of the head), `plug_W`, `plug_T` and
    `cable_d`. The defaults are 20 × 12.5 × 7 mm with a 5 mm cable.
-2. **Find the magnet spots.** Hold a loose magnet against the back of the
-   tablet and feel where it pulls hardest. The original puts them near the top
-   edge. Set `mag_xy`. For 3 mm magnets, set `mag_t = 3` and `back_t = 4`.
+2. **Magnets:** six pockets are provided. Hold a loose magnet against the back
+   of the tablet in the inserted position, and glue magnets into the pockets
+   where it pulls. Empty pockets do no harm. Move them with `mag_xy`. For 3 mm
+   thick magnets, set `mag_t = 3` and `back_t = 4`.
 3. If the buttons, mics or speakers don't line up on your unit, adjust
    `btn_from`/`btn_to`, `mic_at` and `speaker_from`/`speaker_to`. They were
    measured from product photos.
@@ -37,7 +39,7 @@ redrawn from scratch in OpenSCAD (`m10-wall-mount.scad`).
 
 1. Screw the mount to the wall through the 5 countersunk holes, sized for 4 mm
    screws. The heads sit flush with the floor.
-2. Glue in the magnets, with their faces flush with the floor.
+2. Glue in the magnets (CA or epoxy), with their faces flush with the floor.
 3. Lay the cable in the channel on the back, and push the plug head into its
    pocket from the tablet side.
 4. Slide the tablet in to check the plug lines up with the port. Then fix the

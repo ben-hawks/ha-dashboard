@@ -28,7 +28,7 @@ clr_z = 0.5;         // sliding clearance front-to-back (total)
 
 /* ---- Body ---- */
 wall     = 2.2;      // top/bottom wall thickness
-back_t   = 3.0;      // floor thickness (raise to 4 if you use 3 mm magnets)
+back_t   = 3.0;      // floor thickness (raise to 4 if you use 3 mm thick magnets)
 lip      = 2.0;      // how far the front lip covers the bezel (45 deg chamfer)
 lip_drop = 0.5;      // chamfer starts this far below the tablet front face (edge is rounded)
 edge_r   = 2;        // rounded-over front outer edge
@@ -58,12 +58,14 @@ screw_head = 9;      // countersink diameter (heads sit flush in the floor)
 screws = [[-60,40],[-60,-40],[60,40],[60,-40],[0,0]];
 in_wall_hole = true; // hole behind the plug pocket for a cable from the wall
 
-/* ---- Magnets (12 x 2..3 mm discs, in the floor, facing the tablet) ---- */
-// The original has them near the top edge. Try a loose magnet on the back of
-// your tablet to find where it pulls hardest, then adjust these.
-mag_d  = 12.3;
-mag_t  = 2;
-mag_xy = [[-40, 58], [70, 58]];
+/* ---- Magnets (10 x 2 mm discs, in the floor, facing the tablet) ---- */
+// The grooves carry the tablet's weight; the magnets only stop it creeping out
+// of the open end. Six pockets: hold a loose magnet against the back of your
+// tablet to find where it pulls, and glue magnets into the pockets that line up
+// (empty pockets do no harm). Mind the polarity if the tablet pulls one way only.
+mag_d  = 10.3;       // 10 mm magnet + clearance (glue them in)
+mag_t  = 2;          // pocket is mag_t + 0.2 deep, magnet ends flush
+mag_xy = [[-40, 58], [70, 58], [-40, -58], [70, -58], [105, 45], [105, -45]];
 
 $fn = 64;
 e = 0.01;
