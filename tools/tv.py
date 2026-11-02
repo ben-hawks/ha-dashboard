@@ -55,6 +55,15 @@ PLAYING, PAUSED, BUFFERING = 3, 2, 6
 
 # Friendly names for app packages, where the ADB integration doesn't know
 # them. Anything else shows its ADB app name, or its package.
+# Never "playing": home screens (they play trailer previews), the screensaver
+# and Settings. Their sessions are skipped and the card hides on them.
+IGNORE_APPS = [
+    "com.google.android.apps.tv.launcherx",   # Google TV home screen
+    "com.spocky.projengmenu",                 # Projectivy Launcher
+    "com.google.android.apps.tv.dreamx",      # screensaver
+    "com.android.tv.settings",
+]
+
 APP_NAMES = {
     "org.smarttube.beta": "SmartTube", "org.smarttube.stable": "SmartTube",
     "com.liskovsoft.smarttubetv.beta": "SmartTube",
@@ -92,8 +101,9 @@ def parse():
         "{%- set ns.cur = dict(ns.cur, description=l.split('description=', 1)[1]) %}"
         "{%- endif %}{%- endfor %}"
         "{%- if ns.cur %}{%- set ns.sessions = ns.sessions + [ns.cur] %}{%- endif %}"
-        f"{{%- set pick = (ns.sessions | selectattr('state', 'eq', {PLAYING}) | list"
-        f" + ns.sessions | selectattr('state', 'in', [{PAUSED}, {BUFFERING}]) | list"
+        f"{{%- set media = ns.sessions | rejectattr('package', 'in', {IGNORE_APPS}) | list %}}"
+        f"{{%- set pick = (media | selectattr('state', 'eq', {PLAYING}) | list"
+        f" + media | selectattr('state', 'in', [{PAUSED}, {BUFFERING}]) | list"
         " + [{'package': '', 'state': 0, 'description': ''}]) | first %}"
         "{%- set parts = (pick.description or '').split(', ') %}"
     )
@@ -163,13 +173,18 @@ def app_playing(tv):
         "icon": "mdi:television-play",
         # On while one of the APP_NAMES apps is open on a TV that's on (the
         # ADB player often says "idle" while those play), or while the ADB
-        # player says playing/paused for any other app.
+        # player says playing/paused for any other app; never on a home
+        # screen, the screensaver or Settings (IGNORE_APPS).
         "state": (f"{{%- set package = state_attr('{adb}', 'app_id')"
                   f" or state_attr('{adb}', 'app_name') or '' %}}"
-                  f"{{{{ states('{adb}') in ['playing', 'paused'] or"
+                  f"{{{{ package not in {IGNORE_APPS} and"
+                  f" (states('{adb}') in ['playing', 'paused'] or"
                   f" (package in {list(APP_NAMES)} and states('{adb}')"
-                  " not in ['off', 'standby', 'unavailable', 'unknown']) }}"),
-        "delay_off": {"minutes": 1},
+                  " not in ['off', 'standby', 'unavailable', 'unknown'])) }}"),
+        # Held a minute through state flips, but off at once on a home screen.
+        "delay_off": (f"{{%- set package = state_attr('{adb}', 'app_id')"
+                      f" or state_attr('{adb}', 'app_name') or '' %}}"
+                      f"{{{{ '00:00:00' if package in {IGNORE_APPS} else '00:01:00' }}}}"),
     }
 
 
