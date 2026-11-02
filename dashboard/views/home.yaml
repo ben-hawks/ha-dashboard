@@ -229,16 +229,61 @@ sections:
               {%- if not jellyfin and pick != tv.cast
                      and states(session) in ['playing', 'paused']
                      and state_attr(session, 'title') %}
-                {%- set ns.cards = ns.cards + [{'type': 'vertical-stack', 'cards': [
-                      {'type': 'markdown', 'content':
-                        '### ' ~ state_attr(session, 'title') ~ '\n'
-                        ~ (state_attr(session, 'subtitle') ~ '\n\n' if state_attr(session, 'subtitle') else '')
-                        ~ '<small>' ~ (state_attr(session, 'app') or 'Playing')
-                        ~ ' on ' ~ tv.name ~ '</small>'},
-                      {'type': 'tile', 'entity': tv.adb, 'name': tv.name,
-                       'icon': 'mdi:television-play', 'state_content': 'state',
-                       'features': [{'type': 'media-player-playback'},
-                                    {'type': 'media-player-volume-slider'}]}]}] %}
+                {#- The app's colours as the background (apps don't hand out
+                    artwork this way), its logo faint in the corner, the title
+                    and buttons in white. Buttons send commands to the TV over
+                    ADB, so they don't flicker with its state. #}
+                {%- set brands = {
+                  'SmartTube': ['#c4302b', '#2a0708', 'mdi:youtube'],
+                  'YouTube': ['#c4302b', '#2a0708', 'mdi:youtube'],
+                  'Netflix': ['#b20710', '#141414', 'mdi:netflix'],
+                  'Sling TV': ['#1a6be0', '#0b1730', 'mdi:television-classic'],
+                  'Jellyfin': ['#8e44b8', '#00405a', 'mdi:jellyfish'],
+                  'Wholphin': ['#8e44b8', '#00405a', 'mdi:jellyfish'],
+                  'Dropout': ['#c9a400', '#1c1700', 'mdi:drama-masks'],
+                  'Spotify': ['#1db954', '#08260f', 'mdi:spotify'],
+                } %}
+                {%- set app = state_attr(session, 'app') or '' %}
+                {%- set b = brands.get(app, ['#3d5280', '#121829', 'mdi:television-play']) %}
+                {%- set svg = "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 150'>"
+                      ~ "<defs><linearGradient id='g' x1='0' y1='1' x2='1' y2='0'>"
+                      ~ "<stop offset='0.35' stop-color='" ~ b[1] ~ "'/>"
+                      ~ "<stop offset='1' stop-color='" ~ b[0] ~ "'/>"
+                      ~ "</linearGradient></defs><rect width='400' height='150' fill='url(#g)'/></svg>" %}
+                {%- set white = {'color': 'white', 'white-space': 'nowrap', 'overflow': 'hidden',
+                                 'text-overflow': 'ellipsis', 'max-width': '78%',
+                                 'transform': 'translate(0, -50%)'} %}
+                {%- set ns3 = namespace(buttons=[]) %}
+                {%- for icon, action, x in [
+                      ['mdi:skip-previous', 'media_previous_track', 10],
+                      ['mdi:play-pause', 'media_play_pause', 24],
+                      ['mdi:skip-next', 'media_next_track', 38],
+                      ['mdi:volume-minus', 'volume_down', 76],
+                      ['mdi:volume-plus', 'volume_up', 90]] %}
+                  {%- set ns3.buttons = ns3.buttons + [{'type': 'icon', 'icon': icon,
+                        'tap_action': {'action': 'perform-action',
+                                       'perform_action': 'media_player.' ~ action,
+                                       'target': {'entity_id': tv.adb}},
+                        'style': {'left': x ~ '%', 'top': '82%', 'color': 'white',
+                                  '--mdc-icon-size': '30px'}}] %}
+                {%- endfor %}
+                {%- set ns.cards = ns.cards + [{'type': 'picture-elements',
+                      'image': 'data:image/svg+xml;utf8,' ~ svg | urlencode,
+                      'elements': [
+                        {'type': 'icon', 'icon': b[2], 'tap_action': {'action': 'none'},
+                         'style': {'left': '88%', 'top': '28%', 'color': 'white',
+                                   'opacity': '0.3', '--mdc-icon-size': '56px'}},
+                        {'type': 'state-label', 'entity': session, 'attribute': 'title',
+                         'style': dict(white, left='5%', top='20%', **{'font-size': '17px',
+                                                                       'font-weight': '600'})},
+                        {'type': 'state-label', 'entity': session, 'attribute': 'subtitle',
+                         'style': dict(white, left='5%', top='38%', **{'font-size': '13px',
+                                                                       'opacity': '0.85'})},
+                        {'type': 'state-label', 'entity': session, 'attribute': 'app',
+                         'suffix': ' on ' ~ tv.name,
+                         'style': dict(white, left='5%', top='55%', **{'font-size': '11px',
+                                                                       'opacity': '0.7'})},
+                      ] + ns3.buttons}] %}
               {%- elif pick %}
                 {%- set ns.cards = ns.cards + [{'type': 'media-control', 'entity': pick}] %}
               {%- endif %}
