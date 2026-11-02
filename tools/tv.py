@@ -132,7 +132,10 @@ def session_sensor(tv):
             # by friendly name where known.
             "app": parse() + (
                 f"{{%- set names = {APP_NAMES} %}}"
-                f"{{%- set package = pick.package or state_attr('{adb}', 'app_id') or '' %}}"
+                # No session: the TV's foreground app, by ID or, failing that,
+                # the ADB integration's app name (often just the package).
+                f"{{%- set package = pick.package or state_attr('{adb}', 'app_id')"
+                f" or state_attr('{adb}', 'app_name') or '' %}}"
                 f"{{{{ names.get(package) or (state_attr('{adb}', 'app_name')"
                 f" if state_attr('{adb}', 'app_id') == package else '') or package }}}}"),
             # What the TV reported, for troubleshooting: "app state" per
