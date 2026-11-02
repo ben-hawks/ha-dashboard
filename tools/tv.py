@@ -65,6 +65,7 @@ APP_NAMES = {
     "com.sling": "Sling TV",
     "com.collegehumor.chdropout": "Dropout",
     "ott.thetryguys": "2nd Try",
+    "com.spotify.tv.android": "Spotify",
 }
 
 
@@ -152,15 +153,23 @@ def session_sensor(tv):
 
 def app_playing(tv):
     """A steadier "the TV is playing something" for apps that don't report
-    a title (and the TV's volume, for the card): on while the ADB player says playing/paused, held on for a
-    minute through its brief state flips, with the app's friendly name kept
+    a title (and the TV's volume, for the card): on while a known media app
+    is open, or the ADB player says playing/paused, held on for a minute
+    through its brief state flips, with the app's friendly name kept
     when the ADB attributes are momentarily blank."""
     adb = tv["adb"]
     return {
         "name": f"TV {tv['name']} App Playing",
         "unique_id": f"tv_{tv['key']}_app_playing",
         "icon": "mdi:television-play",
-        "state": f"{{{{ states('{adb}') in ['playing', 'paused'] }}}}",
+        # On while one of the APP_NAMES apps is open on a TV that's on (the
+        # ADB player often says "idle" while those play), or while the ADB
+        # player says playing/paused for any other app.
+        "state": (f"{{%- set package = state_attr('{adb}', 'app_id')"
+                  f" or state_attr('{adb}', 'app_name') or '' %}}"
+                  f"{{{{ states('{adb}') in ['playing', 'paused'] or"
+                  f" (package in {list(APP_NAMES)} and states('{adb}')"
+                  " not in ['off', 'standby', 'unavailable', 'unknown']) }}"),
         "delay_off": {"minutes": 1},
         "attributes": {
             "app": (f"{{%- set names = {APP_NAMES} %}}"
