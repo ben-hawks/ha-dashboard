@@ -175,8 +175,7 @@ sections:
       # Now playing on each TV, while it's in use: artwork, title and
       # controls from the richest source available, in this order:
       #   1. the TV's Jellyfin player (official app or Wholphin), found by
-      #      area: give each Jellyfin device its TV's area once it appears
-      #      (Settings → Devices → Jellyfin)
+      #      the TV's name (Jellyfin names it after the device) or by area
       #   2. its Google Cast entity (YouTube, anything cast from a phone)
       #   3. its "now playing" player from Android's media sessions over ADB
       #      (Netflix, Sling, Dropout, ...; packages/tv.yaml, tools/tv.py)
@@ -195,17 +194,24 @@ sections:
         filter:
           template: >-
             {%- set tvs = [
-              {'area': 'Living Room', 'cast': 'media_player.main_room_tv', 'key': 'main_room_tv'},
-              {'area': 'Game Room', 'cast': 'media_player.bedroom_tv_2', 'key': 'game_room_tv'},
-              {'area': 'Bedroom', 'cast': 'media_player.bedroom_tv_2_2', 'key': 'bedroom_tv'},
+              {'name': 'Main Room TV', 'area': 'Living Room',
+               'cast': 'media_player.main_room_tv', 'key': 'main_room_tv'},
+              {'name': 'Game Room TV', 'area': 'Game Room',
+               'cast': 'media_player.bedroom_tv_2', 'key': 'game_room_tv'},
+              {'name': 'Bedroom TV', 'area': 'Bedroom',
+               'cast': 'media_player.bedroom_tv_2_2', 'key': 'bedroom_tv'},
             ] %}
             {%- set active = ['playing', 'paused', 'buffering'] %}
             {%- set ns = namespace(cards=[]) %}
             {%- for tv in tvs %}
-              {%- set jellyfin = integration_entities('jellyfin')
-                    | select('match', 'media_player\\.')
-                    | select('in', area_entities(tv.area))
-                    | select('is_state', active) | list %}
+              {%- set ns2 = namespace(jellyfin=[]) %}
+              {%- for e in integration_entities('jellyfin') | select('match', 'media_player\\.') %}
+                {%- if states(e) in active and (e in area_entities(tv.area)
+                       or (state_attr(e, 'friendly_name') or '') | lower == tv.name | lower) %}
+                  {%- set ns2.jellyfin = ns2.jellyfin + [e] %}
+                {%- endif %}
+              {%- endfor %}
+              {%- set jellyfin = ns2.jellyfin %}
               {%- set pick = none %}
               {%- if jellyfin %}
                 {%- set pick = jellyfin[0] %}
@@ -223,7 +229,7 @@ sections:
 
       # Speakers playing anywhere in the house (the TVs are above). A speaker
       # carrying a TV's sound reports "playing" a title of "TV" whenever the
-      # TV is on; that's left out too.
+      # TV is on; that's left out too, as is anything named "…TV…".
       - type: custom:auto-entities
         show_empty: false
         grid_options:
@@ -241,6 +247,7 @@ sections:
             - integration: universal
             - attributes:
                 media_title: TV
+            - name: "*TV*"
             - entity_id: media_player.main_room_tv
             - entity_id: media_player.bedroom_tv_2
             - entity_id: media_player.bedroom_tv_2_2
