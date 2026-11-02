@@ -272,12 +272,21 @@ def automations():
             "id": "tv_overlay_alert_popup",
             "alias": "TVs: pop up new household alerts",
             "mode": "queued",
-            "triggers": [{"trigger": "state", "entity_id": "sensor.household_alerts"}],
+            # Fires on the alerts' list; only alerts that weren't there before
+            # pop up (hiding one, or a text change, doesn't).
+            "triggers": [{"trigger": "state", "entity_id": "sensor.household_alerts",
+                          "attribute": "keys"}],
+            "variables": {"new": (
+                "{%- set before = (trigger.from_state.attributes.get('keys') or [])"
+                " if trigger.from_state else [] %}"
+                "{%- set ns = namespace(t=[]) %}"
+                "{%- for i in trigger.to_state.attributes.get('items') or [] %}"
+                "{%- if i.key not in before %}{% set ns.t = ns.t + [i.text] %}{% endif %}"
+                "{%- endfor %}{{ ns.t }}")},
             "conditions": [{"condition": "template", "value_template": (
-                "{{ trigger.to_state.state not in ['All good', 'unknown', 'unavailable']"
-                " and trigger.from_state is not none"
+                "{{ new | count > 0 and trigger.from_state is not none"
                 " and trigger.from_state.state not in ['unknown', 'unavailable'] }}")}],
-            "actions": [popup("Needs attention", "{{ trigger.to_state.state }}",
+            "actions": [popup("Needs attention", "{{ new | join(' · ') }}",
                               "mdi:alert-circle", RED, 15, id="household_alert")],
         },
         {

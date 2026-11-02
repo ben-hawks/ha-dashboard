@@ -32,6 +32,12 @@ themes/wall_tablet.yaml        colours
   or add a plant type or change its levels, edit `BEDS` / `PLANT_TYPES` in
   `tools/garden.py` and run
   `python3 tools/garden.py` (`--gallery out.html` previews every picture).
+- **Alerts on Home**: one tile per alert. Tap one to hide it until it
+  clears and happens again (e.g. a bed is hidden until it's watered and
+  dries out again); smoke/CO alerts can't be hidden. **Devices → Hidden
+  alerts** brings them all back. To add an alert, add an item to
+  `sensor.household_alert_items` in `packages/wall_tablet.yaml` (a key,
+  text, icon, and `critical` for safety alerts).
 - **TV pop-ups and corner badges**: doorbell, alerts, laundry and coop on the
   TVs through TvOverlay; setup and the ADB commands are in
   [tvoverlay.md](tvoverlay.md).

@@ -38,7 +38,44 @@ input_boolean:
     name: Show weather radar
     icon: mdi:radar
 
+# ---------------------------------------------------------------------------
+# Hidden alerts: keys of alerts someone tapped away (script.alerts_hide).
+# An alert stays hidden until it clears; when it comes back, it shows again.
+# ---------------------------------------------------------------------------
+input_text:
+  alerts_hidden:
+    name: Hidden alerts
+    icon: mdi:bell-off-outline
+    max: 255
+
 automation:
+  - id: wall_tablet_alerts_forget_cleared
+    alias: "Alerts: forget hidden alerts once they clear"
+    description: >-
+      Drops an alert from the hidden list as soon as it's no longer active,
+      so the next time it happens (e.g. a bed dries out again) it shows.
+    mode: queued
+    triggers:
+      - trigger: state
+        entity_id: sensor.household_alert_items
+        attribute: items
+    variables:
+      active: >-
+        {{ (state_attr('sensor.household_alert_items', 'items') or [])
+           | map(attribute='key') | list }}
+      hidden: >-
+        {{ states('input_text.alerts_hidden').split(',') | reject('eq', '') | list }}
+      keep: "{{ hidden | select('in', active) | join(',') }}"
+    conditions:
+      - condition: template
+        value_template: "{{ keep != hidden | join(',') }}"
+    actions:
+      - action: input_text.set_value
+        target:
+          entity_id: input_text.alerts_hidden
+        data:
+          value: "{{ keep }}"
+
   - id: wall_tablet_apply_theme
     alias: "Dashboards: apply light/dark theme"
     description: >-
@@ -285,6 +322,36 @@ binary_sensor:
       - binary_sensor.work_office_base_station_alarm_status
 
 script:
+  # Hide one alert until it clears (tap an alert on the Home tab).
+  alerts_hide:
+    alias: Hide an alert until it happens again
+    icon: mdi:bell-off-outline
+    mode: queued
+    fields:
+      key:
+        description: The alert's key (sensor.household_alert_items)
+        example: garden_2
+    sequence:
+      - action: input_text.set_value
+        target:
+          entity_id: input_text.alerts_hidden
+        data:
+          value: >-
+            {%- set hidden = states('input_text.alerts_hidden').split(',')
+                  | reject('eq', '') | list %}
+            {{ (hidden + [key]) | unique | join(',') }}
+
+  # Show every hidden alert again.
+  alerts_unhide_all:
+    alias: Show hidden alerts again
+    icon: mdi:bell-ring-outline
+    sequence:
+      - action: input_text.set_value
+        target:
+          entity_id: input_text.alerts_hidden
+        data:
+          value: ""
+
   wall_tablet_all_lights_off:
     alias: All lights off
     icon: mdi:lightbulb-group-off
@@ -530,57 +597,109 @@ template:
       # One line of plain English for the home screen. "All good" when
       # nothing needs doing; the dashboard hides the alert banner then.
       # To add a new kind of alert, add another `if` block below.
+      # Every active alert as its own item: key (stable, used to hide it),
+      # text, icon, and critical (safety alerts can't be hidden). The state
+      # is just a label; the list is the "items" attribute.
+      - name: Household Alert Items
+        unique_id: wall_tablet_household_alert_items
+        icon: mdi:format-list-bulleted
+        state: Alert list
+        attributes:
+          items: >-
+            {%- set ns = namespace(a=[]) %}
+            {%- if is_state('binary_sensor.smoke_and_co_alarms', 'on') %}
+              {%- set ns.a = ns.a + [{'key': 'smoke', 'text': 'Smoke/CO alarm is going off',
+                                      'icon': 'mdi:smoke-detector-alert', 'critical': true}] %}
+            {%- endif %}
+            {%- if states('sensor.highest_co_reading') | float(0) >= 10 %}
+              {%- set ns.a = ns.a + [{'key': 'co', 'icon': 'mdi:molecule-co', 'critical': true,
+                                      'text': 'CO detected (' ~ states('sensor.highest_co_reading') ~ ' ppm)'}] %}
+            {%- endif %}
+            {%- if is_state('binary_sensor.base_station_connected', 'off') %}
+              {%- set ns.a = ns.a + [{'key': 'smoke_hub', 'text': 'Smoke alarm hub is offline',
+                                      'icon': 'mdi:smoke-detector-off', 'critical': true}] %}
+            {%- endif %}
+            {%- if ['binary_sensor.combination_alarm_is_life_end',
+                    'binary_sensor.combination_alarm_2_is_life_end',
+                    'binary_sensor.combination_alarm_3_is_life_end',
+                    'binary_sensor.combination_alarm_4_is_life_end',
+                    'binary_sensor.combination_alarm_5_is_life_end']
+                  | select('is_state', 'on') | list | count > 0 %}
+              {%- set ns.a = ns.a + [{'key': 'alarm_life', 'text': 'A smoke alarm needs replacing',
+                                      'icon': 'mdi:smoke-detector-variant-alert', 'critical': false}] %}
+            {%- endif %}
+            {#- The count is in the key: another battery going low shows again. #}
+            {%- set low = states('sensor.low_batteries') | int(0) %}
+            {%- if low > 0 %}
+              {%- set ns.a = ns.a + [{'key': 'batteries_' ~ low, 'icon': 'mdi:battery-alert-variant-outline',
+                                      'critical': false,
+                                      'text': low ~ (' battery is' if low == 1 else ' batteries are') ~ ' low'}] %}
+            {%- endif %}
+            {%- if states('sensor.turd_gobbler_9001_waste_drawer') | float(0) >= 80 %}
+              {%- set ns.a = ns.a + [{'key': 'litter', 'text': 'Litter box drawer is full',
+                                      'icon': 'mdi:cat', 'critical': false}] %}
+            {%- endif %}
+            {#- Finished loads nobody has emptied yet (packages/laundry.yaml). #}
+            {%- if is_state('input_select.washer_state', 'Done') %}
+              {%- set ns.a = ns.a + [{'key': 'washer', 'text': 'Washer is done',
+                                      'icon': 'mdi:washing-machine', 'critical': false}] %}
+            {%- endif %}
+            {%- if is_state('input_select.dryer_state', 'Done') %}
+              {%- set ns.a = ns.a + [{'key': 'dryer', 'text': 'Dryer is done',
+                                      'icon': 'mdi:tumble-dryer', 'critical': false}] %}
+            {%- endif %}
+            {%- if is_state('vacuum.acearchr_gmail_com', 'error') %}
+              {%- set ns.a = ns.a + [{'key': 'vacuum', 'text': 'Vacuum is stuck',
+                                      'icon': 'mdi:robot-vacuum-alert', 'critical': false}] %}
+            {%- endif %}
+            {#- Dry garden beds, one each (packages/garden.yaml). #}
+            {%- for c in state_attr('sensor.garden_needs_water', 'beds') or [] %}
+              {%- set ns.a = ns.a + [{'key': 'garden_' ~ c, 'icon': 'mdi:watering-can', 'critical': false,
+                                      'text': states('sensor.garden_' ~ c ~ '_name') ~ ' needs water'}] %}
+            {%- endfor %}
+            {%- if states('sensor.dockstream_2_smart_cordless_fountain_remaining_water_2') | float(100) < 25 %}
+              {%- set ns.a = ns.a + [{'key': 'fountain_water', 'text': 'Cat fountain needs water',
+                                      'icon': 'mdi:fountain', 'critical': false}] %}
+            {%- endif %}
+            {%- if states('sensor.dockstream_2_smart_cordless_fountain_remaining_filter_day') | float(99) <= 2 %}
+              {%- set ns.a = ns.a + [{'key': 'fountain_filter', 'text': 'Cat fountain filter needs replacing',
+                                      'icon': 'mdi:air-filter', 'critical': false}] %}
+            {%- endif %}
+            {%- if states('sensor.dockstream_2_smart_cordless_fountain_remaining_cleaning_days') | float(99) <= 1 %}
+              {%- set ns.a = ns.a + [{'key': 'fountain_clean', 'text': 'Cat fountain needs cleaning',
+                                      'icon': 'mdi:spray-bottle', 'critical': false}] %}
+            {%- endif %}
+            {{ ns.a }}
+
+      # The alerts that aren't hidden (input_text.alerts_hidden, see
+      # script.alerts_hide), joined into one line for the banner and the TVs.
+      # "items" / "keys": the same, as a list, for the dashboard's tiles.
       - name: Household Alerts
         unique_id: wall_tablet_household_alerts
         icon: mdi:alert-circle-outline
         state: >-
-          {%- set ns = namespace(a=[]) %}
-          {%- if is_state('binary_sensor.smoke_and_co_alarms', 'on') %}
-            {%- set ns.a = ns.a + ['Smoke/CO alarm is going off'] %}
-          {%- endif %}
-          {%- if states('sensor.highest_co_reading') | float(0) >= 10 %}
-            {%- set ns.a = ns.a + ['CO detected (' ~ states('sensor.highest_co_reading') ~ ' ppm)'] %}
-          {%- endif %}
-          {%- if is_state('binary_sensor.base_station_connected', 'off') %}
-            {%- set ns.a = ns.a + ['Smoke alarm hub is offline'] %}
-          {%- endif %}
-          {%- if ['binary_sensor.combination_alarm_is_life_end',
-                  'binary_sensor.combination_alarm_2_is_life_end',
-                  'binary_sensor.combination_alarm_3_is_life_end',
-                  'binary_sensor.combination_alarm_4_is_life_end',
-                  'binary_sensor.combination_alarm_5_is_life_end']
-                | select('is_state', 'on') | list | count > 0 %}
-            {%- set ns.a = ns.a + ['A smoke alarm needs replacing'] %}
-          {%- endif %}
-          {%- set low = states('sensor.low_batteries') | int(0) %}
-          {%- if low > 0 %}
-            {%- set ns.a = ns.a + [low ~ (' battery is' if low == 1 else ' batteries are') ~ ' low'] %}
-          {%- endif %}
-          {%- if states('sensor.turd_gobbler_9001_waste_drawer') | float(0) >= 80 %}
-            {%- set ns.a = ns.a + ['Litter box drawer is full'] %}
-          {%- endif %}
-          {#- Finished loads nobody has emptied yet (packages/laundry.yaml). #}
-          {%- if is_state('input_select.washer_state', 'Done') %}
-            {%- set ns.a = ns.a + ['Washer is done'] %}
-          {%- endif %}
-          {%- if is_state('input_select.dryer_state', 'Done') %}
-            {%- set ns.a = ns.a + ['Dryer is done'] %}
-          {%- endif %}
-          {%- if is_state('vacuum.acearchr_gmail_com', 'error') %}
-            {%- set ns.a = ns.a + ['Vacuum is stuck'] %}
-          {%- endif %}
-          {#- Dry garden beds, e.g. "Tomatoes needs water" (packages/garden.yaml). #}
-          {%- set water = states('sensor.garden_needs_water') %}
-          {%- if water not in ['OK', 'unknown', 'unavailable'] %}
-            {%- set ns.a = ns.a + [water] %}
-          {%- endif %}
-          {%- if states('sensor.dockstream_2_smart_cordless_fountain_remaining_water_2') | float(100) < 25 %}
-            {%- set ns.a = ns.a + ['Cat fountain needs water'] %}
-          {%- endif %}
-          {%- if states('sensor.dockstream_2_smart_cordless_fountain_remaining_filter_day') | float(99) <= 2 %}
-            {%- set ns.a = ns.a + ['Cat fountain filter needs replacing'] %}
-          {%- endif %}
-          {%- if states('sensor.dockstream_2_smart_cordless_fountain_remaining_cleaning_days') | float(99) <= 1 %}
-            {%- set ns.a = ns.a + ['Cat fountain needs cleaning'] %}
-          {%- endif %}
-          {{ (ns.a | join(' · ') if ns.a else 'All good')[:250] }}
+          {%- set hidden = states('input_text.alerts_hidden').split(',') %}
+          {%- set ns = namespace(s=[]) %}
+          {%- for i in state_attr('sensor.household_alert_items', 'items') or [] %}
+            {%- if i.critical or i.key not in hidden %}{% set ns.s = ns.s + [i] %}{% endif %}
+          {%- endfor %}
+          {{ (ns.s | map(attribute='text') | join(' · ') if ns.s else 'All good')[:250] }}
+        attributes:
+          items: >-
+            {%- set hidden = states('input_text.alerts_hidden').split(',') %}
+            {%- set ns = namespace(s=[]) %}
+            {%- for i in state_attr('sensor.household_alert_items', 'items') or [] %}
+              {%- if i.critical or i.key not in hidden %}{% set ns.s = ns.s + [i] %}{% endif %}
+            {%- endfor %}
+            {{ ns.s }}
+          keys: >-
+            {%- set hidden = states('input_text.alerts_hidden').split(',') %}
+            {%- set ns = namespace(s=[]) %}
+            {%- for i in state_attr('sensor.household_alert_items', 'items') or [] %}
+              {%- if i.critical or i.key not in hidden %}{% set ns.s = ns.s + [i.key] %}{% endif %}
+            {%- endfor %}
+            {{ ns.s }}
+          hidden: >-
+            {%- set hidden = states('input_text.alerts_hidden').split(',') %}
+            {{ (state_attr('sensor.household_alert_items', 'items') or [])
+               | rejectattr('critical') | selectattr('key', 'in', hidden) | list | count }}

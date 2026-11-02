@@ -207,14 +207,17 @@ automation:
   triggers:
   - trigger: state
     entity_id: sensor.household_alerts
+    attribute: keys
+  variables:
+    new: '{%- set before = (trigger.from_state.attributes.get(''keys'') or []) if trigger.from_state else [] %}{%- set ns = namespace(t=[]) %}{%- for i in trigger.to_state.attributes.get(''items'') or [] %}{%- if i.key not in before %}{% set ns.t = ns.t + [i.text] %}{% endif %}{%- endfor %}{{ ns.t }}'
   conditions:
   - condition: template
-    value_template: '{{ trigger.to_state.state not in [''All good'', ''unknown'', ''unavailable''] and trigger.from_state is not none and trigger.from_state.state not in [''unknown'', ''unavailable''] }}'
+    value_template: '{{ new | count > 0 and trigger.from_state is not none and trigger.from_state.state not in [''unknown'', ''unavailable''] }}'
   actions:
   - action: script.tv_popup
     data:
       title: Needs attention
-      message: '{{ trigger.to_state.state }}'
+      message: '{{ new | join('' · '') }}'
       small_icon: mdi:alert-circle
       large_icon: mdi:alert-circle
       color: '#e5484d'

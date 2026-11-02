@@ -50,7 +50,10 @@ badges:
         above: 0
 
 sections:
-  # Only shown when something needs doing (see sensor.household_alerts).
+  # Only shown when something needs doing (see sensor.household_alerts): one
+  # tile per alert. Tap one to hide it until it happens again (it asks
+  # first); safety alerts (smoke, CO) can't be hidden and open Devices
+  # instead. Hold any alert for Devices. Hidden alerts: Devices tab.
   - type: grid
     column_span: 3
     visibility:
@@ -61,16 +64,33 @@ sections:
           - unavailable
           - unknown
     cards:
-      - type: tile
-        entity: sensor.household_alerts
-        name: Needs attention
-        icon: mdi:alert-circle
-        color: red
+      - type: custom:auto-entities
+        show_empty: false
         grid_options:
           columns: full
-        tap_action:
-          action: navigate
-          navigation_path: /wall-tablet/devices
+        card:
+          type: grid
+          columns: 2
+          square: false
+        card_param: cards
+        filter:
+          template: >-
+            {%- set devices = {'action': 'navigate', 'navigation_path': '/wall-tablet/devices'} %}
+            {%- set ns = namespace(cards=[]) %}
+            {%- for i in state_attr('sensor.household_alerts', 'items') or [] %}
+              {%- set tap = devices if i.critical else {
+                    'action': 'perform-action', 'perform_action': 'script.alerts_hide',
+                    'data': {'key': i.key},
+                    'confirmation': {'text': 'Hide "' ~ i.text ~ '" until it happens again?'}} %}
+              {%- set ns.cards = ns.cards + [{
+                    'type': 'tile', 'entity': 'sensor.household_alerts',
+                    'name': i.text, 'icon': i.icon,
+                    'color': 'red' if i.critical else 'amber',
+                    'hide_state': true, 'tap_action': tap, 'hold_action': devices}] %}
+            {%- endfor %}
+            {#- Python-style output (True, not true): Home Assistant reads it
+                with Python's rules before auto-entities sees it. #}
+            {{ ns.cards }}
 
   # The house at a glance: rooms light up with their lights; tap a room for
   # its devices. Two-thirds of the width, with the clock, forecast and

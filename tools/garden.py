@@ -663,26 +663,30 @@ def package():
     # One line for the Home alert banner. A probe reading exactly 0% is
     # taken to be out of the ground (or not set up yet), not a dry bed.
     channels = [b["channel"] for b in BEDS]
+    dry = (
+        "{%- set ns = namespace(beds=[], channels=[]) %}"
+        # Rain in the next few hours waters the outdoor beds for us.
+        f"{{%- set rain = range(1, {SEASON['rain_hours']} + 1)"
+        " | map('string') | map('regex_replace', '^', 'sensor.forecast_hour_')"
+        f" | map('states') | select('in', {SEASON['rain_pictures']}) | list | count > 0 %}}"
+        f"{{%- for c in {channels} %}}"
+        "{%- if is_state('sensor.garden_' ~ c ~ '_status', 'Dry')"
+        " and states('sensor.garden_' ~ c ~ '_moisture') | float(0) > 0"
+        " and not (rain and is_state('input_boolean.garden_' ~ c ~ '_outdoors', 'on')) %}"
+        "{%- set ns.beds = ns.beds + [states('sensor.garden_' ~ c ~ '_name')] %}"
+        "{%- set ns.channels = ns.channels + [c] %}"
+        "{%- endif %}{%- endfor %}")
     sensors.append({
         "name": "Garden Needs Water",
         "unique_id": "garden_needs_water",
         "icon": "mdi:watering-can",
-        "state": (
-            "{%- set ns = namespace(beds=[]) %}"
-            # Rain in the next few hours waters the outdoor beds for us.
-            f"{{%- set rain = range(1, {SEASON['rain_hours']} + 1)"
-            " | map('string') | map('regex_replace', '^', 'sensor.forecast_hour_')"
-            f" | map('states') | select('in', {SEASON['rain_pictures']}) | list | count > 0 %}}"
-            f"{{%- for c in {channels} %}}"
-            "{%- if is_state('sensor.garden_' ~ c ~ '_status', 'Dry')"
-            " and states('sensor.garden_' ~ c ~ '_moisture') | float(0) > 0"
-            " and not (rain and is_state('input_boolean.garden_' ~ c ~ '_outdoors', 'on')) %}"
-            "{%- set ns.beds = ns.beds + [states('sensor.garden_' ~ c ~ '_name')] %}"
-            "{%- endif %}{%- endfor %}"
+        "state": dry + (
             "{%- if not ns.beds %}OK"
             "{%- elif ns.beds | count == 1 %}{{ ns.beds[0] }} needs water"
             "{%- else %}{{ ns.beds[:-1] | join(', ') }} and {{ ns.beds[-1] }} need water"
             "{%- endif %}"),
+        # Which beds (channel numbers), so each can be its own alert.
+        "attributes": {"beds": dry + "{{ ns.channels }}"},
     })
     return {"input_text": texts, "input_select": selects, "input_boolean": booleans,
             # Outdoor season: the weather station's average over 24 hours.

@@ -16,6 +16,27 @@ sections:
         name: Status
         grid_options:
           columns: full
+      # Alerts tapped away on Home stay hidden until they clear and come
+      # back; this brings them all back now.
+      - type: tile
+        entity: sensor.household_alerts
+        name: Hidden alerts (tap to show again)
+        icon: mdi:bell-off-outline
+        state_content: hidden
+        grid_options:
+          columns: full
+        visibility:
+          - condition: state
+            entity: input_text.alerts_hidden
+            state_not:
+              - ""
+              - unknown
+              - unavailable
+        tap_action:
+          action: perform-action
+          perform_action: script.alerts_unhide_all
+          confirmation:
+            text: Show all hidden alerts again?
       - type: custom:auto-entities
         grid_options:
           columns: full
