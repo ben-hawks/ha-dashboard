@@ -241,7 +241,7 @@ sections:
                   'Jellyfin': ['#8e44b8', '#00405a', 'mdi:jellyfish'],
                   'Wholphin': ['#8e44b8', '#00405a', 'mdi:jellyfish'],
                   'Dropout': ['#c9a400', '#1c1700', 'mdi:drama-masks'],
-                  '2nd Try': ['#e0702a', '#241005', 'mdi:replay'],
+                  '2nd Try': ['#14c39a', '#0a2a4a', 'mdi:google-downasaur'],
                   'Spotify': ['#1db954', '#08260f', 'mdi:spotify'],
                 } %}
                 {%- set app = state_attr(session, 'app') or '' %}
