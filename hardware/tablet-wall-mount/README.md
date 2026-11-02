@@ -1,62 +1,61 @@
-# Lenovo Tab M10 HD (2nd Gen, TB-X306F) wall mount with a 90° USB-C housing
+# Lenovo Tab M10 HD (2nd Gen, TB-X306F) slide-in wall mount with 90° USB-C
 
-A sliding wall mount based on the idea of Kreato 3D's
+A slide-in wall mount based on the idea of Kreato 3D's
 [Lenovo Tab M10 HD 2 Gen wall mount](https://cults3d.com/en/3d-model/gadget/lenovo-tab-m10-hd-2-gen-wall-mount),
-redrawn from scratch in OpenSCAD (`m10-wall-mount.scad`). This version adds a
-housing on the side for a **90° (right-angle) USB-C plug**, so the tablet can
-stay on charge.
+redrawn from scratch in OpenSCAD (`m10-wall-mount.scad`).
 
-| File | What it is | Print |
-|------|-----------|-------|
-| `m10-holder.stl` | Tablet holder. The tablet snaps in behind a 2 mm, 45° lip. The front edge is rounded, and the right-hand border is wider to hold the plug | Back face down, no supports |
-| `m10-plate.stl`  | Wall plate. 6 countersunk holes for 4 mm screws. It sits fully hidden behind the holder | Back face down, no supports |
+- **One printed part**, `m10-mount.stl`, screwed to the wall. Print it back
+  face down with no supports. PETG or PLA both work, with 3 to 4 walls.
+- **The bare tablet (no case) slides in** from the open left end. Grooves
+  along its top and bottom edges hold it, with a 2 mm, 45° lip over the bezel.
+  About 40 mm of the left end sticks out, so you can grip it and so the rear
+  camera bump stays clear.
+- **It charges itself.** A right-angle (side-bend) USB-C plug sits in a pocket
+  at the right end. As the tablet slides home it pushes onto the plug, and the
+  plug acts as the end stop. The cable runs in a channel on the back out to the
+  bottom edge (`cable_dir = 1` for the top). There is also an optional hole
+  behind the pocket for a cable coming out of the wall.
+- **12 mm magnets** sit in pockets in the floor (12 × 2 mm by default) and hold
+  the tablet in place.
+- **Openings** for the right-hand speaker, the power/volume buttons and the
+  three mic holes. The left speaker and the headphone jack are on the end that
+  sticks out.
 
-PETG is a good choice because the holder has to flex a little when the tablet
-snaps in. Use 3 to 4 walls and about 20 % infill.
+## Before printing
 
-## How it goes together
+1. **Measure your plug** with it pushed into the tablet, and set `plug_L` (from
+   the tablet edge to the far end of the head), `plug_W`, `plug_T` and
+   `cable_d`. The defaults are 20 × 12.5 × 7 mm with a 5 mm cable.
+2. **Find the magnet spots.** Hold a loose magnet against the back of the
+   tablet and feel where it pulls hardest. The original puts them near the top
+   edge. Set `mag_xy`. For 3 mm magnets, set `mag_t = 3` and `back_t = 4`.
+3. If the buttons, mics or speakers don't line up on your unit, adjust
+   `btn_from`/`btn_to`, `mic_at` and `speaker_from`/`speaker_to`. They were
+   measured from product photos.
 
-1. Screw the plate to the wall, with the rails along the top and bottom.
-2. Glue two 12 mm magnets into the plate (the default pocket is for
-   12 × 2 mm discs) and two into the back of the holder. Check the polarity
-   first so each pair attracts.
-3. Snap the tablet into the holder, with the USB-C port on the housing side.
-4. Plug the right-angle USB-C plug in from behind, through the open back of the
-   housing. Lay the cable in the channel on the back that runs to the top or
-   bottom edge.
-5. Slide the holder onto the rails from the left. The rails grip a 45° bevel
-   along the holder's top and bottom back edges. The holder stops when the
-   rails reach the un-bevelled left end, and the magnets hold it there. To
-   remove it, slide it to the left.
+## Installing
+
+1. Screw the mount to the wall through the 5 countersunk holes, sized for 4 mm
+   screws. The heads sit flush with the floor.
+2. Glue in the magnets, with their faces flush with the floor.
+3. Lay the cable in the channel on the back, and push the plug head into its
+   pocket from the tablet side.
+4. Slide the tablet in to check the plug lines up with the port. Then fix the
+   plug with a dab of hot glue so it doesn't get pushed back.
+
+`PORT_RIGHT = false` mirrors the whole mount if you'd rather have the port on
+the left. Change `stick_out` for more or less overhang.
+
+Export the STL:
+
+```bash
+openscad -D 'PART="mount"' -o m10-mount.stl m10-wall-mount.scad
+```
 
 ## Tablet details used
 
 - 241.54 × 149.38 × 8.25 mm, with about 9 mm corner radius (estimated)
-- USB-C is centred on one short edge, with speaker grilles on both short edges
-  and the 3.5 mm jack on the other short edge
-- The power and volume buttons are on the top long edge, about 45 to 112 mm
-  from the jack end. There are mic holes about 124, 168 and 219 mm from that
-  end. These were measured from product photos, so check them against your
-  tablet.
-
-## Adjusting
-
-Open the `.scad` file in OpenSCAD and change the parameters at the top:
-
-- `PORT_RIGHT` puts the port on the right; set it to `false` to mirror the
-  whole mount.
-- `plug_depth` / `plug_len` set the space for the plug head and the cable bend.
-  The defaults are 15 mm out from the tablet edge and 60 mm along it.
-- `cable_d`, `exit_top`, `exit_bottom` control the cable channels.
-- `edge_r` sets the rounding on the front edge.
-- `btn_from`/`btn_to` and `mic_at` set the button slot and the mic holes.
-- `clr` is the tablet clearance and `lip` is how much the lip overlaps the
-  bezel.
-- For 3 mm magnets, set `mag_t = 3` and `back_t = 4`.
-
-Export STLs:
-
-```bash
-openscad -D 'PART="holder"' -o m10-holder.stl m10-wall-mount.scad
-openscad -D 'PART="plate"'  -o m10-plate.stl  m10-wall-mount.scad
-```
+- USB-C is centred on one short edge, with speakers on both short edges and the
+  jack on the other short edge
+- The buttons are on the top long edge, about 45 to 112 mm from the jack end.
+  The mic holes are about 124, 168 and 219 mm from that end
