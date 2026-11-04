@@ -38,6 +38,15 @@ it, and the board goes back to Follow switch if Home Assistant is gone for 5
 minutes. Found by the ends of its entity IDs (`_door_mode`, `_controller_sees`,
 `_switch_position`; `tools/coop.py`).
 
+**Door schedule** (`packages/chicken_door.yaml`). The door is forced open 10
+minutes after sunrise and closed 15 minutes after sunset; **Next** counts
+down to the next move, and **Schedule** turns it off (the door goes back to
+Follow switch). Moving the switch on the door overrides it until the next
+sunrise or sunset, and when the door board reconnects (a reboot, or Home
+Assistant restarting) the schedule puts the door back where it should be.
+To change the times, edit the offsets at the top of that file's comments
+(both places).
+
 **Controls and graphs.** Every light, switch, door and lock in the Chicken
 Coop area, so the automatic door appears once it's in that area; coop
 temperature (with the outside temperature as a faint line) and humidity.

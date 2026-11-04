@@ -56,6 +56,7 @@ homeassistant:
     laundry: !include ha-dashboard/packages/laundry.yaml
     tv: !include ha-dashboard/packages/tv.yaml
     hvac_zones: !include ha-dashboard/packages/hvac_zones.yaml
+    chicken_door: !include ha-dashboard/packages/chicken_door.yaml
 
 frontend:
   themes: !include_dir_merge_named ha-dashboard/themes

@@ -1,0 +1,199 @@
+# Chicken door schedule: opens 10 minutes after sunrise, closes 15 minutes
+# after sunset, through the chicken-door ESPHome board's "Door mode" select
+# (esphome add-on: chicken-door.yaml). Loaded as a package (docs/install.md).
+#
+# How it behaves:
+# - At the scheduled times the door is set to Force Open / Force Closed, and
+#   it stays that way until the next one.
+# - Moving the physical switch on the door ends a forced mode (the board's
+#   "last action wins"); the schedule takes over again at the next sunrise
+#   or sunset.
+# - The board always starts on "Follow switch" (after a reboot, or after
+#   Home Assistant was gone for 5 minutes), so when it comes back the
+#   schedule puts the door back where it should be for the time of day.
+# - "Door schedule" off hands the door back to its own controller (Follow
+#   switch: the switch decides, and on Auto, the door's light sensor/timer).
+#
+# To change the times, change the offsets in BOTH places: the two sun
+# triggers below, and `open_after` / `close_after` in the countdown sensor.
+
+input_boolean:
+  chicken_door_schedule:
+    name: Door schedule
+    icon: mdi:calendar-clock
+    initial: true
+
+template:
+  - sensor:
+      # "Opens in 2 h 5 min" / "Closes in 12 min", for the coop tablet.
+      # Attributes: action (open/close), at (when), time ("6:52 AM").
+      - name: Chicken Door Next Move
+        unique_id: chicken_door_next_move
+        icon: >-
+          {{ 'mdi:calendar-remove' if is_state('input_boolean.chicken_door_schedule', 'off')
+             else 'mdi:door-open' if this.attributes.get('action') == 'open'
+             else 'mdi:door-closed' }}
+        availability: >-
+          {{ state_attr('sun.sun', 'next_rising') is not none
+             and state_attr('sun.sun', 'next_setting') is not none }}
+        state: >-
+          {%- set open_after, close_after = 10, 15 %}
+          {%- set n = now() %}
+          {%- set rise = as_datetime(state_attr('sun.sun', 'next_rising')) | as_local %}
+          {%- set sets = as_datetime(state_attr('sun.sun', 'next_setting')) | as_local %}
+          {#- sun.sun only has the next sunrise/sunset; within the offset after
+              one, the move from it is still to come (a day earlier is close
+              enough to that sunrise/sunset). #}
+          {%- set open = rise - timedelta(days=1) + timedelta(minutes=open_after) %}
+          {%- if open <= n %}{% set open = rise + timedelta(minutes=open_after) %}{% endif %}
+          {%- set close = sets - timedelta(days=1) + timedelta(minutes=close_after) %}
+          {%- if close <= n %}{% set close = sets + timedelta(minutes=close_after) %}{% endif %}
+          {%- set action = 'open' if open < close else 'close' %}
+          {%- set at = open if action == 'open' else close %}
+          {%- set mins = ((at - n).total_seconds() / 60) | round(0, 'ceil') | int %}
+          {%- set h, m = mins // 60, mins % 60 %}
+          {%- if is_state('input_boolean.chicken_door_schedule', 'off') %}Schedule off
+          {%- elif mins <= 0 %}{{ 'Opening' if action == 'open' else 'Closing' }} now
+          {%- else %}{{ 'Opens' if action == 'open' else 'Closes' }} in
+          {{- (' %d h' % h) if h else '' }}{{ ' %d min' % m if m or not h else '' }}
+          {%- endif %}
+        attributes:
+          action: >-
+            {%- set open_after, close_after = 10, 15 %}
+            {%- set n = now() %}
+            {%- set rise = as_datetime(state_attr('sun.sun', 'next_rising')) | as_local %}
+            {%- set sets = as_datetime(state_attr('sun.sun', 'next_setting')) | as_local %}
+            {%- set open = rise - timedelta(days=1) + timedelta(minutes=open_after) %}
+            {%- if open <= n %}{% set open = rise + timedelta(minutes=open_after) %}{% endif %}
+            {%- set close = sets - timedelta(days=1) + timedelta(minutes=close_after) %}
+            {%- if close <= n %}{% set close = sets + timedelta(minutes=close_after) %}{% endif %}
+            {{ 'open' if open < close else 'close' }}
+          at: >-
+            {%- set open_after, close_after = 10, 15 %}
+            {%- set n = now() %}
+            {%- set rise = as_datetime(state_attr('sun.sun', 'next_rising')) | as_local %}
+            {%- set sets = as_datetime(state_attr('sun.sun', 'next_setting')) | as_local %}
+            {%- set open = rise - timedelta(days=1) + timedelta(minutes=open_after) %}
+            {%- if open <= n %}{% set open = rise + timedelta(minutes=open_after) %}{% endif %}
+            {%- set close = sets - timedelta(days=1) + timedelta(minutes=close_after) %}
+            {%- if close <= n %}{% set close = sets + timedelta(minutes=close_after) %}{% endif %}
+            {{ [open, close] | min }}
+          time: >-
+            {%- set open_after, close_after = 10, 15 %}
+            {%- set n = now() %}
+            {%- set rise = as_datetime(state_attr('sun.sun', 'next_rising')) | as_local %}
+            {%- set sets = as_datetime(state_attr('sun.sun', 'next_setting')) | as_local %}
+            {%- set open = rise - timedelta(days=1) + timedelta(minutes=open_after) %}
+            {%- if open <= n %}{% set open = rise + timedelta(minutes=open_after) %}{% endif %}
+            {%- set close = sets - timedelta(days=1) + timedelta(minutes=close_after) %}
+            {%- if close <= n %}{% set close = sets + timedelta(minutes=close_after) %}{% endif %}
+            {{ ([open, close] | min).strftime('%-I:%M %p') }}
+
+script:
+  # Sets the door board's mode ("Follow switch", "Force Open", "Force
+  # Closed"). The select is found by its ID's end, with or without an area
+  # prefix.
+  chicken_door_set_mode:
+    alias: "Chicken door: set mode"
+    icon: mdi:door
+    mode: queued
+    fields:
+      option:
+        description: Follow switch, Force Open or Force Closed
+        example: Force Open
+    variables:
+      door: >-
+        {{ integration_entities('esphome') | select('match', 'select\..*_door_mode$')
+           | first | default('') }}
+    sequence:
+      - condition: template
+        value_template: "{{ door != '' and states(door) not in ['unavailable', 'unknown'] }}"
+      - action: select.select_option
+        target:
+          entity_id: "{{ door }}"
+        data:
+          option: "{{ option }}"
+
+  # Puts the door where the schedule says it should be right now: open
+  # between the morning and evening moves, closed otherwise.
+  chicken_door_apply_schedule:
+    alias: "Chicken door: apply the schedule now"
+    icon: mdi:calendar-sync
+    mode: queued
+    sequence:
+      - condition: state
+        entity_id: input_boolean.chicken_door_schedule
+        state: "on"
+      - action: script.chicken_door_set_mode
+        data:
+          # The next move is a close, so it's daytime: open (and vice versa).
+          option: >-
+            {{ 'Force Open' if is_state_attr('sensor.chicken_door_next_move', 'action', 'close')
+               else 'Force Closed' }}
+
+automation:
+  - id: chicken_door_open_morning
+    alias: "Chicken door: open after sunrise"
+    mode: single
+    triggers:
+      - trigger: sun
+        event: sunrise
+        offset: "00:10:00"
+    conditions:
+      - condition: state
+        entity_id: input_boolean.chicken_door_schedule
+        state: "on"
+    actions:
+      - action: script.chicken_door_set_mode
+        data:
+          option: Force Open
+
+  - id: chicken_door_close_evening
+    alias: "Chicken door: close after sunset"
+    mode: single
+    triggers:
+      - trigger: sun
+        event: sunset
+        offset: "00:15:00"
+    conditions:
+      - condition: state
+        entity_id: input_boolean.chicken_door_schedule
+        state: "on"
+    actions:
+      - action: script.chicken_door_set_mode
+        data:
+          option: Force Closed
+
+  - id: chicken_door_reapply
+    alias: "Chicken door: back on schedule when the board reconnects"
+    description: >-
+      The door board starts on "Follow switch" after a reboot or after Home
+      Assistant was away, so put it back where the schedule wants it.
+    mode: single
+    triggers:
+      - trigger: template
+        value_template: >-
+          {{ integration_entities('esphome') | select('match', 'select\..*_door_mode$')
+             | map('states') | reject('in', ['unavailable', 'unknown']) | list | count > 0 }}
+        for: "00:00:30"
+    actions:
+      - action: script.chicken_door_apply_schedule
+
+  - id: chicken_door_schedule_toggled
+    alias: "Chicken door: schedule switched on or off"
+    mode: queued
+    triggers:
+      - trigger: state
+        entity_id: input_boolean.chicken_door_schedule
+        to: ["on", "off"]
+    actions:
+      - if:
+          - condition: state
+            entity_id: input_boolean.chicken_door_schedule
+            state: "on"
+        then:
+          - action: script.chicken_door_apply_schedule
+        else:
+          - action: script.chicken_door_set_mode
+            data:
+              option: Follow switch

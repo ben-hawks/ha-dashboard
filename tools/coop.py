@@ -598,6 +598,16 @@ def door_card():
                       "type": "tile", "name": "Chicken door", "icon": "mdi:door",
                       "features": [{"type": "select-options", "style": "buttons"}],
                       "features_position": "bottom"})),
+            # The schedule (packages/chicken_door.yaml): time to the next
+            # move ("Opens in 1 h 40 min · 6:40 AM") and its on/off switch.
+            {"type": "grid", "columns": 2, "square": False, "cards": [
+                {"type": "tile", "entity": "sensor.chicken_door_next_move",
+                 "name": "Next", "vertical": False, "state_content": ["state", "time"]},
+                {"type": "tile", "entity": "input_boolean.chicken_door_schedule",
+                 "name": "Schedule", "vertical": False,
+                 "tap_action": {"action": "toggle"},
+                 "hold_action": {"action": "more-info"}},
+            ]},
             # "Auto" = the door's own light sensor/timer decides.
             group({"type": "grid", "columns": 2, "square": False},
                   find("sensor", "controller_sees", {**info, "name": "Door controller",
