@@ -6,7 +6,7 @@ A one-screen dashboard at `/chicken-coop/coop`, sized for a 1280×800 tablet.
 |-------|------|
 | Left, top | Coop Cam 1 and Coop Cam 2 side by side |
 | Left, bottom | Chicken Run, wide |
-| Right column | The animated coop scene, chicken comfort, controls, coop graphs |
+| Right column | The animated coop scene, chicken comfort, the chicken door, controls, coop graphs |
 
 Only one feed plays live video at a time (Chicken Run by day, Coop Cam 2 at
 night); the others are stills that refresh every 10 seconds. Tap any feed to
@@ -27,6 +27,16 @@ a heat index when it's hot), falling back to the station if that sensor is
 offline. Levels: Very cold < 10 °F, Chilly < 32 °F, Comfy up to 75 °F, Warm
 up to 85 °F, Hot up to 95 °F, then Heat danger. A cold, damp coop (humidity
 80% or more below 40 °F) gets a ventilation warning.
+
+**Chicken door.** The `chicken-door` ESPHome board on the Ladies First
+door's override switch cable: three buttons, **Follow switch** (the switch on
+the door decides; on Auto, the door's own light sensor/timer does), **Force
+Open** and **Force Closed**. Underneath, what the door's controller is being
+told (Open, Closed or Auto) and where the physical switch is. Forcing is
+refused while the switch is on the opposite position, moving the switch ends
+it, and the board goes back to Follow switch if Home Assistant is gone for 5
+minutes. Found by the device's name, "Chicken Door" (`DOOR_DEVICE` in
+`tools/coop.py`).
 
 **Controls and graphs.** Every light, switch, door and lock in the Chicken
 Coop area, so the automatic door appears once it's in that area; coop

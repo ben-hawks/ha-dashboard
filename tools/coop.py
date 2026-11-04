@@ -570,12 +570,49 @@ def controls():
     }
 
 
+# The chicken door's ESPHome board (esphome add-on: chicken-door.yaml), a
+# tap on the Ladies First door's override switch cable. Found by device, so
+# its entity IDs don't matter (with or without an area prefix).
+DOOR_DEVICE = "Chicken Door"
+
+
+def door_card():
+    """The door: its mode as three buttons (Follow switch / Force Open /
+    Force Closed), what the door's controller is being told, and where the
+    physical switch is. Hidden until the device exists."""
+    def find(domain, suffix, options):
+        return {"device": DOOR_DEVICE, "domain": domain, "entity_id": f"*{suffix}",
+                "options": options}
+    info = {"type": "tile", "vertical": False, "tap_action": {"action": "more-info"}}
+
+    def group(card, *filters):
+        return {"type": "custom:auto-entities", "show_empty": False,
+                "card": card, "card_param": "cards", "filter": {"include": list(filters)}}
+    return {
+        "type": "vertical-stack",
+        "cards": [
+            group({"type": "vertical-stack"},
+                  find("select", "door_mode", {
+                      "type": "tile", "name": "Chicken door", "icon": "mdi:door",
+                      "features": [{"type": "select-options", "style": "buttons"}],
+                      "features_position": "bottom"})),
+            # "Auto" = the door's own light sensor/timer decides.
+            group({"type": "grid", "columns": 2, "square": False},
+                  find("sensor", "controller_sees", {**info, "name": "Door controller",
+                                                     "icon": "mdi:door-sliding"}),
+                  find("sensor", "switch_position", {**info, "name": "Switch on the door",
+                                                     "icon": "mdi:toggle-switch"})),
+        ],
+    }
+
+
 def section():
     return {
         "type": "grid",
         "cards": [
             {**scene_card(), "grid_options": {"columns": "full"}},
             {**comfort_card(), "grid_options": {"columns": "full"}},
+            {**door_card(), "grid_options": {"columns": "full"}},
             {**controls(), "grid_options": {"columns": "full"}},
             {"type": "grid", "columns": 2, "square": False, "grid_options": {"columns": "full"},
              "cards": coop_graphs()},

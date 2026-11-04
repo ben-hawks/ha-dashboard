@@ -176,6 +176,56 @@ cards:
       font-size: 12px
   grid_options:
     columns: full
+- type: vertical-stack
+  cards:
+  - type: custom:auto-entities
+    show_empty: false
+    card:
+      type: vertical-stack
+    card_param: cards
+    filter:
+      include:
+      - device: Chicken Door
+        domain: select
+        entity_id: '*door_mode'
+        options:
+          type: tile
+          name: Chicken door
+          icon: mdi:door
+          features:
+          - type: select-options
+            style: buttons
+          features_position: bottom
+  - type: custom:auto-entities
+    show_empty: false
+    card:
+      type: grid
+      columns: 2
+      square: false
+    card_param: cards
+    filter:
+      include:
+      - device: Chicken Door
+        domain: sensor
+        entity_id: '*controller_sees'
+        options:
+          type: tile
+          vertical: false
+          tap_action: &id003
+            action: more-info
+          name: Door controller
+          icon: mdi:door-sliding
+      - device: Chicken Door
+        domain: sensor
+        entity_id: '*switch_position'
+        options:
+          type: tile
+          vertical: false
+          tap_action: *id003
+          name: Switch on the door
+          icon: mdi:toggle-switch
+  grid_options:
+    columns: full
 - type: custom:auto-entities
   show_empty: false
   card:
@@ -199,7 +249,7 @@ cards:
         - type: lock-commands
     - area: chicken_coop
       domain: light
-      options: &id003
+      options: &id004
         type: tile
         tap_action:
           action: toggle
@@ -207,7 +257,7 @@ cards:
           action: more-info
     - area: chicken_coop
       domain: switch
-      options: *id003
+      options: *id004
     exclude:
     - entity_id: '*chicken_cam_*'
     - entity_id: '*chicken_run_*'
@@ -232,7 +282,7 @@ cards:
     animate: false
     font_size: 70
     font_size_header: 12
-    show: &id004
+    show: &id005
       icon: true
       name: true
       state: true
@@ -270,7 +320,7 @@ cards:
     animate: false
     font_size: 70
     font_size_header: 12
-    show: *id004
+    show: *id005
     name: Coop humidity
     icon: mdi:water-percent
     entities:
