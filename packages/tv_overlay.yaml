@@ -175,13 +175,13 @@ automation:
     for: 00:00:10
   conditions:
   - condition: template
-    value_template: '{{ trigger.to_state.state not in [''off'', ''standby'', ''unavailable'', ''unknown''] }}'
+    value_template: '{{ trigger.to_state.state not in [''off'', ''standby'', ''unavailable'', ''unknown''] and trigger.from_state is not none and (trigger.to_state.last_changed - trigger.from_state.last_changed).total_seconds() >= 300 }}'
   actions:
   - action: androidtv.adb_command
     target:
       entity_id: '{{ trigger.entity_id }}'
     data:
-      command: pidof com.tabdeveloper.tvoverlay >/dev/null || (monkey -p com.tabdeveloper.tvoverlay -c android.intent.category.LEANBACK_LAUNCHER 1; sleep 4; input keyevent KEYCODE_HOME)
+      command: ps -A | grep -q com.tabdeveloper.tvoverlay || { top=$(dumpsys activity activities | grep -m1 -E 'topResumedActivity|mResumedActivity'); case "$top" in *com.google.android.apps.tv.launcherx*|*com.spocky.projengmenu*) monkey -p com.tabdeveloper.tvoverlay -c android.intent.category.LEANBACK_LAUNCHER 1; sleep 4; input keyevent KEYCODE_HOME;; esac; }
     continue_on_error: true
   - delay: 00:00:08
   - action: script.tv_badges
@@ -198,7 +198,7 @@ automation:
     - sensor.chicken_comfort
     - sensor.station_sky
   - trigger: time_pattern
-    minutes: /10
+    minutes: /30
   actions:
   - action: script.tv_badges
 - id: tv_overlay_alert_popup

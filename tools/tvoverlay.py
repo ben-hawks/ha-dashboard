@@ -12,10 +12,11 @@ in standby doesn't make a send fail.
 Pop-ups:  doorbell (with the camera's picture), a new household alert, laundry
           done, hens too hot/cold
 Badges:   outside temperature, alerts, laundry waiting, coop comfort;
-          refreshed when they change, every 10 minutes, and when a TV turns
+          refreshed when they change, every 30 minutes, and when a TV turns
           on (a restarted TV forgets them)
-Watchdog: when a TV turns on, start TvOverlay if it isn't running (then
-          press Home, so you land on the home screen as usual)
+Watchdog: when a TV turns on (after 5+ minutes off), start TvOverlay if it
+          isn't running and the TV is on its home screen (then press Home,
+          so you land where you were); never over an app
 
 Fill in SETTINGS below (TV IP addresses, Home Assistant's address, the
 doorbell's entities), then run:  python3 tools/tvoverlay.py
@@ -26,6 +27,9 @@ from pathlib import Path
 import yaml
 
 from tv import TVS
+
+# Home screens: the only place the watchdog may open TvOverlay.
+HOME_APPS = ["com.google.android.apps.tv.launcherx", "com.spocky.projengmenu"]
 
 ROOT = Path(__file__).resolve().parent.parent
 PACKAGE = "com.tabdeveloper.tvoverlay"
@@ -228,6 +232,16 @@ def popup(title, message, icon, color, seconds=12, **extra):
     return {"action": "script.tv_popup", "data": data}
 
 
+# Run on the TV by the watchdog: start TvOverlay only when none of its
+# processes is running and a home screen is in front.
+START = (f"ps -A | grep -q {PACKAGE} || {{ top=$(dumpsys activity activities"
+         " | grep -m1 -E 'topResumedActivity|mResumedActivity');"
+         " case \"$top\" in "
+         + "|".join(f"*{p}*" for p in HOME_APPS)
+         + f") monkey -p {PACKAGE} -c android.intent.category.LEANBACK_LAUNCHER 1;"
+         " sleep 4; input keyevent KEYCODE_HOME;; esac; }")
+
+
 def automations():
     adbs = [tv["adb"] for tv in TVS]
     autos = [
@@ -237,17 +251,23 @@ def automations():
             "mode": "parallel",
             "triggers": [{"trigger": "state", "entity_id": adbs,
                           "from": ["off", "standby", "unavailable"], "for": "00:00:10"}],
+            # Only a real power-on: off or unreachable for 5 minutes or more.
+            # ADB drops for a few seconds now and then while a TV is in use,
+            # and the screensaver reads as standby; neither counts.
             "conditions": [{"condition": "template",
-                            "value_template": "{{ trigger.to_state.state not in "
-                                              "['off', 'standby', 'unavailable', 'unknown'] }}"}],
+                            "value_template": (
+                                "{{ trigger.to_state.state not in "
+                                "['off', 'standby', 'unavailable', 'unknown'] and "
+                                "trigger.from_state is not none and "
+                                "(trigger.to_state.last_changed - trigger.from_state.last_changed)"
+                                ".total_seconds() >= 300 }}")}],
             "actions": [
-                # Start it only if it isn't running, then back to Home.
+                # Start TvOverlay only if no process of it is running and the
+                # TV is on a home screen, so nothing that's playing gets
+                # covered; then Home, back where you were.
                 {"action": "androidtv.adb_command",
                  "target": {"entity_id": "{{ trigger.entity_id }}"},
-                 "data": {"command": (
-                     f"pidof {PACKAGE} >/dev/null || (monkey -p {PACKAGE}"
-                     " -c android.intent.category.LEANBACK_LAUNCHER 1;"
-                     " sleep 4; input keyevent KEYCODE_HOME)")},
+                 "data": {"command": START},
                  "continue_on_error": True},
                 {"delay": "00:00:08"},
                 {"action": "script.tv_badges"},
@@ -264,7 +284,7 @@ def automations():
                     "sensor.household_alerts", "input_select.washer_state",
                     "input_select.dryer_state", "sensor.chicken_comfort",
                     "sensor.station_sky"]},
-                {"trigger": "time_pattern", "minutes": "/10"},
+                {"trigger": "time_pattern", "minutes": "/30"},
             ],
             "actions": [{"action": "script.tv_badges"}],
         },

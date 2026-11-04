@@ -12,7 +12,7 @@ What you get:
 |---|---|
 | Pop-ups | Doorbell (with the camera's picture), a new household alert (the Home tab's red banner), laundry done, hens too hot or too cold |
 | Corner badges | Outside temperature, alerts, laundry waiting to be emptied, coop comfort |
-| Watchdog | When a TV turns on, TvOverlay is started if it isn't running (you land back on the home screen) and the badges are sent again |
+| Watchdog | When a TV turns on after being off for 5+ minutes, the badges are sent again, and TvOverlay is started if it isn't running, but only while the TV is on its home screen (it never opens over an app you're watching) |
 
 Only TVs that are on get anything.
 
