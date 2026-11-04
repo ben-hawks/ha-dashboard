@@ -603,6 +603,17 @@ def find(suffix):
             f"| select('is_number') | list")
 
 
+# Forecast sources, in order: the National Weather Service (local office
+# forecasts; Settings → Devices & services → Add integration → National
+# Weather Service), then Met.no (weather.forecast_home). The NWS weather
+# entity is found by integration, so its station code doesn't matter.
+MET = "weather.forecast_home"
+NWS = ("integration_entities('nws') | select('match', 'weather\\.') | first | default('')")
+# Jinja: `source`, the first forecast source that's up (Met.no if neither is).
+SOURCE = (f"{{%- set nws = {NWS} %}}"
+          f"{{%- set source = nws if nws and has_value(nws) else '{MET}' %}}")
+
+
 def templates():
     sensors = []
     for key, (name, suffix, unit, device_class, icon) in READINGS.items():
@@ -646,7 +657,7 @@ def templates():
             "{% set temp = states('sensor.station_temperature') | float(99) %}"
             # The WS90's piezo rain sensor misses most dry snow, so also trust
             # the forecast's current condition when it's cold enough.
-            "{% set forecast = states('weather.forecast_home') %}"
+            + SOURCE + "{% set forecast = states(source) %}"
             "{% set elev = state_attr('sun.sun', 'elevation') | float(0) %}"
             "{% set solar = states('sensor.station_solar_radiation') | float(-1) %}"
             "{% if (wet and temp <= 35)"
@@ -663,28 +674,29 @@ def templates():
     return {"sensor": sensors, "weather": [home_weather()]}
 
 
-# Station sky picture → weather condition, for when Met.no is down.
+# Station sky picture → weather condition, for when no forecast source is up.
 SKY_CONDITION = {"Sunny": "sunny", "Partly cloudy": "partlycloudy", "Cloudy": "cloudy",
                  "Rain": "rainy", "Snow": "snowy", "Night": "clear-night", "Fog": "fog"}
 
 
 def home_weather():
     """weather.home_weather, for the Home tab's forecast card: right-now
-    readings from our own station, the forecast from Met.no as last
-    downloaded (sensor.forecast_cache). When Met.no is down (its entity goes
-    unavailable and the stock card shows nothing), this keeps working: the
-    condition comes from the station's sky, the forecast from the cache."""
+    readings from our own station, the forecast as last downloaded from the
+    NWS or Met.no (sensor.forecast_cache). When both are down (their
+    entities go unavailable and the stock card shows nothing), this keeps
+    working: the condition comes from the station's sky, the forecast from
+    the cache."""
     def reading(key):
         return f"{{{{ states('sensor.station_{key}') | float(none) }}}}"
     return {
         "name": "Home Weather", "unique_id": "home_weather",
-        # Met.no's condition, unless the station sees rain or snow; the
-        # station's sky while Met.no is down.
+        # The NWS's (or Met.no's) condition, unless the station sees rain or
+        # snow; the station's sky while neither is up.
         "condition_template": (
             f"{{% set sky = {SKY_CONDITION}.get(states('sensor.station_sky')) %}}"
-            "{% set met = states('weather.forecast_home') %}"
-            "{{ sky if sky in ['rainy', 'snowy'] or met in ['unavailable', 'unknown']"
-            " else met }}"),
+            + SOURCE + "{% set cur = states(source) %}"
+            "{{ sky if sky in ['rainy', 'snowy'] or cur in ['unavailable', 'unknown']"
+            " else cur }}"),
         "temperature_template": reading("temperature"), "temperature_unit": "°F",
         "apparent_temperature_template": reading("feels_like"),
         "dew_point_template": reading("dew_point"),
@@ -696,51 +708,76 @@ def home_weather():
         "uv_index_template": reading("uv_index"),
         "forecast_daily_template": "{{ state_attr('sensor.forecast_cache', 'daily') or [] }}",
         "forecast_hourly_template": "{{ state_attr('sensor.forecast_cache', 'hourly') or [] }}",
-        "attribution_template": ("Now: our weather station. Forecast from met.no"
-                                 "{{ '' if has_value('weather.forecast_home') else"
-                                 " ' (offline; last download ' ~ relative_time("
-                                 "states.sensor.forecast_cache.last_changed) ~ ' ago)'"
-                                 " if states.sensor.forecast_cache else '' }}."),
+        "attribution_template": (
+            "{%- set c = states.sensor.forecast_cache %}"
+            "{%- set src = c.attributes.get('source', '') if c else '' %}"
+            "Now: our weather station. Forecast: "
+            "{{ 'National Weather Service' if src.startswith('weather.') and src != '" + MET + "'"
+            " else 'met.no' }}"
+            # Older than 2 hours: both sources down.
+            "{{ ' (offline; from ' ~ relative_time(c.last_changed) ~ ' ago)'"
+            " if c and now() - c.last_changed > timedelta(hours=2) else '' }}."),
     }
+
+
+# Jinja: `hours` and `days` from the get_forecasts replies. The NWS has no
+# daily forecast, only day and night periods (twice_daily): each day period
+# becomes a day, with the night after it as its low. (An evening's leading
+# "Tonight" is skipped, so the days start tomorrow.)
+HOURS = "{%- set hours = (hourly.values() | list | first).forecast %}"
+DAYS = (
+    "{%- set raw = (daily.values() | list | first).forecast %}"
+    "{%- if raw and raw[0].is_daytime is defined %}"
+    "{%- set ns = namespace(days=[]) %}"
+    "{%- for f in raw if f.is_daytime %}"
+    "{%- set i = raw.index(f) %}"
+    "{%- set night = raw[i + 1] if i + 1 < raw | count else none %}"
+    "{%- set ns.days = ns.days + [dict(f, templow=night.temperature)"
+    " if night and not night.is_daytime else dict(f)] %}"
+    "{%- endfor %}"
+    "{%- set days = ns.days %}"
+    "{%- else %}{%- set days = raw %}{%- endif %}"
+)
 
 
 def forecast_templates():
     """Trigger-based slot sensors (sensor.forecast_hour_1…6, forecast_day_1…5)
-    filled from Met.no every 30 minutes and on template reload. State = the
-    picture to show; attributes = the labels."""
+    filled every 30 minutes and on template reload from the NWS, or Met.no
+    when the NWS is down. State = the picture to show; attributes = the
+    labels. If both are down, everything here keeps its last values."""
     art = (f"{{% set art = {CONDITION_ART} %}}"
            f"{{% set night_art = {NIGHT_ART} %}}")
 
     def hour(i):
-        f = f"hourly['weather.forecast_home'].forecast[{i}]"
+        f = f"hours[{i}]"
         t = f"as_local(as_datetime({f}.datetime))"
         return {
             "name": f"Forecast Hour {i + 1}", "unique_id": f"forecast_hour_{i + 1}",
             "icon": "mdi:clock-outline",
-            "state": (art + f"{{% set t = {t} %}}{{% set a = art.get({f}.condition, 'Cloudy') %}}"
+            "state": (HOURS + art + f"{{% set t = {t} %}}{{% set a = art.get({f}.condition, 'Cloudy') %}}"
                       "{{ night_art.get(a, a) if t.hour >= 19 or t.hour < 7 else a }}"),
             "attributes": {
-                "time": f"{{{{ {t}.strftime('%-I %p') }}}}",
-                "day": (f"{{% set t = {t} %}}"
+                "time": HOURS + f"{{{{ {t}.strftime('%-I %p') }}}}",
+                "day": (HOURS + f"{{% set t = {t} %}}"
                         + ("{{ t.strftime('%a').upper() }}" if i == 0 else
                            "{{ t.strftime('%a').upper() if t.hour == 0 else '' }}")),
-                "temperature": f"{{{{ {f}.temperature | round(0) | int }}}}°",
+                "temperature": HOURS + f"{{{{ {f}.temperature | round(0) | int }}}}°",
             },
         }
 
     def day(i):
-        f = f"daily['weather.forecast_home'].forecast[{i}]"
+        f = f"days[{i}]"
         t = f"as_local(as_datetime({f}.datetime))"
         return {
             "name": f"Forecast Day {i + 1}", "unique_id": f"forecast_day_{i + 1}",
             "icon": "mdi:calendar",
-            "state": art + f"{{{{ art.get({f}.condition, 'Cloudy') }}}}",
+            "state": DAYS + art + f"{{{{ art.get({f}.condition, 'Cloudy') }}}}",
             "attributes": {
-                "day": (f"{{% set t = {t} %}}"
+                "day": (DAYS + f"{{% set t = {t} %}}"
                         "{{ 'Today' if t.date() == now().date() else t.strftime('%a') }}"),
-                "high": f"{{{{ {f}.temperature | round(0) | int }}}}°",
-                "low": (f"{{{{ ({f}.templow | round(0) | int) ~ '°' "
-                        f"if {f}.templow is defined else '' }}}}"),
+                "high": DAYS + f"{{{{ {f}.temperature | round(0) | int }}}}°",
+                "low": DAYS + (f"{{{{ ({f}.templow | round(0) | int) ~ '°' "
+                               f"if {f}.templow is defined and {f}.templow is not none else '' }}}}"),
             },
         }
 
@@ -750,40 +787,44 @@ def forecast_templates():
             {"trigger": "homeassistant", "event": "start"},
             {"trigger": "event", "event_type": "event_template_reloaded"},
             # Re-check storms as soon as the weather or the station's sky changes.
-            {"trigger": "state", "entity_id": ["weather.forecast_home", "sensor.station_sky"],
+            {"trigger": "state", "entity_id": [MET, "sensor.station_sky"],
              "to": None},  # state changes only, not every attribute update
         ],
-        # Met.no down (its entity unavailable): skip, so everything here keeps
-        # the last forecast instead of erroring.
+        # Both sources down: skip, so everything here keeps the last forecast
+        # instead of erroring.
         "conditions": [{"condition": "template",
-                        "value_template": "{{ has_value('weather.forecast_home') }}"}],
+                        "value_template": f"{{%- set nws = {NWS} %}}"
+                                          f"{{{{ (nws and has_value(nws)) or has_value('{MET}') }}}}"}],
         "actions": [
-            {"action": "weather.get_forecasts", "target": {"entity_id": "weather.forecast_home"},
-             "data": {"type": kind}, "response_variable": kind}
-            for kind in ("hourly", "daily")
+            {"variables": {"source": SOURCE + "{{ source }}"}},
+            {"action": "weather.get_forecasts", "target": {"entity_id": "{{ source }}"},
+             "data": {"type": "hourly"}, "response_variable": "hourly"},
+            {"action": "weather.get_forecasts", "target": {"entity_id": "{{ source }}"},
+             "data": {"type": f"{{{{ 'daily' if source == '{MET}' else 'twice_daily' }}}}"},
+             "response_variable": "daily"},
         ],
         "sensor": [hour(i) for i in range(HOURS_SHOWN)] + [day(i) for i in range(DAYS_SHOWN)] + [{
             # The last forecast downloaded, for weather.home_weather. State:
-            # when it was downloaded.
+            # when it was downloaded; source: which weather entity.
             "name": "Forecast Cache", "unique_id": "forecast_cache",
             "icon": "mdi:weather-cloudy-clock", "device_class": "timestamp",
             "state": "{{ now().isoformat() }}",
             "attributes": {
-                "hourly": "{{ hourly['weather.forecast_home'].forecast[:24] }}",
-                "daily": "{{ daily['weather.forecast_home'].forecast[:7] }}",
+                "source": "{{ hourly.keys() | list | first }}",
+                "hourly": HOURS + "{{ hours[:24] }}",
+                "daily": DAYS + "{{ days[:7] }}",
             },
         }],
         "binary_sensor": [{
             "name": "Stormy Weather", "unique_id": "stormy_weather", "icon": "mdi:weather-lightning-rainy",
-            "state": (f"{{% set stormy = {STORMY} %}}"
-                      "{% set soon = hourly['weather.forecast_home'].forecast"
-                      f"[:{STORM_HOURS}] | map(attribute='condition') | list %}}"
-                      "{{ states('weather.forecast_home') in stormy"
+            "state": (HOURS + f"{{% set stormy = {STORMY} %}}"
+                      f"{{% set soon = hours[:{STORM_HOURS}] | map(attribute='condition') | list %}}"
+                      "{{ states(hourly.keys() | list | first) in stormy"
                       " or states('sensor.station_sky') in ['Rain', 'Snow']"
                       " or soon | select('in', stormy) | list | count > 0 }}"),
             "attributes": {
-                "next_hours": "{{ hourly['weather.forecast_home'].forecast"
-                              f"[:{STORM_HOURS}] | map(attribute='condition') | join(', ') }}}}",
+                "next_hours": HOURS + f"{{{{ hours[:{STORM_HOURS}] | map(attribute='condition')"
+                              " | join(', ') }}",
             },
         }],
     }]

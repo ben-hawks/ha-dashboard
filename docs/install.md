@@ -16,13 +16,24 @@ Restart Home Assistant. (Browser Mod is no longer needed: light/dark
 switching uses Home Assistant's own default theme. If you installed it
 earlier, you can remove it.)
 
-## 2. Make sure there's a weather entity
+## 2. Weather forecasts
 
-The dashboard uses `weather.forecast_home`. If you don't have it, add
-**Settings → Devices & services → Add integration → Meteorologisk institutt
-(Met.no)**. If you already use a different weather integration, replace
-`weather.forecast_home` in `dashboard/views/home.yaml` and
-`dashboard/views/outdoors.yaml`.
+The forecasts come from the **National Weather Service** (US, local office
+forecasts), with **Met.no** as the fallback while the NWS is down:
+
+- **NWS:** Settings → Devices & services → Add integration → **National
+  Weather Service**. The "API key" is any text that identifies you, such as
+  your email address (the NWS asks for one; there's no sign-up). Keep the
+  suggested location; leave the station blank to use the nearest one.
+- **Met.no:** Settings → Devices & services → Add integration →
+  **Meteorologisk institutt (Met.no)**, which makes `weather.forecast_home`.
+
+The NWS weather entity is found by integration, so its name (e.g.
+`weather.kord`) doesn't matter. `sensor.forecast_cache` keeps the last
+forecast downloaded and which source it came from; the Home tab's
+`weather.home_weather` shows it with the weather station's readings, so the
+card keeps working while both are down. Without the NWS, Met.no alone works
+as before.
 
 ## 3. Put this repo on your Home Assistant
 
