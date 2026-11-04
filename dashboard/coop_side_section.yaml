@@ -185,8 +185,7 @@ cards:
     card_param: cards
     filter:
       include:
-      - device: Chicken Door
-        domain: select
+      - domain: select
         entity_id: '*door_mode'
         options:
           type: tile
@@ -205,8 +204,7 @@ cards:
     card_param: cards
     filter:
       include:
-      - device: Chicken Door
-        domain: sensor
+      - domain: sensor
         entity_id: '*controller_sees'
         options:
           type: tile
@@ -215,8 +213,7 @@ cards:
             action: more-info
           name: Door controller
           icon: mdi:door-sliding
-      - device: Chicken Door
-        domain: sensor
+      - domain: sensor
         entity_id: '*switch_position'
         options:
           type: tile

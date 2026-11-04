@@ -571,9 +571,9 @@ def controls():
 
 
 # The chicken door's ESPHome board (esphome add-on: chicken-door.yaml), a
-# tap on the Ladies First door's override switch cable. Found by device, so
-# its entity IDs don't matter (with or without an area prefix).
-DOOR_DEVICE = "Chicken Door"
+# tap on the Ladies First door's override switch cable. Its entities are
+# found by the ends of their IDs (…_door_mode, …_controller_sees,
+# …_switch_position), with or without an area prefix.
 
 
 def door_card():
@@ -581,8 +581,10 @@ def door_card():
     Force Closed), what the door's controller is being told, and where the
     physical switch is. Hidden until the device exists."""
     def find(domain, suffix, options):
-        return {"device": DOOR_DEVICE, "domain": domain, "entity_id": f"*{suffix}",
-                "options": options}
+        # By entity name only: these names are unique to the door board, and a
+        # device-name filter silently matches nothing if the device is named
+        # differently in HA.
+        return {"domain": domain, "entity_id": f"*{suffix}", "options": options}
     info = {"type": "tile", "vertical": False, "tap_action": {"action": "more-info"}}
 
     def group(card, *filters):

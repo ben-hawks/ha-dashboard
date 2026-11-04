@@ -35,8 +35,8 @@ Open** and **Force Closed**. Underneath, what the door's controller is being
 told (Open, Closed or Auto) and where the physical switch is. Forcing is
 refused while the switch is on the opposite position, moving the switch ends
 it, and the board goes back to Follow switch if Home Assistant is gone for 5
-minutes. Found by the device's name, "Chicken Door" (`DOOR_DEVICE` in
-`tools/coop.py`).
+minutes. Found by the ends of its entity IDs (`_door_mode`, `_controller_sees`,
+`_switch_position`; `tools/coop.py`).
 
 **Controls and graphs.** Every light, switch, door and lock in the Chicken
 Coop area, so the automatic door appears once it's in that area; coop
