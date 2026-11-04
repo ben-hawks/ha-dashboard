@@ -118,8 +118,10 @@ sections:
         time_format: "12"
         grid_options:
           columns: full
+      # Our station's readings + Met.no's forecast, and still shows when
+      # Met.no is down (weather.home_weather, tools/weather.py).
       - type: weather-forecast
-        entity: weather.forecast_home
+        entity: weather.home_weather
         show_current: true
         show_forecast: true
         forecast_type: daily

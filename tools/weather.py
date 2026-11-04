@@ -660,7 +660,48 @@ def templates():
             "{{ 'Sunny' if ratio > 0.7 else 'Partly cloudy' if ratio > 0.35 else 'Cloudy' }}"
             "{% endif %}"),
     })
-    return {"sensor": sensors}
+    return {"sensor": sensors, "weather": [home_weather()]}
+
+
+# Station sky picture → weather condition, for when Met.no is down.
+SKY_CONDITION = {"Sunny": "sunny", "Partly cloudy": "partlycloudy", "Cloudy": "cloudy",
+                 "Rain": "rainy", "Snow": "snowy", "Night": "clear-night", "Fog": "fog"}
+
+
+def home_weather():
+    """weather.home_weather, for the Home tab's forecast card: right-now
+    readings from our own station, the forecast from Met.no as last
+    downloaded (sensor.forecast_cache). When Met.no is down (its entity goes
+    unavailable and the stock card shows nothing), this keeps working: the
+    condition comes from the station's sky, the forecast from the cache."""
+    def reading(key):
+        return f"{{{{ states('sensor.station_{key}') | float(none) }}}}"
+    return {
+        "name": "Home Weather", "unique_id": "home_weather",
+        # Met.no's condition, unless the station sees rain or snow; the
+        # station's sky while Met.no is down.
+        "condition_template": (
+            f"{{% set sky = {SKY_CONDITION}.get(states('sensor.station_sky')) %}}"
+            "{% set met = states('weather.forecast_home') %}"
+            "{{ sky if sky in ['rainy', 'snowy'] or met in ['unavailable', 'unknown']"
+            " else met }}"),
+        "temperature_template": reading("temperature"), "temperature_unit": "°F",
+        "apparent_temperature_template": reading("feels_like"),
+        "dew_point_template": reading("dew_point"),
+        "humidity_template": reading("humidity"),
+        "pressure_template": reading("pressure"), "pressure_unit": "inHg",
+        "wind_speed_template": reading("wind_speed"),
+        "wind_gust_speed_template": reading("wind_gust"), "wind_speed_unit": "mph",
+        "wind_bearing_template": reading("wind_direction"),
+        "uv_index_template": reading("uv_index"),
+        "forecast_daily_template": "{{ state_attr('sensor.forecast_cache', 'daily') or [] }}",
+        "forecast_hourly_template": "{{ state_attr('sensor.forecast_cache', 'hourly') or [] }}",
+        "attribution_template": ("Now: our weather station. Forecast from met.no"
+                                 "{{ '' if has_value('weather.forecast_home') else"
+                                 " ' (offline; last download ' ~ relative_time("
+                                 "states.sensor.forecast_cache.last_changed) ~ ' ago)'"
+                                 " if states.sensor.forecast_cache else '' }}."),
+    }
 
 
 def forecast_templates():
@@ -712,12 +753,26 @@ def forecast_templates():
             {"trigger": "state", "entity_id": ["weather.forecast_home", "sensor.station_sky"],
              "to": None},  # state changes only, not every attribute update
         ],
+        # Met.no down (its entity unavailable): skip, so everything here keeps
+        # the last forecast instead of erroring.
+        "conditions": [{"condition": "template",
+                        "value_template": "{{ has_value('weather.forecast_home') }}"}],
         "actions": [
             {"action": "weather.get_forecasts", "target": {"entity_id": "weather.forecast_home"},
              "data": {"type": kind}, "response_variable": kind}
             for kind in ("hourly", "daily")
         ],
-        "sensor": [hour(i) for i in range(HOURS_SHOWN)] + [day(i) for i in range(DAYS_SHOWN)],
+        "sensor": [hour(i) for i in range(HOURS_SHOWN)] + [day(i) for i in range(DAYS_SHOWN)] + [{
+            # The last forecast downloaded, for weather.home_weather. State:
+            # when it was downloaded.
+            "name": "Forecast Cache", "unique_id": "forecast_cache",
+            "icon": "mdi:weather-cloudy-clock", "device_class": "timestamp",
+            "state": "{{ now().isoformat() }}",
+            "attributes": {
+                "hourly": "{{ hourly['weather.forecast_home'].forecast[:24] }}",
+                "daily": "{{ daily['weather.forecast_home'].forecast[:7] }}",
+            },
+        }],
         "binary_sensor": [{
             "name": "Stormy Weather", "unique_id": "stormy_weather", "icon": "mdi:weather-lightning-rainy",
             "state": (f"{{% set stormy = {STORMY} %}}"

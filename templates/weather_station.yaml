@@ -111,3 +111,22 @@ sensor:
   unique_id: station_sky
   icon: mdi:weather-partly-cloudy
   state: '{% set rain = states(''sensor.station_rain_rate'') | float(0) %}{% set flag = states.binary_sensor | map(attribute=''entity_id'') | select(''search'', ''gw3000b_rain_state(_piezo)?$'') | select(''is_state'', ''on'') | list | count > 0 %}{% set hour = ((states.sensor | map(attribute=''entity_id'') | select(''search'', ''gw3000b_hourly_rain(_piezo)?$'') | map(''states'') | select(''is_number'') | list) | map(''float'') | list + [0]) | max %}{% set wet = rain > 0 or (flag and hour > 0) %}{% set temp = states(''sensor.station_temperature'') | float(99) %}{% set forecast = states(''weather.forecast_home'') %}{% set elev = state_attr(''sun.sun'', ''elevation'') | float(0) %}{% set solar = states(''sensor.station_solar_radiation'') | float(-1) %}{% if (wet and temp <= 35) or (forecast in [''snowy'', ''snowy-rainy''] and temp <= 37) %}Snow{% elif wet %}Rain{% elif elev <= 0 %}Night{% elif solar < 0 or elev < 8 %}Partly cloudy{% else %}{% set ratio = solar / (990 * sin(elev * pi / 180)) %}{{ ''Sunny'' if ratio > 0.7 else ''Partly cloudy'' if ratio > 0.35 else ''Cloudy'' }}{% endif %}'
+weather:
+- name: Home Weather
+  unique_id: home_weather
+  condition_template: '{% set sky = {''Sunny'': ''sunny'', ''Partly cloudy'': ''partlycloudy'', ''Cloudy'': ''cloudy'', ''Rain'': ''rainy'', ''Snow'': ''snowy'', ''Night'': ''clear-night'', ''Fog'': ''fog''}.get(states(''sensor.station_sky'')) %}{% set met = states(''weather.forecast_home'') %}{{ sky if sky in [''rainy'', ''snowy''] or met in [''unavailable'', ''unknown''] else met }}'
+  temperature_template: '{{ states(''sensor.station_temperature'') | float(none) }}'
+  temperature_unit: °F
+  apparent_temperature_template: '{{ states(''sensor.station_feels_like'') | float(none) }}'
+  dew_point_template: '{{ states(''sensor.station_dew_point'') | float(none) }}'
+  humidity_template: '{{ states(''sensor.station_humidity'') | float(none) }}'
+  pressure_template: '{{ states(''sensor.station_pressure'') | float(none) }}'
+  pressure_unit: inHg
+  wind_speed_template: '{{ states(''sensor.station_wind_speed'') | float(none) }}'
+  wind_gust_speed_template: '{{ states(''sensor.station_wind_gust'') | float(none) }}'
+  wind_speed_unit: mph
+  wind_bearing_template: '{{ states(''sensor.station_wind_direction'') | float(none) }}'
+  uv_index_template: '{{ states(''sensor.station_uv_index'') | float(none) }}'
+  forecast_daily_template: '{{ state_attr(''sensor.forecast_cache'', ''daily'') or [] }}'
+  forecast_hourly_template: '{{ state_attr(''sensor.forecast_cache'', ''hourly'') or [] }}'
+  attribution_template: 'Now: our weather station. Forecast from met.no{{ '''' if has_value(''weather.forecast_home'') else '' (offline; last download '' ~ relative_time(states.sensor.forecast_cache.last_changed) ~ '' ago)'' if states.sensor.forecast_cache else '''' }}.'
