@@ -59,7 +59,9 @@ TV_IPS = {
 HA_URL = "https://ha.archer.industries"
 # The doorbell: the entity that changes when it's pressed (UniFi Protect:
 # event.<name>_doorbell, or binary_sensor.<name>_doorbell) and its camera.
-DOORBELL_TRIGGER = "binary_sensor.front_doorbell_doorbell"
+# The doorbell's event entity (UniFi Protect): its state is the time of the
+# last ring, so every ring is a state change.
+DOORBELL_TRIGGER = "event.front_doorbell_doorbell"
 DOORBELL_CAMERA = "camera.front_doorbell_high_resolution_channel"
 
 # Colours (hex) used on the TV.
@@ -345,9 +347,13 @@ def automations():
             "mode": "single",
             "max_exceeded": "silent",
             "triggers": [{"trigger": "state", "entity_id": DOORBELL_TRIGGER}],
+            # A ring: a new event time, not the entity coming back after
+            # being unavailable (it then shows its last ring again).
             "conditions": [{"condition": "template", "value_template": (
-                "{{ trigger.to_state.state not in ['unknown', 'unavailable', 'off']"
-                " and trigger.from_state is not none }}")}],
+                "{{ trigger.from_state is not none and trigger.to_state is not none"
+                " and trigger.from_state.state != 'unavailable'"
+                " and trigger.to_state.state not in ['unknown', 'unavailable']"
+                " and trigger.to_state.attributes.get('event_type', 'ring') == 'ring' }}")}],
             "actions": [
                 popup("Someone's at the door", "Front doorbell", "mdi:doorbell-video",
                       AMBER, 25, corner="top_end", id="doorbell",
