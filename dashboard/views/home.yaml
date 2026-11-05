@@ -387,11 +387,12 @@ sections:
       # Laundry (packages/laundry.yaml): only while a machine is running or
       # has a finished load in it. "Done" tiles: tap once it's emptied.
       - type: tile
-        entity: input_select.washer_state
+        # "Running", or WashData's program and time left once it's set up.
+        entity: sensor.washer_cycle
         name: Washer
         icon: mdi:washing-machine
         color: blue
-        state_content: [state, last_changed]
+        state_content: state
         tap_action: &laundry_info
           action: navigate
           navigation_path: /wall-tablet/devices
@@ -415,11 +416,12 @@ sections:
             entity: input_select.washer_state
             state: Done
       - type: tile
-        entity: input_select.dryer_state
+        # "Running", or WashData's program and time left once it's set up.
+        entity: sensor.dryer_cycle
         name: Dryer
         icon: mdi:tumble-dryer
         color: deep-orange
-        state_content: [state, last_changed]
+        state_content: state
         tap_action: *laundry_info
         visibility:
           - condition: state

@@ -8,6 +8,14 @@
 #
 # Thresholds/delays are STARTING GUESSES. Tune them with
 # tools/laundry_profile.py after one normal cycle on each machine.
+#
+# Optional extras, both idle until they exist (docs/laundry.md):
+# - WashData (HACS integration), devices named "WashData Washer" and
+#   "WashData Dryer": program and time left on the Home tiles, the program
+#   in the "done" notification. Our own detection below stays in charge.
+# - An IKEA BILRESA dual button by the machines, its two event entities
+#   renamed event.laundry_button_washer / event.laundry_button_dryer:
+#   press = that machine emptied, long press = both.
 
 # ---------- Who gets the push notifications ----------
 # One entry per phone running the Home Assistant Companion app. The names are
@@ -74,6 +82,36 @@ template:
         # Wrinkle-guard tumbles are short bursts after the cycle; a real cycle runs far longer.
         delay_on: "00:02:00"
         delay_off: "00:01:30"
+
+  - sensor:
+      # What the Home tile says while a machine runs: WashData's program and
+      # time left once it's set up ("Normal · 23 min left"), else "Running".
+      - name: Washer cycle
+        unique_id: laundry_washer_cycle
+        icon: mdi:washing-machine
+        state: >-
+          {%- set prog = states('sensor.washdata_washer_program') %}
+          {%- set left = states('sensor.washdata_washer_time_remaining') %}
+          {%- set parts = ([prog] if prog not in ['unknown', 'unavailable', 'none', 'None', '']
+                           else [])
+                          + ([(left | float | round(0) | int) ~ ' min left']
+                             if left | is_number and left | float > 0 else []) %}
+          {{ parts | join(' · ') if parts else 'Running' }}
+        attributes:
+          progress: "{{ states('sensor.washdata_washer_progress') | float(none) }}"
+      - name: Dryer cycle
+        unique_id: laundry_dryer_cycle
+        icon: mdi:tumble-dryer
+        state: >-
+          {%- set prog = states('sensor.washdata_dryer_program') %}
+          {%- set left = states('sensor.washdata_dryer_time_remaining') %}
+          {%- set parts = ([prog] if prog not in ['unknown', 'unavailable', 'none', 'None', '']
+                           else [])
+                          + ([(left | float | round(0) | int) ~ ' min left']
+                             if left | is_number and left | float > 0 else []) %}
+          {{ parts | join(' · ') if parts else 'Running' }}
+        attributes:
+          progress: "{{ states('sensor.washdata_dryer_progress') | float(none) }}"
 
 script:
   laundry_notify:
@@ -154,9 +192,11 @@ automation:
         data:
           appliance: washer
           message: >
+            {%- set prog = states('sensor.washdata_washer_program') %}
             Washer is done
             ({{ ((now() - states('input_datetime.washer_cycle_start') | as_datetime | as_local)
-                 .total_seconds() / 60) | round(0) | int }} min).
+                 .total_seconds() / 60) | round(0) | int }} min
+            {{- ', ' ~ prog if prog not in ['unknown', 'unavailable', 'none', 'None', ''] else '' }}).
 
   - id: laundry_washer_reminder
     alias: Laundry - washer reminder
@@ -222,9 +262,11 @@ automation:
         data:
           appliance: dryer
           message: >
+            {%- set prog = states('sensor.washdata_dryer_program') %}
             Dryer is done
             ({{ ((now() - states('input_datetime.dryer_cycle_start') | as_datetime | as_local)
-                 .total_seconds() / 60) | round(0) | int }} min).
+                 .total_seconds() / 60) | round(0) | int }} min
+            {{- ', ' ~ prog if prog not in ['unknown', 'unavailable', 'none', 'None', ''] else '' }}).
 
   - id: laundry_dryer_reminder
     alias: Laundry - dryer reminder
@@ -267,6 +309,45 @@ automation:
       - action: script.laundry_emptied
         data:
           appliance: "{{ trigger.id }}"
+
+  # The IKEA BILRESA dual button by the machines (Matter over Thread). Its
+  # two buttons are event entities; rename them (⚙ → Entity ID) to these.
+  # Press = that machine emptied, long press = both (a load moved over and
+  # the other one emptied). Only a machine that's Done is touched, so a
+  # stray press can't upset a cycle in progress.
+  - id: laundry_button
+    alias: Laundry - emptied (button by the machines)
+    mode: queued
+    triggers:
+      - trigger: state
+        entity_id:
+          - event.laundry_button_washer
+          - event.laundry_button_dryer
+    conditions:
+      # A press (a new event), not the button reconnecting.
+      - condition: template
+        value_template: >-
+          {{ trigger.from_state is not none and trigger.to_state is not none
+             and trigger.from_state.state != 'unavailable'
+             and trigger.to_state.state not in ['unknown', 'unavailable']
+             and trigger.to_state.attributes.get('event_type')
+                 in ['multi_press_1', 'short_release', 'long_press'] }}
+    variables:
+      machines: >-
+        {{ ['washer', 'dryer']
+           if trigger.to_state.attributes.get('event_type') == 'long_press'
+           else [trigger.entity_id.split('_')[-1]] }}
+    actions:
+      - repeat:
+          for_each: "{{ machines }}"
+          sequence:
+            - if:
+                - condition: template
+                  value_template: "{{ is_state('input_select.' ~ repeat.item ~ '_state', 'Done') }}"
+              then:
+                - action: script.laundry_emptied
+                  data:
+                    appliance: "{{ repeat.item }}"
 
   # Once a load is dealt with (button on a phone, the wall tablet, the
   # 6-hour timeout, or a new cycle starting), take the notification off
