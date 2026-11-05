@@ -64,7 +64,10 @@ power.
 3. Adopt them in **Settings → Devices & services → ESPHome**. With the
    friendly names "Washer" / "Dryer" and no MAC suffix, the power sensors
    are `sensor.washer_power` and `sensor.dryer_power`, which is what the
-   package expects. Put both in the Laundry area.
+   package expects. Put both in the **Laundry Room** area, then check the
+   IDs are still `sensor.washer_power` / `sensor.dryer_power` (if HA added
+   the room to the front, e.g. `sensor.laundry_room_washer_power`, rename
+   them back under ⚙ → Entity ID).
 4. Plug the washer and dryer into them.
 5. Run one normal cycle on each machine, then tune (below).
 
@@ -122,7 +125,7 @@ back to Idle, notification cleared everywhere.
 1. **Pair it:** Settings → Devices & services → Add device → **Matter**,
    with the Home Assistant app on a phone (it scans the QR code on the
    button). Thread comes from the HA Yellow (OpenThread Border Router
-   add-on). Name the device **Laundry Button**, area Laundry.
+   add-on). Name the device **Laundry Button**, area **Laundry Room**.
 2. **Rename its two event entities** (device page → each event entity → ⚙ →
    Entity ID): the first button to `event.laundry_button_washer`, the second
    to `event.laundry_button_dryer`. Not sure which is which? Press one and
