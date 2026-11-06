@@ -98,40 +98,40 @@ template:
     entity_id: media_player.living_room_main_room_tv_adb
   conditions:
   - condition: template
-    value_template: '{{ (trigger.to_state.attributes.get(''app_id'') or trigger.to_state.attributes.get(''app_name'')) and trigger.to_state.attributes.get(''volume_level'') is number }}'
+    value_template: '{{ (trigger.to_state.attributes.get(''app_id'') or trigger.to_state.attributes.get(''app_name'')) or trigger.to_state.attributes.get(''volume_level'') is number }}'
   sensor:
   - name: TV Main Room TV App
     unique_id: tv_main_room_tv_app
     icon: mdi:application-outline
-    state: '{%- set names = {''org.smarttube.beta'': ''SmartTube'', ''org.smarttube.stable'': ''SmartTube'', ''com.liskovsoft.smarttubetv.beta'': ''SmartTube'', ''com.liskovsoft.smarttubetv'': ''SmartTube'', ''com.google.android.youtube.tv'': ''YouTube'', ''com.netflix.ninja'': ''Netflix'', ''org.jellyfin.androidtv'': ''Jellyfin'', ''com.github.damontecres.wholphin'': ''Wholphin'', ''com.sling'': ''Sling TV'', ''com.collegehumor.chdropout'': ''Dropout'', ''ott.thetryguys'': ''2nd Try'', ''com.spotify.tv.android'': ''Spotify''} %}{%- set package = trigger.to_state.attributes.get(''app_id'') or trigger.to_state.attributes.get(''app_name'') %}{{ names.get(package) or package }}'
+    state: '{%- set names = {''org.smarttube.beta'': ''SmartTube'', ''org.smarttube.stable'': ''SmartTube'', ''com.liskovsoft.smarttubetv.beta'': ''SmartTube'', ''com.liskovsoft.smarttubetv'': ''SmartTube'', ''com.google.android.youtube.tv'': ''YouTube'', ''com.netflix.ninja'': ''Netflix'', ''org.jellyfin.androidtv'': ''Jellyfin'', ''com.github.damontecres.wholphin'': ''Wholphin'', ''com.sling'': ''Sling TV'', ''com.collegehumor.chdropout'': ''Dropout'', ''ott.thetryguys'': ''2nd Try'', ''com.spotify.tv.android'': ''Spotify''} %}{%- set package = (trigger.to_state.attributes.get(''app_id'') or trigger.to_state.attributes.get(''app_name'')) %}{{ names.get(package) or package if package else state_attr(''sensor.tv_main_room_tv_session'', ''app'') or this.state | default('''', true) }}'
     attributes:
-      volume: '{{ ''Muted'' if trigger.to_state.attributes.get(''is_volume_muted'') else (trigger.to_state.attributes.get(''volume_level'') * 100) | round(0) | int ~ ''%'' }}'
+      volume: '{%- set v = trigger.to_state.attributes.get(''volume_level'') %}{{ ''Muted'' if trigger.to_state.attributes.get(''is_volume_muted'') else ((v * 100) | round(0) | int ~ ''%'') if v is number else this.attributes.get(''volume'', '''') }}'
 - triggers:
   - trigger: state
     entity_id: media_player.game_room_game_room_tv_adb
   conditions:
   - condition: template
-    value_template: '{{ (trigger.to_state.attributes.get(''app_id'') or trigger.to_state.attributes.get(''app_name'')) and trigger.to_state.attributes.get(''volume_level'') is number }}'
+    value_template: '{{ (trigger.to_state.attributes.get(''app_id'') or trigger.to_state.attributes.get(''app_name'')) or trigger.to_state.attributes.get(''volume_level'') is number }}'
   sensor:
   - name: TV Game Room TV App
     unique_id: tv_game_room_tv_app
     icon: mdi:application-outline
-    state: '{%- set names = {''org.smarttube.beta'': ''SmartTube'', ''org.smarttube.stable'': ''SmartTube'', ''com.liskovsoft.smarttubetv.beta'': ''SmartTube'', ''com.liskovsoft.smarttubetv'': ''SmartTube'', ''com.google.android.youtube.tv'': ''YouTube'', ''com.netflix.ninja'': ''Netflix'', ''org.jellyfin.androidtv'': ''Jellyfin'', ''com.github.damontecres.wholphin'': ''Wholphin'', ''com.sling'': ''Sling TV'', ''com.collegehumor.chdropout'': ''Dropout'', ''ott.thetryguys'': ''2nd Try'', ''com.spotify.tv.android'': ''Spotify''} %}{%- set package = trigger.to_state.attributes.get(''app_id'') or trigger.to_state.attributes.get(''app_name'') %}{{ names.get(package) or package }}'
+    state: '{%- set names = {''org.smarttube.beta'': ''SmartTube'', ''org.smarttube.stable'': ''SmartTube'', ''com.liskovsoft.smarttubetv.beta'': ''SmartTube'', ''com.liskovsoft.smarttubetv'': ''SmartTube'', ''com.google.android.youtube.tv'': ''YouTube'', ''com.netflix.ninja'': ''Netflix'', ''org.jellyfin.androidtv'': ''Jellyfin'', ''com.github.damontecres.wholphin'': ''Wholphin'', ''com.sling'': ''Sling TV'', ''com.collegehumor.chdropout'': ''Dropout'', ''ott.thetryguys'': ''2nd Try'', ''com.spotify.tv.android'': ''Spotify''} %}{%- set package = (trigger.to_state.attributes.get(''app_id'') or trigger.to_state.attributes.get(''app_name'')) %}{{ names.get(package) or package if package else state_attr(''sensor.tv_game_room_tv_session'', ''app'') or this.state | default('''', true) }}'
     attributes:
-      volume: '{{ ''Muted'' if trigger.to_state.attributes.get(''is_volume_muted'') else (trigger.to_state.attributes.get(''volume_level'') * 100) | round(0) | int ~ ''%'' }}'
+      volume: '{%- set v = trigger.to_state.attributes.get(''volume_level'') %}{{ ''Muted'' if trigger.to_state.attributes.get(''is_volume_muted'') else ((v * 100) | round(0) | int ~ ''%'') if v is number else this.attributes.get(''volume'', '''') }}'
 - triggers:
   - trigger: state
     entity_id: media_player.bedroom_bedroom_tv_adb
   conditions:
   - condition: template
-    value_template: '{{ (trigger.to_state.attributes.get(''app_id'') or trigger.to_state.attributes.get(''app_name'')) and trigger.to_state.attributes.get(''volume_level'') is number }}'
+    value_template: '{{ (trigger.to_state.attributes.get(''app_id'') or trigger.to_state.attributes.get(''app_name'')) or trigger.to_state.attributes.get(''volume_level'') is number }}'
   sensor:
   - name: TV Bedroom TV App
     unique_id: tv_bedroom_tv_app
     icon: mdi:application-outline
-    state: '{%- set names = {''org.smarttube.beta'': ''SmartTube'', ''org.smarttube.stable'': ''SmartTube'', ''com.liskovsoft.smarttubetv.beta'': ''SmartTube'', ''com.liskovsoft.smarttubetv'': ''SmartTube'', ''com.google.android.youtube.tv'': ''YouTube'', ''com.netflix.ninja'': ''Netflix'', ''org.jellyfin.androidtv'': ''Jellyfin'', ''com.github.damontecres.wholphin'': ''Wholphin'', ''com.sling'': ''Sling TV'', ''com.collegehumor.chdropout'': ''Dropout'', ''ott.thetryguys'': ''2nd Try'', ''com.spotify.tv.android'': ''Spotify''} %}{%- set package = trigger.to_state.attributes.get(''app_id'') or trigger.to_state.attributes.get(''app_name'') %}{{ names.get(package) or package }}'
+    state: '{%- set names = {''org.smarttube.beta'': ''SmartTube'', ''org.smarttube.stable'': ''SmartTube'', ''com.liskovsoft.smarttubetv.beta'': ''SmartTube'', ''com.liskovsoft.smarttubetv'': ''SmartTube'', ''com.google.android.youtube.tv'': ''YouTube'', ''com.netflix.ninja'': ''Netflix'', ''org.jellyfin.androidtv'': ''Jellyfin'', ''com.github.damontecres.wholphin'': ''Wholphin'', ''com.sling'': ''Sling TV'', ''com.collegehumor.chdropout'': ''Dropout'', ''ott.thetryguys'': ''2nd Try'', ''com.spotify.tv.android'': ''Spotify''} %}{%- set package = (trigger.to_state.attributes.get(''app_id'') or trigger.to_state.attributes.get(''app_name'')) %}{{ names.get(package) or package if package else state_attr(''sensor.tv_bedroom_tv_session'', ''app'') or this.state | default('''', true) }}'
     attributes:
-      volume: '{{ ''Muted'' if trigger.to_state.attributes.get(''is_volume_muted'') else (trigger.to_state.attributes.get(''volume_level'') * 100) | round(0) | int ~ ''%'' }}'
+      volume: '{%- set v = trigger.to_state.attributes.get(''volume_level'') %}{{ ''Muted'' if trigger.to_state.attributes.get(''is_volume_muted'') else ((v * 100) | round(0) | int ~ ''%'') if v is number else this.attributes.get(''volume'', '''') }}'
 - binary_sensor:
   - name: TV Main Room TV App Playing
     unique_id: tv_main_room_tv_app_playing

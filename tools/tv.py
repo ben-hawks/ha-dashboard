@@ -191,26 +191,32 @@ def app_playing(tv):
 def app_block(tv):
     """sensor.tv_<key>_app: the open app's friendly name, with the TV's
     volume ("7%" or "Muted") as an attribute, for the card. The ADB player
-    blanks these for a moment on every update, so this only updates when
-    both are actually there (trigger-based) and holds them otherwise."""
+    blanks these for a moment on every update, so this is trigger-based and
+    only takes values that are actually there, holding the rest. Some TVs
+    report the volume but never the app (app_id empty): the volume still
+    updates, and the app comes from the media session sensor instead."""
     attrs = "trigger.to_state.attributes"
+    package = f"({attrs}.get('app_id') or {attrs}.get('app_name'))"
+    session_app = f"state_attr('sensor.tv_{tv['key']}_session', 'app')"
     return {
         "triggers": [{"trigger": "state", "entity_id": tv["adb"]}],
         "conditions": [{
             "condition": "template",
-            "value_template": (f"{{{{ ({attrs}.get('app_id') or {attrs}.get('app_name'))"
-                               f" and {attrs}.get('volume_level') is number }}}}"),
+            "value_template": (f"{{{{ {package} or {attrs}.get('volume_level') is number }}}}"),
         }],
         "sensor": [{
             "name": f"TV {tv['name']} App",
             "unique_id": f"tv_{tv['key']}_app",
             "icon": "mdi:application-outline",
             "state": (f"{{%- set names = {APP_NAMES} %}}"
-                      f"{{%- set package = {attrs}.get('app_id') or {attrs}.get('app_name') %}}"
-                      "{{ names.get(package) or package }}"),
+                      f"{{%- set package = {package} %}}"
+                      "{{ names.get(package) or package if package"
+                      f" else {session_app} or this.state | default('', true) }}}}"),
             "attributes": {
-                "volume": (f"{{{{ 'Muted' if {attrs}.get('is_volume_muted') else"
-                           f" ({attrs}.get('volume_level') * 100) | round(0) | int ~ '%' }}}}"),
+                "volume": (f"{{%- set v = {attrs}.get('volume_level') %}}"
+                           f"{{{{ 'Muted' if {attrs}.get('is_volume_muted') else"
+                           " ((v * 100) | round(0) | int ~ '%') if v is number else"
+                           " this.attributes.get('volume', '') }}"),
             },
         }],
     }
