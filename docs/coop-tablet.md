@@ -39,7 +39,7 @@ minutes. Found by the ends of its entity IDs (`_door_mode`, `_controller_sees`,
 `_switch_position`; `tools/coop.py`).
 
 **Door schedule** (`packages/chicken_door.yaml`). The door is forced open 10
-minutes after sunrise and closed 15 minutes after sunset; **Next** counts
+minutes after sunrise and closed at sunset; **Next** counts
 down to the next move, and **Schedule** turns it off (the door goes back to
 Follow switch). Moving the switch on the door overrides it until the next
 sunrise or sunset, and when the door board reconnects (a reboot, or Home

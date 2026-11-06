@@ -1,5 +1,5 @@
-# Chicken door schedule: opens 10 minutes after sunrise, closes 15 minutes
-# after sunset, through the chicken-door ESPHome board's "Door mode" select
+# Chicken door schedule: opens 10 minutes after sunrise, closes at sunset,
+# through the chicken-door ESPHome board's "Door mode" select
 # (esphome add-on: chicken-door.yaml). Loaded as a package (docs/install.md).
 #
 # How it behaves:
@@ -37,7 +37,7 @@ template:
           {{ state_attr('sun.sun', 'next_rising') is not none
              and state_attr('sun.sun', 'next_setting') is not none }}
         state: >-
-          {%- set open_after, close_after = 10, 15 %}
+          {%- set open_after, close_after = 10, 0 %}
           {%- set n = now() %}
           {%- set rise = as_datetime(state_attr('sun.sun', 'next_rising')) | as_local %}
           {%- set sets = as_datetime(state_attr('sun.sun', 'next_setting')) | as_local %}
@@ -59,7 +59,7 @@ template:
           {%- endif %}
         attributes:
           action: >-
-            {%- set open_after, close_after = 10, 15 %}
+            {%- set open_after, close_after = 10, 0 %}
             {%- set n = now() %}
             {%- set rise = as_datetime(state_attr('sun.sun', 'next_rising')) | as_local %}
             {%- set sets = as_datetime(state_attr('sun.sun', 'next_setting')) | as_local %}
@@ -69,7 +69,7 @@ template:
             {%- if close <= n %}{% set close = sets + timedelta(minutes=close_after) %}{% endif %}
             {{ 'open' if open < close else 'close' }}
           at: >-
-            {%- set open_after, close_after = 10, 15 %}
+            {%- set open_after, close_after = 10, 0 %}
             {%- set n = now() %}
             {%- set rise = as_datetime(state_attr('sun.sun', 'next_rising')) | as_local %}
             {%- set sets = as_datetime(state_attr('sun.sun', 'next_setting')) | as_local %}
@@ -79,7 +79,7 @@ template:
             {%- if close <= n %}{% set close = sets + timedelta(minutes=close_after) %}{% endif %}
             {{ [open, close] | min }}
           time: >-
-            {%- set open_after, close_after = 10, 15 %}
+            {%- set open_after, close_after = 10, 0 %}
             {%- set n = now() %}
             {%- set rise = as_datetime(state_attr('sun.sun', 'next_rising')) | as_local %}
             {%- set sets = as_datetime(state_attr('sun.sun', 'next_setting')) | as_local %}
@@ -149,12 +149,13 @@ automation:
           option: Force Open
 
   - id: chicken_door_close_evening
-    alias: "Chicken door: close after sunset"
+    alias: "Chicken door: close at sunset"
     mode: single
     triggers:
       - trigger: sun
         event: sunset
-        offset: "00:15:00"
+        # Add an offset here (e.g. "00:15:00") to close later.
+        offset: "00:00:00"
     conditions:
       - condition: state
         entity_id: input_boolean.chicken_door_schedule
