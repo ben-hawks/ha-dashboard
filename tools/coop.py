@@ -645,10 +645,10 @@ def fan_card():
                       "features_position": "bottom"})),
             group({"type": "grid", "columns": 2, "square": False},
                   find("sensor", "fan_status", {**info, "name": "Fan", "icon": "mdi:fan-alert"}),
-                  find("sensor", "temperature", {**info, "name": "Fan's probe",
+                  find("sensor", "temperature", {**info, "name": "Fan's Temp",
                                                  "icon": "mdi:thermometer",
                                                  "state_content": "state"}),
-                  find("sensor", "humidity", {**info, "name": "Fan's probe",
+                  find("sensor", "humidity", {**info, "name": "Fan's Humidity",
                                               "icon": "mdi:water-percent"}),
                   # Only while the probe has stopped reporting.
                   find("binary_sensor", "sensor_problem",

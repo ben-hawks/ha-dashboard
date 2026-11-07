@@ -285,7 +285,7 @@ cards:
           type: tile
           vertical: false
           tap_action: *id004
-          name: Fan's probe
+          name: Fan's Temp
           icon: mdi:thermometer
           state_content: state
       - domain: sensor
@@ -294,7 +294,7 @@ cards:
           type: tile
           vertical: false
           tap_action: *id004
-          name: Fan's probe
+          name: Fan's Humidity
           icon: mdi:water-percent
       - domain: binary_sensor
         entity_id: '*coop_fan_sensor_problem'

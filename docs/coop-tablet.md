@@ -51,7 +51,7 @@ To change the times, edit the offsets at the top of that file's comments
 board decides from its own probe: too hot, or too damp unless it's too cold
 to vent), **On** and **Off** (manual, back to Auto after "Manual mode
 lasts", 4 h by default). Underneath: why it's on or off ("On (drying
-out)"), its probe's temperature and humidity, and a red warning only while
+out)"), its probe's temperature and humidity (**Fan's Temp**, **Fan's Humidity**), and a red warning only while
 the probe stops reporting. Tap a tile for the details; the thresholds are
 on the Coop Fan device page. Found by the ends of its entity IDs
 (`…coop_fan_fan_mode` etc.), with or without an area prefix.
