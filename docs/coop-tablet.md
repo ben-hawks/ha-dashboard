@@ -6,7 +6,7 @@ A one-screen dashboard at `/chicken-coop/coop`, sized for a 1280×800 tablet.
 |-------|------|
 | Left, top | Coop Cam 1 and Coop Cam 2 side by side |
 | Left, bottom | Chicken Run, wide |
-| Right column | The animated coop scene, chicken comfort, the chicken door, controls, coop graphs |
+| Right column | The animated coop scene, chicken comfort, the chicken door, the exhaust fan, controls, coop graphs |
 
 Only one feed plays live video at a time (Chicken Run by day, Coop Cam 2 at
 night); the others are stills that refresh every 10 seconds. Tap any feed to
@@ -46,6 +46,15 @@ sunrise or sunset, and when the door board reconnects (a reboot, or Home
 Assistant restarting) the schedule puts the door back where it should be.
 To change the times, edit the offsets at the top of that file's comments
 (both places).
+
+**Exhaust fan** (`esphome/coop-fan.yaml`). Three buttons: **Auto** (the
+board decides from its own probe: too hot, or too damp unless it's too cold
+to vent), **On** and **Off** (manual, back to Auto after "Manual mode
+lasts", 4 h by default). Underneath: why it's on or off ("On (drying
+out)"), its probe's temperature and humidity, and a red warning only while
+the probe stops reporting. Tap a tile for the details; the thresholds are
+on the Coop Fan device page. Found by the ends of its entity IDs
+(`…coop_fan_fan_mode` etc.), with or without an area prefix.
 
 **Controls and graphs.** Every light, switch, door and lock in the Chicken
 Coop area, so the automatic door appears once it's in that area; coop

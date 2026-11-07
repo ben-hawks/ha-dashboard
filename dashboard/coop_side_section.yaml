@@ -242,6 +242,72 @@ cards:
           icon: mdi:toggle-switch
   grid_options:
     columns: full
+- type: vertical-stack
+  cards:
+  - type: custom:auto-entities
+    show_empty: false
+    card:
+      type: vertical-stack
+    card_param: cards
+    filter:
+      include:
+      - domain: select
+        entity_id: '*coop_fan_fan_mode'
+        options:
+          type: tile
+          name: Exhaust fan
+          icon: mdi:fan
+          features:
+          - type: select-options
+            style: buttons
+          features_position: bottom
+  - type: custom:auto-entities
+    show_empty: false
+    card:
+      type: grid
+      columns: 2
+      square: false
+    card_param: cards
+    filter:
+      include:
+      - domain: sensor
+        entity_id: '*coop_fan_fan_status'
+        options:
+          type: tile
+          vertical: false
+          tap_action: &id004
+            action: more-info
+          name: Fan
+          icon: mdi:fan-alert
+      - domain: sensor
+        entity_id: '*coop_fan_temperature'
+        options:
+          type: tile
+          vertical: false
+          tap_action: *id004
+          name: Fan's probe
+          icon: mdi:thermometer
+          state_content: state
+      - domain: sensor
+        entity_id: '*coop_fan_humidity'
+        options:
+          type: tile
+          vertical: false
+          tap_action: *id004
+          name: Fan's probe
+          icon: mdi:water-percent
+      - domain: binary_sensor
+        entity_id: '*coop_fan_sensor_problem'
+        options:
+          type: tile
+          vertical: false
+          tap_action: *id004
+          name: Fan's probe isn't reporting
+          color: red
+          icon: mdi:alert
+        state: 'on'
+  grid_options:
+    columns: full
 - type: custom:auto-entities
   show_empty: false
   card:
@@ -265,7 +331,7 @@ cards:
         - type: lock-commands
     - area: chicken_coop
       domain: light
-      options: &id004
+      options: &id005
         type: tile
         tap_action:
           action: toggle
@@ -273,10 +339,11 @@ cards:
           action: more-info
     - area: chicken_coop
       domain: switch
-      options: *id004
+      options: *id005
     exclude:
     - entity_id: '*chicken_cam_*'
     - entity_id: '*chicken_run_*'
+    - entity_id: '*coop_fan_*'
     - integration: unifi
   sort:
     method: name
@@ -298,7 +365,7 @@ cards:
     animate: false
     font_size: 70
     font_size_header: 12
-    show: &id005
+    show: &id006
       icon: true
       name: true
       state: true
@@ -336,7 +403,7 @@ cards:
     animate: false
     font_size: 70
     font_size_header: 12
-    show: *id005
+    show: *id006
     name: Coop humidity
     icon: mdi:water-percent
     entities:

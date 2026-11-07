@@ -563,7 +563,9 @@ def controls():
                 {"area": "chicken_coop", "domain": "light", "options": toggle},
                 {"area": "chicken_coop", "domain": "switch", "options": toggle},
             ],
+            # The fan has its own card (fan_card); its spare relays stay out.
             "exclude": [{"entity_id": "*chicken_cam_*"}, {"entity_id": "*chicken_run_*"},
+                        {"entity_id": "*coop_fan_*"},
                         {"integration": "unifi"}],
         },
         "sort": {"method": "name"},
@@ -618,6 +620,44 @@ def door_card():
     }
 
 
+def fan_card():
+    """The exhaust fan (esphome/coop-fan.yaml): its mode as three buttons
+    (Auto / On / Off), why it's on or off ("On (drying out)"), what its own
+    probe reads, and a warning while that probe isn't reporting. Tap the
+    status for the thresholds (Cool down above, Dry out above, Don't vent
+    below, Manual mode lasts) on the device. Found by the ends of the
+    entity IDs (…coop_fan_fan_mode etc.), with or without an area prefix;
+    hidden until the board exists."""
+    def find(domain, suffix, options, **extra):
+        return {"domain": domain, "entity_id": f"*coop_fan_{suffix}", "options": options, **extra}
+    info = {"type": "tile", "vertical": False, "tap_action": {"action": "more-info"}}
+
+    def group(card, *filters):
+        return {"type": "custom:auto-entities", "show_empty": False,
+                "card": card, "card_param": "cards", "filter": {"include": list(filters)}}
+    return {
+        "type": "vertical-stack",
+        "cards": [
+            group({"type": "vertical-stack"},
+                  find("select", "fan_mode", {
+                      "type": "tile", "name": "Exhaust fan", "icon": "mdi:fan",
+                      "features": [{"type": "select-options", "style": "buttons"}],
+                      "features_position": "bottom"})),
+            group({"type": "grid", "columns": 2, "square": False},
+                  find("sensor", "fan_status", {**info, "name": "Fan", "icon": "mdi:fan-alert"}),
+                  find("sensor", "temperature", {**info, "name": "Fan's probe",
+                                                 "icon": "mdi:thermometer",
+                                                 "state_content": "state"}),
+                  find("sensor", "humidity", {**info, "name": "Fan's probe",
+                                              "icon": "mdi:water-percent"}),
+                  # Only while the probe has stopped reporting.
+                  find("binary_sensor", "sensor_problem",
+                       {**info, "name": "Fan's probe isn't reporting", "color": "red",
+                        "icon": "mdi:alert"}, state="on")),
+        ],
+    }
+
+
 def section():
     return {
         "type": "grid",
@@ -625,6 +665,7 @@ def section():
             {**scene_card(), "grid_options": {"columns": "full"}},
             {**comfort_card(), "grid_options": {"columns": "full"}},
             {**door_card(), "grid_options": {"columns": "full"}},
+            {**fan_card(), "grid_options": {"columns": "full"}},
             {**controls(), "grid_options": {"columns": "full"}},
             {"type": "grid", "columns": 2, "square": False, "grid_options": {"columns": "full"},
              "cards": coop_graphs()},
