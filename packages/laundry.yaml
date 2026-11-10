@@ -13,8 +13,8 @@
 # - WashData (HACS integration), devices named "WashData Washer" and
 #   "WashData Dryer": program and time left on the Home tiles, the program
 #   in the "done" notification. Our own detection below stays in charge.
-# - An IKEA BILRESA dual button by the machines, its two event entities
-#   renamed event.laundry_button_washer / event.laundry_button_dryer:
+# - An IKEA BILRESA dual button by the machines ("Laundry Empty Button";
+#   event.laundry_room_laundry_empty_button_button_1 = washer, _2 = dryer):
 #   press = that machine emptied, long press = both.
 
 # ---------- Who gets the push notifications ----------
@@ -310,19 +310,20 @@ automation:
         data:
           appliance: "{{ trigger.id }}"
 
-  # The IKEA BILRESA dual button by the machines (Matter over Thread). Its
-  # two buttons are event entities; rename them (⚙ → Entity ID) to these.
-  # Press = that machine emptied, long press = both (a load moved over and
-  # the other one emptied). Only a machine that's Done is touched, so a
-  # stray press can't upset a cycle in progress.
+  # The IKEA BILRESA dual button by the machines (Matter over Thread, device
+  # "Laundry Empty Button"): button 1 = washer, button 2 = dryer. Press =
+  # that machine emptied, long press = both (a load moved over and the
+  # other one emptied). Only a machine that's Done is touched, so a stray
+  # press can't upset a cycle in progress. It reports multi_press_1 /
+  # multi_press_2 / long_press / long_release.
   - id: laundry_button
     alias: Laundry - emptied (button by the machines)
     mode: queued
     triggers:
       - trigger: state
         entity_id:
-          - event.laundry_button_washer
-          - event.laundry_button_dryer
+          - event.laundry_room_laundry_empty_button_button_1
+          - event.laundry_room_laundry_empty_button_button_2
     conditions:
       # A press (a new event), not the button reconnecting.
       - condition: template
@@ -336,7 +337,7 @@ automation:
       machines: >-
         {{ ['washer', 'dryer']
            if trigger.to_state.attributes.get('event_type') == 'long_press'
-           else [trigger.entity_id.split('_')[-1]] }}
+           else ['washer' if trigger.entity_id.endswith('_1') else 'dryer'] }}
     actions:
       - repeat:
           for_each: "{{ machines }}"

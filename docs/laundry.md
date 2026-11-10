@@ -125,18 +125,18 @@ back to Idle, notification cleared everywhere.
 1. **Pair it:** Settings → Devices & services → Add device → **Matter**,
    with the Home Assistant app on a phone (it scans the QR code on the
    button). Thread comes from the HA Yellow (OpenThread Border Router
-   add-on). Name the device **Laundry Button**, area **Laundry Room**.
-2. **Rename its two event entities** (device page → each event entity → ⚙ →
-   Entity ID): the first button to `event.laundry_button_washer`, the second
-   to `event.laundry_button_dryer`. Not sure which is which? Press one and
-   see which entity's time changes.
-3. Test: with a machine on Done (or set `input_select.washer_state` to Done
+   add-on). Ours is named **Laundry Empty Button**, area Laundry Room, so
+   its buttons are `event.laundry_room_laundry_empty_button_button_1`
+   (washer) and `…_button_2` (dryer). A different name means different
+   IDs: update them in the `laundry_button` automation.
+2. Test: with a machine on Done (or set `input_select.washer_state` to Done
    in Developer Tools → States), press its button; it should go to Idle.
 
 If a press does nothing, look at the event entity's **event_type** after a
 press (Developer Tools → States). The automation (`laundry_button` in
 `packages/laundry.yaml`) acts on `multi_press_1`, `short_release` and
-`long_press`; if the button reports other names, add them there.
+`long_press` (the BILRESA reports `multi_press_1`, `multi_press_2`,
+`long_press` and `long_release`); if the button reports other names, add them there.
 
 ## WashData (once the plugs work)
 
