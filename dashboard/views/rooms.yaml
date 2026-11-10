@@ -114,6 +114,26 @@ sections:
       - type: heading
         heading: Bedroom
         icon: mdi:bed
+      # Ceiling fan and its light, through the Hunter RF bridge (ESPHome
+      # "Bedroom Fan"). RF has no feedback: HA tracks what it sent and the
+      # wall remote's presses, so a press nobody heard can leave it out of
+      # step; press again to resync.
+      - type: tile
+        entity: fan.bedroom_fan_remote
+        name: Ceiling fan
+        grid_options:
+          columns: full
+        tap_action: *toggle
+        hold_action: *more_info
+        features:
+          - type: fan-speed
+            style: icons
+      - type: tile
+        entity: light.bedroom_fan_remote_light
+        name: Fan light
+        icon: mdi:ceiling-fan-light
+        tap_action: *toggle
+        hold_action: *more_info
       - type: tile
         entity: media_player.bedroom_tv_2
         name: TV
