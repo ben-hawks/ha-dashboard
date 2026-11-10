@@ -5,27 +5,35 @@
 # Hunter ceiling fan over 433.92 MHz, on a LilyGO T3 LoRa32 V1.6.1 (433 MHz,
 # ESP32 + SX1278). See docs/hunter-fan.md.
 #
-# PHASE 1: SNIFFER. This build only listens. It logs every packet it hears
-# from the Hunter remote (K5579-02 / 99372, FCC ID IN2TX50) so we can work
-# out each button's code. Nothing here transmits.
-#   - Logs: "Remote" dumps (rc_switch, raw timings and any other protocol
-#     that matches) in the ESPHome logs.
-#   - "Last RF code" in HA: the last rc_switch decode, e.g. "P6 0x1A2B3C".
-#   - The blue LED flashes on each rc_switch decode.
+# PHASE 2: REPLAY. The remote (K5579-02 / 99372, FCC ID IN2TX50) sends fixed
+# codes, decoded from captures (docs/hunter-fan.md has the details):
+#   - Each press: 12 short wake-up pulses, a gap, then a 65-bit frame, sent
+#     about 3 times. Bits are pulse-width coded, about 390 us per unit:
+#     0 = 1 unit on, 2 off; 1 = 2 on, 1 off. A short pulse ends the frame.
+#   - The first 20 bits are a header (19 zeros, then 1), then a 24-bit
+#     remote ID, then 21 bits for the button.
+#
+# Home Assistant gets:
+#   - Buttons: Light, Fan power, Fan faster, Fan slower. Each sends that code.
+#   - "Remote button" event: fires once per press of the real remote (light,
+#     fan_power, speed_up, speed_down).
+# The gaps between the wake-up pulses and the frame, and between repeats,
+# aren't known yet. The DEBUG log prints each burst's layout ("Frame: 23, gap
+# 5800 us, 131, ...") so they can be read off a press and set below.
 #
 # Screen (0.96" OLED), two pages; the BOOT button (GPIO0) flips between them:
-#   1. Status: Wi-Fi/HA link, then the last code, how long ago, and how many
-#      times it repeated in one press (xN). Phase 3 replaces this with the
-#      fan speed and light.
-#   2. Radio: frequency and floor, frames heard (incl. noise) and codes
-#      decoded, the last frame's length, IP, uptime.
+#   1. Status: HA link, the last button (from the remote or sent from HA),
+#      how long ago, how many frames that press had (xN). Phase 3 replaces
+#      this with the fan speed and light.
+#   2. Radio: frequency and floor, bursts heard (noise included) vs Hunter
+#      frames decoded, the last burst's length, IP, uptime.
 # The screen goes dark after "Screen timeout" minutes (HA, default 5, 0 =
-# always on) to spare the OLED, and wakes on a remote press or the button.
+# always on) to spare the OLED, and wakes on a press or the BOOT button.
 #
 # Radio: the SX1278 runs in OOK continuous mode and puts the demodulated
 # signal on DIO2 (GPIO32). The receiver and the transmitter share that pin,
 # so both are open drain, and the transmitter flips the radio to TX and back.
-# Attach the 433 MHz antenna before anything is allowed to transmit.
+# THIS BUILD TRANSMITS: keep the 433 MHz antenna attached.
 
 substitutions:
   name: hunter-fan-rf
@@ -34,6 +42,22 @@ substitutions:
   # device nearby. Raise it more (e.g. "-65") if that still shows up; lower it
   # (e.g. "-85") if the Hunter remote isn't heard.
   rx_floor: "-75"
+  # Transmit power, dBm (BOOST pin: 2-17). Raise it if the fan doesn't react.
+  tx_power: "10"
+
+  # The four buttons, 65 bits each, as captured.
+  code_light: "00000000000000000001001110010101110101111001100000000110011111111"
+  code_fan_power: "00000000000000000001001110010101110101111000000100011111111011100"
+  code_speed_up: "00000000000000000001001110010101110101111001000000001110111111110"
+  code_speed_down: "00000000000000000001001110010101110101111001000000010110111111101"
+
+  # Timing for sending, microseconds unless noted.
+  t_short: "390"
+  t_long: "780"
+  pre_pulses: "12"       # wake-up pulses before each frame
+  pre_gap_us: "6000"     # gap after the wake-up pulses (guess, to be measured)
+  repeat_gap_ms: "10"    # gap between repeats (guess, to be measured)
+  tx_repeats: "3"        # frames per press
 
 esphome:
   name: ${name}
@@ -83,7 +107,7 @@ sx127x:
   bandwidth: 50_0kHz
   rx_floor: ${rx_floor}
   pa_pin: BOOST
-  pa_power: 10
+  pa_power: ${tx_power}
 
 remote_receiver:
   id: rf_rx
@@ -96,40 +120,68 @@ remote_receiver:
       pullup: true
       open_drain: true
   filter: 50us
-  idle: 4ms
+  # Long enough that a whole press (wake-up pulses, frames and the gaps
+  # between them) arrives as one burst, so the log shows the gaps.
+  idle: 30ms
   tolerance: 25%
   buffer_size: 10kb
-  dump: all
-  # Every frame, noise included: shows whether the radio hears anything.
+  # No generic dumps: they mis-decode this remote as other protocols and
+  # stall the loop. The lambda below decodes Hunter frames instead.
   on_raw:
     then:
       - lambda: |-
           id(rx_frames)++;
           id(last_frame_len) = x.size();
-  on_rc_switch:
-    then:
-      - lambda: |-
-          char buf[40];
-          snprintf(buf, sizeof(buf), "P%u 0x%llX", (unsigned) x.protocol,
-                   (unsigned long long) x.code);
-          std::string code(buf);
           uint32_t now = millis();
-          // The remote repeats a code several times per press; frames less
-          // than 500 ms apart with the same code count as one press.
-          if (code == id(last_code).state && now - id(last_code_ms) < 500)
-            id(repeats)++;
-          else
-            id(repeats) = 1;
-          id(last_code_ms) = now;
-          id(rx_codes)++;
-          if (code != id(last_code).state) id(last_code).publish_state(code);
-      - script.execute: wake_screen
-      - output.turn_on: led
-      - delay: 100ms
-      - output.turn_off: led
+          // Split the burst at spaces over 2 ms (the longest space inside
+          // a frame is about 0.8 ms) and decode each 131-step segment:
+          // 65 bits (on + off each), then the closing pulse.
+          std::string layout;
+          size_t start = 0;
+          for (size_t i = 0; i <= x.size(); i++) {
+            bool gap = i < x.size() && x[i] < -2000;
+            if (i < x.size() && !gap) continue;
+            size_t n = i - start;
+            char part[40];
+            if (gap) snprintf(part, sizeof(part), "%u, gap %d us, ", (unsigned) n, (int) -x[i]);
+            else snprintf(part, sizeof(part), "%u", (unsigned) n);
+            layout += part;
+            if (n == 131) {
+              std::string bits;
+              bool ok = true;
+              for (size_t b = 0; b < 65 && ok; b++) {
+                int32_t m = x[start + 2 * b], s = -x[start + 2 * b + 1];
+                ok = m > 200 && m < 1200 && s > 200 && s < 1200;
+                bits += m > s ? '1' : '0';
+              }
+              if (ok && bits.compare(0, 20, "00000000000000000001") == 0) {
+                id(hunter_frames)++;
+                if (bits == id(last_bits) && now - id(last_ms) < 500) {
+                  id(repeats)++;   // another copy of the same press
+                } else {
+                  int which = -1;
+                  for (size_t k = 0; k < id(hunter_codes).size(); k++)
+                    if (bits == id(hunter_codes)[k]) which = k;
+                  id(last_bits) = bits;
+                  id(last_button) = which;
+                  id(last_from_ha) = false;
+                  id(repeats) = 1;
+                  id(presses)++;
+                  if (which >= 0) {
+                    ESP_LOGI("hunter", "Remote: %s", id(button_names)[which].c_str());
+                    id(remote_button).trigger(id(event_types)[which]);
+                  } else {
+                    ESP_LOGW("hunter", "Unknown Hunter code: %s", bits.c_str());
+                  }
+                  id(wake_screen).execute();
+                }
+                id(last_ms) = now;
+              }
+            }
+            start = i + 1;
+          }
+          if (x.size() > 40) ESP_LOGD("hunter", "Frame: %s", layout.c_str());
 
-# Not used yet (phase 2 adds buttons that send codes). Configured now so the
-# shared pin and the RX/TX switching are tested from the start.
 remote_transmitter:
   id: rf_tx
   pin:
@@ -156,19 +208,41 @@ remote_transmitter:
       - lambda: id(tx_active) = false;
 
 # ---------------------------------------------------------------------------
-# Screen (SSD1306 128x64 on I2C)
+# Buttons, codes and state
 # ---------------------------------------------------------------------------
 globals:
-  - id: rx_frames        # frames heard, noise included
+  # Same order everywhere: 0 Light, 1 Fan power, 2 Faster, 3 Slower.
+  - id: hunter_codes
+    type: std::vector<std::string>
+    initial_value: '{"${code_light}", "${code_fan_power}", "${code_speed_up}", "${code_speed_down}"}'
+  - id: button_names
+    type: std::vector<std::string>
+    initial_value: '{"Light", "Fan power", "Faster", "Slower"}'
+  - id: event_types
+    type: std::vector<std::string>
+    initial_value: '{"light", "fan_power", "speed_up", "speed_down"}'
+
+  - id: rx_frames        # bursts heard, noise included
     type: uint32_t
     initial_value: "0"
-  - id: last_frame_len   # pulses in the last frame
+  - id: last_frame_len   # steps (on/off times) in the last burst
     type: uint32_t
     initial_value: "0"
-  - id: rx_codes         # rc_switch decodes
+  - id: hunter_frames    # Hunter frames decoded
     type: uint32_t
     initial_value: "0"
-  - id: last_code_ms
+  - id: presses          # remote presses (frames of one press count once)
+    type: uint32_t
+    initial_value: "0"
+  - id: last_button      # index above, -1 = unknown code
+    type: int
+    initial_value: "-1"
+  - id: last_bits        # last code heard, to group a press's frames
+    type: std::string
+  - id: last_from_ha     # last button was sent from HA, not the remote
+    type: bool
+    initial_value: "false"
+  - id: last_ms
     type: uint32_t
     initial_value: "0"
   - id: repeats          # frames in the last press
@@ -184,6 +258,95 @@ globals:
     type: bool
     initial_value: "true"
 
+button:
+  - platform: template
+    name: Light
+    icon: mdi:lightbulb
+    on_press:
+      - script.execute:
+          id: send_hunter
+          which: 0
+  - platform: template
+    name: Fan power
+    icon: mdi:fan
+    on_press:
+      - script.execute:
+          id: send_hunter
+          which: 1
+  - platform: template
+    name: Fan faster
+    icon: mdi:fan-plus
+    on_press:
+      - script.execute:
+          id: send_hunter
+          which: 2
+  - platform: template
+    name: Fan slower
+    icon: mdi:fan-minus
+    on_press:
+      - script.execute:
+          id: send_hunter
+          which: 3
+
+event:
+  - platform: template
+    id: remote_button
+    name: Remote button
+    icon: mdi:remote
+    event_types: [light, fan_power, speed_up, speed_down]
+
+script:
+  # Send one button's code the way the remote does.
+  - id: send_hunter
+    mode: queued
+    max_runs: 4
+    parameters:
+      which: int
+    then:
+      - lambda: |-
+          ESP_LOGI("hunter", "Sending: %s", id(button_names)[which].c_str());
+          id(last_button) = which;
+          id(last_bits) = "";
+          id(last_from_ha) = true;
+          id(repeats) = ${tx_repeats};
+          id(last_ms) = millis();
+      - script.execute: wake_screen
+      - remote_transmitter.transmit_raw:
+          transmitter_id: rf_tx
+          code: !lambda |-
+            const std::string &bits = id(hunter_codes)[which];
+            std::vector<int32_t> out;
+            out.reserve(2 * ${pre_pulses} + 2 * bits.size() + 1);
+            for (int i = 0; i < ${pre_pulses}; i++) {
+              out.push_back(${t_short});
+              out.push_back(-${t_short});
+            }
+            out.back() = -${pre_gap_us};
+            for (char c : bits) {
+              if (c == '1') { out.push_back(${t_long});  out.push_back(-${t_short}); }
+              else          { out.push_back(${t_short}); out.push_back(-${t_long}); }
+            }
+            out.push_back(${t_short});   // closing pulse
+            return out;
+          repeat:
+            times: ${tx_repeats}
+            wait_time: ${repeat_gap_ms}ms
+
+  # Something happened: light the screen (back on the status page if it was
+  # dark) and restart the timeout.
+  - id: wake_screen
+    then:
+      - lambda: |-
+          id(last_activity) = millis();
+          if (!id(screen_on)) {
+            id(screen_on) = true;
+            id(oled).show_page(id(page_status));
+            id(oled).turn_on();
+          }
+
+# ---------------------------------------------------------------------------
+# Screen (SSD1306 128x64 on I2C)
+# ---------------------------------------------------------------------------
 i2c:
   sda: GPIO21
   scl: GPIO22
@@ -217,24 +380,24 @@ display:
             it.print(64, 38, id(font_big), TextAlign::CENTER, "Sending");
             return;
           }
-          if (id(rx_codes) == 0) {
+          if (id(last_ms) == 0) {
             it.print(64, 30, id(font_big), TextAlign::CENTER, "Listening");
             it.print(64, 52, id(font_small), TextAlign::CENTER, "press a remote button");
             return;
           }
-          it.print(0, 15, id(font_small), "Last code");
-          if (id(repeats) > 1)
+          it.print(0, 15, id(font_small), id(last_from_ha) ? "Sent from HA" : "Remote");
+          if (!id(last_from_ha) && id(repeats) > 1)
             it.printf(127, 15, id(font_small), TextAlign::TOP_RIGHT, "x%u",
                       (unsigned) id(repeats));
-          const std::string &code = id(last_code).state;
-          it.print(0, 27, code.size() > 11 ? id(font_small) : id(font_big),
-                   code.c_str());
-          uint32_t s = (millis() - id(last_code_ms)) / 1000;
+          int b = id(last_button);
+          it.print(0, 27, id(font_big),
+                   b >= 0 ? id(button_names)[b].c_str() : "Unknown code");
+          uint32_t s = (millis() - id(last_ms)) / 1000;
           if (s < 60)        it.printf(0, 53, id(font_small), "%us ago", (unsigned) s);
           else if (s < 3600) it.printf(0, 53, id(font_small), "%um ago", (unsigned) (s / 60));
           else               it.printf(0, 53, id(font_small), "%uh ago", (unsigned) (s / 3600));
-          it.printf(127, 53, id(font_small), TextAlign::TOP_RIGHT, "%u codes",
-                    (unsigned) id(rx_codes));
+          it.printf(127, 53, id(font_small), TextAlign::TOP_RIGHT, "%u presses",
+                    (unsigned) id(presses));
       - id: page_radio
         lambda: |-
           it.print(0, 0, id(font_small), "Radio");
@@ -242,27 +405,14 @@ display:
                    id(tx_active) ? "TX" : "RX");
           it.horizontal_line(0, 12, 128);
           it.print(0, 14, id(font_small), "433.92 MHz OOK, floor ${rx_floor}");
-          it.printf(0, 26, id(font_small), "Frames %u, codes %u",
-                    (unsigned) id(rx_frames), (unsigned) id(rx_codes));
-          it.printf(0, 38, id(font_small), "Last frame %u pulses",
+          it.printf(0, 26, id(font_small), "Bursts %u, Hunter %u",
+                    (unsigned) id(rx_frames), (unsigned) id(hunter_frames));
+          it.printf(0, 38, id(font_small), "Last burst %u steps",
                     (unsigned) id(last_frame_len));
           uint32_t up = id(uptime_s).state;
           it.printf(0, 50, id(font_small), "%s", id(ip_addr).state.c_str());
           it.printf(127, 50, id(font_small), TextAlign::TOP_RIGHT, "up %uh%02um",
                     (unsigned) (up / 3600), (unsigned) (up / 60 % 60));
-
-script:
-  # Something happened: light the screen (back on the status page if it was
-  # dark) and restart the timeout.
-  - id: wake_screen
-    then:
-      - lambda: |-
-          id(last_activity) = millis();
-          if (!id(screen_on)) {
-            id(screen_on) = true;
-            id(oled).show_page(id(page_status));
-            id(oled).turn_on();
-          }
 
 interval:
   - interval: 5s
@@ -318,16 +468,7 @@ binary_sensor:
             - component.update: oled
       - script.execute: wake_screen
 
-output:
-  - platform: gpio
-    id: led
-    pin: GPIO25
-
 text_sensor:
-  - platform: template
-    id: last_code
-    name: Last RF code
-    icon: mdi:remote
   - platform: wifi_info
     ip_address:
       id: ip_addr
