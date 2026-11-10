@@ -59,9 +59,10 @@ Device **Bedroom Fan** (ESPHome `hunter-fan-rf`):
 
 | Entity | What it does |
 |--------|--------------|
-| `fan.bedroom_fan` | Off / Low / Medium / High. To reach a speed it sends the right number of Faster/Slower presses (about half a second each), plus one extra when going to Low or High. That extra press does nothing if the speed was right, and fixes it if it had drifted. |
+| `fan.bedroom_fan` | Off / Low / Medium / High. To reach a speed it sends the right number of Faster/Slower presses (*Press gap* apart, 1 s by default), plus one extra when going to Low or High. That extra press does nothing if the speed was right, and fixes it if it had drifted. |
 | `light.bedroom_fan_light` | On / off. |
 | `event.bedroom_fan_remote_button` | Fires once for each press of the real remote: `light`, `fan_power`, `speed_up`, `speed_down`. For automations. |
+| *Press gap* (configuration) | Pause between presses when it sends several (e.g. High → Low). Default 1000 ms. At 300 ms the fan only took the first step. If multi-step changes still stop short, raise it. |
 | *Send … code* (configuration) | Sends one code **without** changing what HA thinks the fan is doing. Use these to fix drift. |
 
 Check the entity IDs after the first install: HA may still name them after

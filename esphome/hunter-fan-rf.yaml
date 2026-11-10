@@ -27,7 +27,8 @@
 #     the fan is off. Fan power resumes the last speed.
 # To reach a speed from HA it sends the right number of steps, plus one extra
 # step when going to Low or High (harmless there, and it puts the speed back
-# in line if it had drifted).
+# in line if it had drifted). Steps go out "Press gap" apart (HA, default
+# 1 s): at 0.3 s apart the fan only took the first step.
 # It drifts if a press is missed or the wall switch cuts the power. To fix
 # it: make HA match the room using the HA entity while the room is right
 # again, e.g. light on in the room but off in HA -> press "Send light code"
@@ -73,7 +74,8 @@ substitutions:
   pre_gap_us: "6000"     # gap after the wake-up pulses
   repeat_gap_ms: "10"    # gap between repeats
   tx_repeats: "3"        # frames per press
-  press_gap_ms: "300"    # pause between presses when sending several
+  # The pause between presses when sending several (e.g. High -> Low) is
+  # "Press gap" in HA: the fan ignores a repeat that comes too soon.
 
 esphome:
   name: ${name}
@@ -465,7 +467,7 @@ script:
           repeat:
             times: ${tx_repeats}
             wait_time: ${repeat_gap_ms}ms
-      - delay: ${press_gap_ms}ms
+      - delay: !lambda return (uint32_t) id(press_gap).state;
 
   # Something happened: light the screen (back on the status page if it was
   # dark) and restart the timeout.
@@ -565,6 +567,21 @@ interval:
           }
 
 number:
+  # Pause between presses when sending several in a row. Too short and the
+  # fan takes them as one press.
+  - platform: template
+    id: press_gap
+    name: Press gap
+    icon: mdi:timer-sand
+    entity_category: config
+    unit_of_measurement: ms
+    min_value: 200
+    max_value: 3000
+    step: 100
+    initial_value: 1000
+    optimistic: true
+    restore_value: true
+    mode: box
   - platform: template
     id: screen_timeout
     name: Screen timeout
