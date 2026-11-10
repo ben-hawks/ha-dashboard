@@ -52,8 +52,10 @@ board decides from its own probe: too hot, or too damp unless it's too cold
 to vent), **On** and **Off** (manual, back to Auto after "Manual mode
 lasts", 4 h by default). Underneath: why it's on or off ("On (drying
 out)"), its probe's temperature and humidity (**Fan's Temp**, **Fan's Humidity**), and a red warning only while
-the probe stops reporting. Tap a tile for the details; the thresholds are
-on the Coop Fan device page. Found by the ends of its entity IDs
+the probe stops reporting, and a short summary of the Auto rules with the
+current settings ("runs at 85 °F or hotter, until below 82 °F…"). Tap a
+tile for the details; the settings themselves are on the Coop Fan device
+page, and the summary follows them. Found by the ends of its entity IDs
 (`…coop_fan_fan_mode` etc.), with or without an area prefix.
 
 **Controls and graphs.** Every light, switch, door and lock in the Chicken

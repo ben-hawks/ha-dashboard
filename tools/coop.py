@@ -654,7 +654,35 @@ def fan_card():
                   find("binary_sensor", "sensor_problem",
                        {**info, "name": "Fan's probe isn't reporting", "color": "red",
                         "icon": "mdi:alert"}, state="on")),
+            fan_rules_card(),
         ],
+    }
+
+
+# The on/off gaps built into the firmware (substitutions in coop-fan.yaml).
+FAN_HOT_GAP_F, FAN_DAMP_GAP_PCT = 3, 5
+
+
+def fan_rules_card():
+    """What Auto does, with the board's current settings (the four number
+    entities on the Coop Fan device), so it stays right when they change."""
+    def setting(suffix):
+        return (f"(states.number | selectattr('entity_id', 'search', 'coop_fan_{suffix}$')"
+                " | map(attribute='state') | first | default('?'))")
+    return {
+        "type": "markdown",
+        "text_only": True,
+        "content": (
+            f"{{%- set hot = {setting('cool_down_above')} | float(85) | round(0) | int %}}"
+            f"{{%- set damp = {setting('dry_out_above')} | float(70) | round(0) | int %}}"
+            f"{{%- set cold = {setting('don_t_vent_below')} | float(15) | round(0) | int %}}"
+            f"{{%- set hours = {setting('manual_mode_lasts')} | float(4) | round(0) | int %}}"
+            "**In Auto, the fan runs when**\n"
+            f"- 🌡️ it's **{{{{ hot }}}} °F** or hotter, until it's below {{{{ hot - {FAN_HOT_GAP_F} }}}} °F\n"
+            f"- 💧 humidity is **{{{{ damp }}}} %** or more, until it's below {{{{ damp - {FAN_DAMP_GAP_PCT} }}}} %"
+            " (not when it's below **{{ cold }} °F**: too cold to vent)\n"
+            "- ✋ On / Off by hand lasts "
+            "{{ 'until changed' if hours == 0 else hours ~ ' h, then back to Auto' }}"),
     }
 
 

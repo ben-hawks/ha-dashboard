@@ -306,6 +306,15 @@ cards:
           color: red
           icon: mdi:alert
         state: 'on'
+  - type: markdown
+    text_only: true
+    content: '{%- set hot = (states.number | selectattr(''entity_id'', ''search'', ''coop_fan_cool_down_above$'') | map(attribute=''state'') | first | default(''?'')) | float(85) | round(0) | int %}{%- set damp = (states.number | selectattr(''entity_id'', ''search'', ''coop_fan_dry_out_above$'') | map(attribute=''state'') | first | default(''?'')) | float(70) | round(0) | int %}{%- set cold = (states.number | selectattr(''entity_id'', ''search'', ''coop_fan_don_t_vent_below$'') | map(attribute=''state'') | first | default(''?'')) | float(15) | round(0) | int %}{%- set hours = (states.number | selectattr(''entity_id'', ''search'', ''coop_fan_manual_mode_lasts$'') | map(attribute=''state'') | first | default(''?'')) | float(4) | round(0) | int %}**In Auto, the fan runs when**
+
+      - 🌡️ it''s **{{ hot }} °F** or hotter, until it''s below {{ hot - 3 }} °F
+
+      - 💧 humidity is **{{ damp }} %** or more, until it''s below {{ damp - 5 }} % (not when it''s below **{{ cold }} °F**: too cold to vent)
+
+      - ✋ On / Off by hand lasts {{ ''until changed'' if hours == 0 else hours ~ '' h, then back to Auto'' }}'
   grid_options:
     columns: full
 - type: custom:auto-entities
