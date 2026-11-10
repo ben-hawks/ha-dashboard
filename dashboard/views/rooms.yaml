@@ -114,6 +114,21 @@ sections:
       - type: heading
         heading: Bedroom
         icon: mdi:bed
+      # Ceiling fan via the 433 MHz bridge (esphome/hunter-fan-rf.yaml).
+      # Its state is the bridge's best guess; see docs/hunter-fan.md.
+      - type: tile
+        entity: fan.bedroom_fan
+        name: Fan
+        tap_action: *toggle
+        hold_action: *more_info
+        features:
+          - type: fan-speed
+            style: icons
+      - type: tile
+        entity: light.bedroom_fan_light
+        name: Fan light
+        tap_action: *toggle
+        hold_action: *more_info
       - type: tile
         entity: media_player.bedroom_tv_2
         name: TV

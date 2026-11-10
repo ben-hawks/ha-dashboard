@@ -72,6 +72,9 @@ sections:
             - domain: vacuum
               state: unavailable
               options: *plain_row
+            - domain: fan
+              state: unavailable
+              options: *plain_row
           exclude:
             # Groups go offline with their bulbs; list the bulbs only.
             - entity_id: light.hallway_lights

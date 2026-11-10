@@ -2,47 +2,61 @@
 # Source: github.com/ben-hawks/ha-dashboard, esphome/hunter-fan-rf.yaml
 # API key omitted here; the dashboard copy has it.
 #
-# Hunter ceiling fan over 433.92 MHz, on a LilyGO T3 LoRa32 V1.6.1 (433 MHz,
-# ESP32 + SX1278). See docs/hunter-fan.md.
+# Bedroom ceiling fan (Hunter) over 433.92 MHz, on a LilyGO T3 LoRa32 V1.6.1
+# (433 MHz, ESP32 + SX1278). See docs/hunter-fan.md.
 #
-# PHASE 2: REPLAY. The remote (K5579-02 / 99372, FCC ID IN2TX50) sends fixed
-# codes, decoded from captures (docs/hunter-fan.md has the details):
+# The remote (K5579-02 / 99372, FCC ID IN2TX50) sends fixed codes:
 #   - Each press: 12 short wake-up pulses, a gap, then a 65-bit frame, sent
 #     about 3 times. Bits are pulse-width coded, about 390 us per unit:
 #     0 = 1 unit on, 2 off; 1 = 2 on, 1 off. A short pulse ends the frame.
-#   - The first 20 bits are a header (19 zeros, then 1), then a 24-bit
-#     remote ID, then 21 bits for the button.
+#   - 20-bit header (19 zeros, then 1), 24-bit remote ID, 21 bits of button.
 #
 # Home Assistant gets:
-#   - Buttons: Light, Fan power, Fan faster, Fan slower. Each sends that code.
-#   - "Remote button" event: fires once per press of the real remote (light,
-#     fan_power, speed_up, speed_down).
-# The gaps between the wake-up pulses and the frame, and between repeats,
-# aren't known yet. The DEBUG log prints each burst's layout ("Frame: 23, gap
-# 5800 us, 131, ...") so they can be read off a press and set below.
+#   - Fan "Bedroom Fan": off / Low / Medium / High.
+#   - Light "Bedroom Fan Light": on / off.
+#   - "Remote button" event: fires once per press of the real remote.
+#   - Config: "Send ... code" buttons that send a code WITHOUT changing the
+#     state HA thinks the fan is in. Use them to fix drift (below).
+#
+# State is inferred: the fan never reports back. The board keeps its own
+# idea of the fan (on/off, speed 1-3) and light (on/off), remembered across
+# restarts, and updates it from what it sends and what it hears from the
+# real remote. How the fan reacts (tested):
+#   - Light and Fan power toggle.
+#   - Faster/Slower step the speed, stop at High/Low, and do nothing while
+#     the fan is off. Fan power resumes the last speed.
+# To reach a speed from HA it sends the right number of steps, plus one extra
+# step when going to Low or High (harmless there, and it puts the speed back
+# in line if it had drifted).
+# It drifts if a press is missed or the wall switch cuts the power. To fix
+# it: make HA match the room using the HA entity while the room is right
+# again, e.g. light on in the room but off in HA -> press "Send light code"
+# (room goes off, HA stays off).
+#
+# The board also hears its own transmissions (the receiver and transmitter
+# share GPIO32), so frames heard while sending, or just after, are ignored.
 #
 # Screen (0.96" OLED), two pages; the BOOT button (GPIO0) flips between them:
-#   1. Status: HA link, the last button (from the remote or sent from HA),
-#      how long ago, how many frames that press had (xN). Phase 3 replaces
-#      this with the fan speed and light.
+#   1. Status: HA link, fan speed, light, the last button (from the remote or
+#      HA) and how long ago.
 #   2. Radio: frequency and floor, bursts heard (noise included) vs Hunter
 #      frames decoded, the last burst's length, IP, uptime.
 # The screen goes dark after "Screen timeout" minutes (HA, default 5, 0 =
 # always on) to spare the OLED, and wakes on a press or the BOOT button.
 #
 # Radio: the SX1278 runs in OOK continuous mode and puts the demodulated
-# signal on DIO2 (GPIO32). The receiver and the transmitter share that pin,
-# so both are open drain, and the transmitter flips the radio to TX and back.
+# signal on DIO2 (GPIO32). Both receiver and transmitter use it, open drain,
+# and the transmitter flips the radio to TX and back.
 # THIS BUILD TRANSMITS: keep the 433 MHz antenna attached.
 
 substitutions:
   name: hunter-fan-rf
-  friendly_name: Hunter Fan RF
+  friendly_name: Bedroom Fan
   # Signals weaker than this are ignored. Was -85, which let in another 433 MHz
   # device nearby. Raise it more (e.g. "-65") if that still shows up; lower it
   # (e.g. "-85") if the Hunter remote isn't heard.
   rx_floor: "-75"
-  # Transmit power, dBm (BOOST pin: 2-17). Raise it if the fan doesn't react.
+  # Transmit power, dBm (BOOST pin: 2-17). 10 works from the bedroom.
   tx_power: "10"
 
   # The four buttons, 65 bits each, as captured.
@@ -51,17 +65,25 @@ substitutions:
   code_speed_up: "00000000000000000001001110010101110101111001000000001110111111110"
   code_speed_down: "00000000000000000001001110010101110101111001000000010110111111101"
 
-  # Timing for sending, microseconds unless noted.
+  # Timing for sending, microseconds unless noted. The gaps are guesses
+  # (never measured from the remote), but the fan accepts them.
   t_short: "390"
   t_long: "780"
   pre_pulses: "12"       # wake-up pulses before each frame
-  pre_gap_us: "6000"     # gap after the wake-up pulses (guess, to be measured)
-  repeat_gap_ms: "10"    # gap between repeats (guess, to be measured)
+  pre_gap_us: "6000"     # gap after the wake-up pulses
+  repeat_gap_ms: "10"    # gap between repeats
   tx_repeats: "3"        # frames per press
+  press_gap_ms: "300"    # pause between presses when sending several
 
 esphome:
   name: ${name}
   friendly_name: ${friendly_name}
+  on_boot:
+    priority: -100
+    then:
+      # Show the remembered state in HA, then start acting on changes.
+      - script.execute: publish_state
+      - lambda: id(ready) = true;
 
 esp32:
   board: ttgo-lora32-v21
@@ -120,8 +142,8 @@ remote_receiver:
       pullup: true
       open_drain: true
   filter: 50us
-  # Long enough that a whole press (wake-up pulses, frames and the gaps
-  # between them) arrives as one burst, so the log shows the gaps.
+  # A whole press (wake-up pulses, frames and the gaps between them) arrives
+  # as one burst.
   idle: 30ms
   tolerance: 25%
   buffer_size: 10kb
@@ -133,10 +155,16 @@ remote_receiver:
           id(rx_frames)++;
           id(last_frame_len) = x.size();
           uint32_t now = millis();
+          // Our own transmission, read back off the shared pin.
+          if (id(tx_active) || now - id(tx_end_ms) < 200) {
+            ESP_LOGV("hunter", "Ignored own transmission");
+            return;
+          }
           // Split the burst at spaces over 2 ms (the longest space inside
           // a frame is about 0.8 ms) and decode each 131-step segment:
           // 65 bits (on + off each), then the closing pulse.
           std::string layout;
+          bool any = false;
           size_t start = 0;
           for (size_t i = 0; i <= x.size(); i++) {
             bool gap = i < x.size() && x[i] < -2000;
@@ -155,32 +183,34 @@ remote_receiver:
                 bits += m > s ? '1' : '0';
               }
               if (ok && bits.compare(0, 20, "00000000000000000001") == 0) {
+                any = true;
                 id(hunter_frames)++;
-                if (bits == id(last_bits) && now - id(last_ms) < 500) {
-                  id(repeats)++;   // another copy of the same press
-                } else {
+                // Frames of one press arrive together; count the press once.
+                if (bits != id(last_bits) || now - id(last_rx_ms) > 500) {
                   int which = -1;
                   for (size_t k = 0; k < id(hunter_codes).size(); k++)
                     if (bits == id(hunter_codes)[k]) which = k;
                   id(last_bits) = bits;
-                  id(last_button) = which;
-                  id(last_from_ha) = false;
-                  id(repeats) = 1;
-                  id(presses)++;
                   if (which >= 0) {
                     ESP_LOGI("hunter", "Remote: %s", id(button_names)[which].c_str());
+                    id(last_button) = which;
+                    id(last_from_ha) = false;
+                    id(last_ms) = now;
                     id(remote_button).trigger(id(event_types)[which]);
+                    id(apply_press).execute(which, false);
+                    id(publish_state).execute();
+                    id(wake_screen).execute();
                   } else {
                     ESP_LOGW("hunter", "Unknown Hunter code: %s", bits.c_str());
                   }
-                  id(wake_screen).execute();
                 }
-                id(last_ms) = now;
+                id(last_rx_ms) = now;
               }
             }
             start = i + 1;
           }
-          if (x.size() > 40) ESP_LOGD("hunter", "Frame: %s", layout.c_str());
+          if (any) ESP_LOGD("hunter", "Frame: %s", layout.c_str());
+          else ESP_LOGV("hunter", "Other burst: %s", layout.c_str());
 
 remote_transmitter:
   id: rf_tx
@@ -205,10 +235,103 @@ remote_transmitter:
       - sx127x.set_mode_standby
       - remote_transmitter.digital_write: true
       - sx127x.set_mode_rx
-      - lambda: id(tx_active) = false;
+      - lambda: |-
+          id(tx_active) = false;
+          id(tx_end_ms) = millis();
 
 # ---------------------------------------------------------------------------
-# Buttons, codes and state
+# Fan and light as HA sees them
+# ---------------------------------------------------------------------------
+fan:
+  - platform: template
+    id: bedroom_fan
+    name: None              # the device's name: "Bedroom Fan"
+    speed_count: 3
+    restore_mode: NO_RESTORE   # on_boot restores it from the globals
+    # HA (or the board) changed the fan: send whatever gets the real fan
+    # there from where the board thinks it is. A change that came from the
+    # real remote already matches, so nothing is sent.
+    on_state:
+      - lambda: |-
+          if (!id(ready)) return;
+          bool want_on = id(bedroom_fan).state;
+          int want = id(bedroom_fan).speed;
+          if (want < 1) want = 1;
+          if (want > 3) want = 3;
+          if (!want_on) {
+            if (id(fan_is_on)) id(apply_press).execute(1, true);
+            return;
+          }
+          if (!id(fan_is_on)) id(apply_press).execute(1, true);   // resumes last speed
+          if (want == id(fan_spd)) return;
+          for (int i = 0; i < 3 && id(fan_spd) < want; i++) id(apply_press).execute(2, true);
+          for (int i = 0; i < 3 && id(fan_spd) > want; i++) id(apply_press).execute(3, true);
+          // One more step into the end stop: no change if the speed was
+          // right, a fix if it had drifted.
+          if (want == 3) id(apply_press).execute(2, true);
+          if (want == 1) id(apply_press).execute(3, true);
+
+output:
+  - platform: template
+    id: light_out
+    type: binary
+    write_action:
+      - lambda: |-
+          if (id(ready) && state != id(light_is_on)) id(apply_press).execute(0, true);
+
+light:
+  - platform: binary
+    id: fan_light
+    name: Light
+    icon: mdi:ceiling-fan-light
+    output: light_out
+    restore_mode: ALWAYS_OFF   # on_boot restores it from the globals
+
+event:
+  - platform: template
+    id: remote_button
+    name: Remote button
+    icon: mdi:remote
+    event_types: [light, fan_power, speed_up, speed_down]
+
+# Send a code without changing the state HA thinks the fan is in, to fix
+# drift. Hidden under the device's configuration.
+button:
+  - platform: template
+    name: Send light code
+    icon: mdi:lightbulb
+    entity_category: config
+    on_press:
+      - script.execute:
+          id: send_hunter
+          which: 0
+  - platform: template
+    name: Send fan power code
+    icon: mdi:fan
+    entity_category: config
+    on_press:
+      - script.execute:
+          id: send_hunter
+          which: 1
+  - platform: template
+    name: Send faster code
+    icon: mdi:fan-plus
+    entity_category: config
+    on_press:
+      - script.execute:
+          id: send_hunter
+          which: 2
+  - platform: template
+    name: Send slower code
+    icon: mdi:fan-minus
+    entity_category: config
+    on_press:
+      - script.execute:
+          id: send_hunter
+          which: 3
+
+# ---------------------------------------------------------------------------
+# State and scripts
 # ---------------------------------------------------------------------------
 globals:
   # Same order everywhere: 0 Light, 1 Fan power, 2 Faster, 3 Slower.
@@ -222,6 +345,24 @@ globals:
     type: std::vector<std::string>
     initial_value: '{"light", "fan_power", "speed_up", "speed_down"}'
 
+  # What the board thinks the fan is doing. Remembered across restarts;
+  # the starting values are how the fan was when this was set up.
+  - id: fan_is_on
+    type: bool
+    restore_value: true
+    initial_value: "true"
+  - id: fan_spd          # 1 Low, 2 Medium, 3 High (kept while off)
+    type: int
+    restore_value: true
+    initial_value: "3"
+  - id: light_is_on
+    type: bool
+    restore_value: true
+    initial_value: "false"
+  - id: ready            # false until on_boot has shown the state
+    type: bool
+    initial_value: "false"
+
   - id: rx_frames        # bursts heard, noise included
     type: uint32_t
     initial_value: "0"
@@ -231,26 +372,26 @@ globals:
   - id: hunter_frames    # Hunter frames decoded
     type: uint32_t
     initial_value: "0"
-  - id: presses          # remote presses (frames of one press count once)
-    type: uint32_t
-    initial_value: "0"
-  - id: last_button      # index above, -1 = unknown code
-    type: int
-    initial_value: "-1"
   - id: last_bits        # last code heard, to group a press's frames
     type: std::string
+  - id: last_rx_ms
+    type: uint32_t
+    initial_value: "0"
+  - id: last_button      # last button sent or heard, -1 = none yet
+    type: int
+    initial_value: "-1"
   - id: last_from_ha     # last button was sent from HA, not the remote
     type: bool
     initial_value: "false"
-  - id: last_ms
-    type: uint32_t
-    initial_value: "0"
-  - id: repeats          # frames in the last press
+  - id: last_ms          # when it was
     type: uint32_t
     initial_value: "0"
   - id: tx_active
     type: bool
     initial_value: "false"
+  - id: tx_end_ms        # when the last transmission ended
+    type: uint32_t
+    initial_value: "0"
   - id: last_activity    # for the screen timeout
     type: uint32_t
     initial_value: "0"
@@ -258,57 +399,50 @@ globals:
     type: bool
     initial_value: "true"
 
-button:
-  - platform: template
-    name: Light
-    icon: mdi:lightbulb
-    on_press:
-      - script.execute:
-          id: send_hunter
-          which: 0
-  - platform: template
-    name: Fan power
-    icon: mdi:fan
-    on_press:
-      - script.execute:
-          id: send_hunter
-          which: 1
-  - platform: template
-    name: Fan faster
-    icon: mdi:fan-plus
-    on_press:
-      - script.execute:
-          id: send_hunter
-          which: 2
-  - platform: template
-    name: Fan slower
-    icon: mdi:fan-minus
-    on_press:
-      - script.execute:
-          id: send_hunter
-          which: 3
-
-event:
-  - platform: template
-    id: remote_button
-    name: Remote button
-    icon: mdi:remote
-    event_types: [light, fan_power, speed_up, speed_down]
-
 script:
-  # Send one button's code the way the remote does.
+  # One press of a button: update what the board thinks the fan is doing,
+  # and send the code if this press is ours (not heard from the remote).
+  - id: apply_press
+    mode: queued
+    max_runs: 10
+    parameters:
+      which: int
+      transmit: bool
+    then:
+      - lambda: |-
+          switch (which) {
+            case 0: id(light_is_on) = !id(light_is_on); break;
+            case 1: id(fan_is_on) = !id(fan_is_on); break;
+            case 2: if (id(fan_is_on) && id(fan_spd) < 3) id(fan_spd)++; break;
+            case 3: if (id(fan_is_on) && id(fan_spd) > 1) id(fan_spd)--; break;
+          }
+          if (transmit) id(send_hunter).execute(which);
+
+  # Show the board's idea of the fan and light in HA. on_state and the light
+  # output then see no difference, so nothing is sent.
+  - id: publish_state
+    then:
+      - lambda: |-
+          auto f = id(bedroom_fan).make_call();
+          f.set_state(id(fan_is_on));
+          f.set_speed(id(fan_spd));
+          f.perform();
+          auto l = id(fan_light).make_call();
+          l.set_state(id(light_is_on));
+          l.perform();
+
+  # Send one button's code the way the remote does. Queued, so several
+  # presses go out one after another.
   - id: send_hunter
     mode: queued
-    max_runs: 4
+    max_runs: 10
     parameters:
       which: int
     then:
       - lambda: |-
           ESP_LOGI("hunter", "Sending: %s", id(button_names)[which].c_str());
           id(last_button) = which;
-          id(last_bits) = "";
           id(last_from_ha) = true;
-          id(repeats) = ${tx_repeats};
           id(last_ms) = millis();
       - script.execute: wake_screen
       - remote_transmitter.transmit_raw:
@@ -331,6 +465,7 @@ script:
           repeat:
             times: ${tx_repeats}
             wait_time: ${repeat_gap_ms}ms
+      - delay: ${press_gap_ms}ms
 
   # Something happened: light the screen (back on the status page if it was
   # dark) and restart the timeout.
@@ -370,34 +505,36 @@ display:
       - id: page_status
         lambda: |-
           // Header: name, then the link to HA.
-          it.print(0, 0, id(font_small), "Hunter Fan");
+          it.print(0, 0, id(font_small), "Bedroom Fan");
           const char *link = !id(wifi_net).is_connected() ? "no Wi-Fi"
                            : !id(api_srv).is_connected()  ? "no HA" : "HA ok";
           it.print(127, 0, id(font_small), TextAlign::TOP_RIGHT, link);
           it.horizontal_line(0, 12, 128);
 
+          // Fan on the left, light on the right.
+          static const char *const SPEEDS[] = {"Off", "Low", "Medium", "High"};
+          int spd = id(fan_is_on) ? id(fan_spd) : 0;
+          if (spd < 0 || spd > 3) spd = 0;
+          it.print(0, 15, id(font_small), "Fan");
+          it.print(0, 27, id(font_big), SPEEDS[spd]);
+          it.print(127, 15, id(font_small), TextAlign::TOP_RIGHT, "Light");
+          it.print(127, 27, id(font_big), TextAlign::TOP_RIGHT,
+                   id(light_is_on) ? "On" : "Off");
+
+          // Footer: what happened last.
           if (id(tx_active)) {
-            it.print(64, 38, id(font_big), TextAlign::CENTER, "Sending");
-            return;
+            it.print(0, 53, id(font_small), "Sending...");
+          } else if (id(last_button) >= 0) {
+            uint32_t s = (millis() - id(last_ms)) / 1000;
+            char ago[16];
+            if (s < 60)        snprintf(ago, sizeof(ago), "%us ago", (unsigned) s);
+            else if (s < 3600) snprintf(ago, sizeof(ago), "%um ago", (unsigned) (s / 60));
+            else               snprintf(ago, sizeof(ago), "%uh ago", (unsigned) (s / 3600));
+            it.printf(0, 53, id(font_small), "%s: %s",
+                      id(last_from_ha) ? "HA" : "Remote",
+                      id(button_names)[id(last_button)].c_str());
+            it.print(127, 53, id(font_small), TextAlign::TOP_RIGHT, ago);
           }
-          if (id(last_ms) == 0) {
-            it.print(64, 30, id(font_big), TextAlign::CENTER, "Listening");
-            it.print(64, 52, id(font_small), TextAlign::CENTER, "press a remote button");
-            return;
-          }
-          it.print(0, 15, id(font_small), id(last_from_ha) ? "Sent from HA" : "Remote");
-          if (!id(last_from_ha) && id(repeats) > 1)
-            it.printf(127, 15, id(font_small), TextAlign::TOP_RIGHT, "x%u",
-                      (unsigned) id(repeats));
-          int b = id(last_button);
-          it.print(0, 27, id(font_big),
-                   b >= 0 ? id(button_names)[b].c_str() : "Unknown code");
-          uint32_t s = (millis() - id(last_ms)) / 1000;
-          if (s < 60)        it.printf(0, 53, id(font_small), "%us ago", (unsigned) s);
-          else if (s < 3600) it.printf(0, 53, id(font_small), "%um ago", (unsigned) (s / 60));
-          else               it.printf(0, 53, id(font_small), "%uh ago", (unsigned) (s / 3600));
-          it.printf(127, 53, id(font_small), TextAlign::TOP_RIGHT, "%u presses",
-                    (unsigned) id(presses));
       - id: page_radio
         lambda: |-
           it.print(0, 0, id(font_small), "Radio");

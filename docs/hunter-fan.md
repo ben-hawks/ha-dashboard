@@ -1,8 +1,11 @@
-# Hunter ceiling fan (433 MHz RF bridge)
+# Bedroom ceiling fan (Hunter, 433 MHz RF bridge)
 
-A LilyGO T3 LoRa32 V1.6.1 (433 MHz) running ESPHome listens to the Hunter
-fan's RF remote and will send its codes, so Home Assistant can run the fan
-and light. It also hears the real remote, so HA keeps up when someone uses it.
+A LilyGO T3 LoRa32 V1.6.1 (433 MHz) running ESPHome sends the bedroom Hunter
+fan's RF remote codes, so Home Assistant can run the fan and its light. It
+also hears the real remote, so HA keeps up when someone uses it.
+
+On the dashboard: **Rooms → Bedroom** has *Fan* (tap to switch on/off, speed
+buttons under it) and *Fan light*. "All lights off" includes the fan light.
 
 - Board: LilyGO T3 LoRa32 **V1.6.1, 433 MHz** (ESP32 + SX1278, OLED)
 - Remote: Hunter K5579-02 / 99372, FCC ID IN2TX50, 433.92 MHz
@@ -14,8 +17,8 @@ and light. It also hears the real remote, so HA keeps up when someone uses it.
 | Phase | What | State |
 |-------|------|-------|
 | 1 | **Capture**: log what each remote button sends | Done: fixed codes, decoded below |
-| 2 | **Replay**: HA buttons that send each code; check the fan obeys | Firmware ready; gaps still to measure |
-| 3 | **HA entities**: fan (speeds) + light, kept in sync with the real remote | Not started |
+| 2 | **Replay**: HA buttons that send each code; check the fan obeys | Done: the fan obeys all four at 10 dBm |
+| 3 | **HA entities**: fan (speeds) + light, kept in sync with the real remote | Firmware ready, to be checked with the real remote |
 
 ## The remote's protocol
 
@@ -38,27 +41,56 @@ sends the same bits, so it's a **fixed code** and can be replayed.
 | Fan faster | `00000000000000000001001110010101110101111001000000001110111111110` |
 | Fan slower | `00000000000000000001001110010101110101111001000000010110111111101` |
 
-Still to measure: the gap after the wake-up pulses and the gap between
-repeats. The firmware sends 6 ms and 10 ms for now (`pre_gap_us`,
-`repeat_gap_ms`).
+Never measured: the gap after the wake-up pulses and the gap between
+repeats. The firmware sends 6 ms and 10 ms (`pre_gap_us`, `repeat_gap_ms`)
+and the fan accepts them.
+
+How the fan reacts (tested): Light and Fan power toggle. Faster/Slower step
+the speed, stop at High/Low, and do nothing while the fan is off. Fan power
+resumes the last speed.
 
 Generic decoders don't fit this remote: the logs called it rc_switch, Pronto,
 Beo4 and CanalSat, with different results every frame. The firmware has its
 own decoder (in `on_raw`) and no generic dumps.
 
-## Phase 2: replay
+## In Home Assistant
 
-**Antenna on.** This build transmits.
+Device **Bedroom Fan** (ESPHome `hunter-fan-rf`):
 
-In HA, the device has buttons **Light**, **Fan power**, **Fan faster** and
-**Fan slower**, plus a **Remote button** event that fires once for each press
-of the real remote. To check that it works:
+| Entity | What it does |
+|--------|--------------|
+| `fan.bedroom_fan` | Off / Low / Medium / High. To reach a speed it sends the right number of Faster/Slower presses (about half a second each), plus one extra when going to Low or High. That extra press does nothing if the speed was right, and fixes it if it had drifted. |
+| `light.bedroom_fan_light` | On / off. |
+| `event.bedroom_fan_remote_button` | Fires once for each press of the real remote: `light`, `fan_power`, `speed_up`, `speed_down`. For automations. |
+| *Send … code* (configuration) | Sends one code **without** changing what HA thinks the fan is doing. Use these to fix drift. |
 
-1. Press each HA button and see whether the fan responds. If it doesn't, raise
-   `tx_power` (up to 17) and move the board closer, then try again.
-2. Press each button on the real remote once and send the log. Lines like
-   `Frame: 23, gap 5800 us, 131, gap 9800 us, ...` give the real gaps, and
-   I'll set `pre_gap_us` and `repeat_gap_ms` from them.
+Check the entity IDs after the first install: HA may still name them after
+the old device name, *Hunter Fan RF*. If so, rename them, or change the two
+Bedroom tiles in `dashboard/views/rooms.yaml`.
+
+### State is a guess
+
+The fan never reports back. The board keeps its own idea of the fan and
+light (remembered across restarts) and updates it from what it sends and
+what it hears from the real remote. Using the remote is fine. The state
+drifts when:
+
+- a press from the remote isn't heard (too far away, or while the board is
+  sending), or
+- the wall switch cuts the fan's power. The fan comes back in its own
+  default state, and the board doesn't know.
+
+**Fixing drift:** a speed that's wrong fixes itself the next time HA sets Low
+or High. For on/off, make the room match HA with the *Send … code* buttons:
+if HA says the light is off but it's on, press *Send light code*. The room
+light goes off and HA stays off.
+
+### It hears itself
+
+The receiver and the transmitter share the radio's data pin, so the board
+reads back everything it sends as if the remote had sent it. Frames heard
+while sending, or up to 0.2 s after, are ignored. A real remote press in that
+window is missed.
 
 ## Phase 1: capture the remote (done)
 
@@ -98,7 +130,7 @@ between them.
 
 | Page | Shows |
 |------|-------|
-| **Status** | Link (`HA ok` / `no HA` / `no Wi-Fi`), the last button (*Remote* or *Sent from HA*), how long ago, how many frames that press had (`x3`), presses so far. Phase 3 turns this into the fan speed and light. |
+| **Status** | Link (`HA ok` / `no HA` / `no Wi-Fi`), the fan (Off / Low / Medium / High) and the light (On / Off) as the board thinks they are, and the last button (`Remote: Faster`, `HA: Light`) and how long ago. |
 | **Radio** | Frequency and floor, bursts heard (noise included) vs Hunter frames decoded, the last burst's length, IP, uptime. |
 
 It goes dark after **Screen timeout** minutes (in HA under the device's
