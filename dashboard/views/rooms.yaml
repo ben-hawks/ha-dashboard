@@ -94,12 +94,7 @@ sections:
         hold_action: *more_info
         features:
           - type: light-brightness
-
-  - type: grid
-    cards:
-      - type: heading
-        heading: Den
-        icon: mdi:bookshelf
+      # The speaker HA still calls "Den" (the room is now the Game Room).
       - type: tile
         entity: media_player.den
         name: Speaker
