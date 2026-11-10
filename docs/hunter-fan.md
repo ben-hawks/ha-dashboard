@@ -43,9 +43,24 @@ What to look for in the log:
   use a rolling code and can't simply be replayed. Hunter remotes of this
   type are normally fixed-code.
 
-If it can't hear the remote, lower `rx_floor` (e.g. `-95`). If the log
-floods with noise while nobody is pressing anything, raise it (e.g. `-75`)
-or raise `filter` to `100us`.
+`rx_floor` (a substitution at the top of the file) is **-75 dBm**. At -85
+it picked up another 433 MHz device nearby: long frames every few seconds
+that the log calls Pronto / Beo4 / Drayton. If those still show up, raise it
+(e.g. `-65`). If the Hunter remote isn't heard, lower it again.
+
+## Screen
+
+The OLED has two pages. The **BOOT** button (next to the USB port) flips
+between them.
+
+| Page | Shows |
+|------|-------|
+| **Status** | Link (`HA ok` / `no HA` / `no Wi-Fi`), the last code decoded, how long ago, how many times it repeated in that press (`x5`), codes so far. Phase 3 turns this into the fan speed and light. |
+| **Radio** | Frequency and floor, frames heard (noise included) vs codes decoded, the last frame's length in pulses, IP, uptime. |
+
+It goes dark after **Screen timeout** minutes (in HA under the device's
+configuration, default 5, 0 = always on) to spare the OLED, and wakes on a
+remote press or the BOOT button.
 
 ## Things to note about the remote
 

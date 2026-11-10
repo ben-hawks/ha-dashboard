@@ -13,6 +13,15 @@
 #   - "Last RF code" in HA: the last rc_switch decode, e.g. "P6 0x1A2B3C".
 #   - The blue LED flashes on each rc_switch decode.
 #
+# Screen (0.96" OLED), two pages; the BOOT button (GPIO0) flips between them:
+#   1. Status: Wi-Fi/HA link, then the last code, how long ago, and how many
+#      times it repeated in one press (xN). Phase 3 replaces this with the
+#      fan speed and light.
+#   2. Radio: frequency and floor, frames heard (incl. noise) and codes
+#      decoded, the last frame's length, IP, uptime.
+# The screen goes dark after "Screen timeout" minutes (HA, default 5, 0 =
+# always on) to spare the OLED, and wakes on a remote press or the button.
+#
 # Radio: the SX1278 runs in OOK continuous mode and puts the demodulated
 # signal on DIO2 (GPIO32). The receiver and the transmitter share that pin,
 # so both are open drain, and the transmitter flips the radio to TX and back.
@@ -21,6 +30,10 @@
 substitutions:
   name: hunter-fan-rf
   friendly_name: Hunter Fan RF
+  # Signals weaker than this are ignored. Was -85, which let in another 433 MHz
+  # device nearby. Raise it more (e.g. "-65") if that still shows up; lower it
+  # (e.g. "-85") if the Hunter remote isn't heard.
+  rx_floor: "-75"
 
 esphome:
   name: ${name}
@@ -34,6 +47,7 @@ esp32:
 logger:
 
 api:
+  id: api_srv
   encryption:
     key: !secret hunter_fan_rf_api_key   # dashboard copy has the literal key
 
@@ -41,6 +55,7 @@ ota:
   - platform: esphome
 
 wifi:
+  id: wifi_net
   ssid: !secret wifi_ssid
   password: !secret wifi_password
   ap:
@@ -66,9 +81,7 @@ sx127x:
   bitsync: false
   rx_start: true
   bandwidth: 50_0kHz
-  # Signals weaker than this are ignored. Raise it (e.g. -75) if the logs
-  # fill with noise; lower it (e.g. -95) if the remote isn't heard.
-  rx_floor: -85
+  rx_floor: ${rx_floor}
   pa_pin: BOOST
   pa_power: 10
 
@@ -87,15 +100,30 @@ remote_receiver:
   tolerance: 25%
   buffer_size: 10kb
   dump: all
+  # Every frame, noise included: shows whether the radio hears anything.
+  on_raw:
+    then:
+      - lambda: |-
+          id(rx_frames)++;
+          id(last_frame_len) = x.size();
   on_rc_switch:
     then:
-      - text_sensor.template.publish:
-          id: last_code
-          state: !lambda |-
-            char buf[40];
-            snprintf(buf, sizeof(buf), "P%u 0x%llX", (unsigned) x.protocol,
-                     (unsigned long long) x.code);
-            return std::string(buf);
+      - lambda: |-
+          char buf[40];
+          snprintf(buf, sizeof(buf), "P%u 0x%llX", (unsigned) x.protocol,
+                   (unsigned long long) x.code);
+          std::string code(buf);
+          uint32_t now = millis();
+          // The remote repeats a code several times per press; frames less
+          // than 500 ms apart with the same code count as one press.
+          if (code == id(last_code).state && now - id(last_code_ms) < 500)
+            id(repeats)++;
+          else
+            id(repeats) = 1;
+          id(last_code_ms) = now;
+          id(rx_codes)++;
+          if (code != id(last_code).state) id(last_code).publish_state(code);
+      - script.execute: wake_screen
       - output.turn_on: led
       - delay: 100ms
       - output.turn_off: led
@@ -116,6 +144,7 @@ remote_transmitter:
   carrier_duty_percent: 100%
   on_transmit:
     then:
+      - lambda: id(tx_active) = true;
       - sx127x.set_mode_standby
       - remote_transmitter.digital_write: false
       - sx127x.set_mode_tx
@@ -124,10 +153,171 @@ remote_transmitter:
       - sx127x.set_mode_standby
       - remote_transmitter.digital_write: true
       - sx127x.set_mode_rx
+      - lambda: id(tx_active) = false;
+
+# ---------------------------------------------------------------------------
+# Screen (SSD1306 128x64 on I2C)
+# ---------------------------------------------------------------------------
+globals:
+  - id: rx_frames        # frames heard, noise included
+    type: uint32_t
+    initial_value: "0"
+  - id: last_frame_len   # pulses in the last frame
+    type: uint32_t
+    initial_value: "0"
+  - id: rx_codes         # rc_switch decodes
+    type: uint32_t
+    initial_value: "0"
+  - id: last_code_ms
+    type: uint32_t
+    initial_value: "0"
+  - id: repeats          # frames in the last press
+    type: uint32_t
+    initial_value: "0"
+  - id: tx_active
+    type: bool
+    initial_value: "false"
+  - id: last_activity    # for the screen timeout
+    type: uint32_t
+    initial_value: "0"
+  - id: screen_on
+    type: bool
+    initial_value: "true"
+
+i2c:
+  sda: GPIO21
+  scl: GPIO22
+  frequency: 400kHz
+
+font:
+  - file: "gfonts://Roboto"
+    id: font_small
+    size: 10
+  - file: "gfonts://Roboto@500"
+    id: font_big
+    size: 18
+
+display:
+  - platform: ssd1306_i2c
+    id: oled
+    model: SSD1306 128x64
+    address: 0x3C
+    update_interval: 1s
+    pages:
+      - id: page_status
+        lambda: |-
+          // Header: name, then the link to HA.
+          it.print(0, 0, id(font_small), "Hunter Fan");
+          const char *link = !id(wifi_net).is_connected() ? "no Wi-Fi"
+                           : !id(api_srv).is_connected()  ? "no HA" : "HA ok";
+          it.print(127, 0, id(font_small), TextAlign::TOP_RIGHT, link);
+          it.horizontal_line(0, 12, 128);
+
+          if (id(tx_active)) {
+            it.print(64, 38, id(font_big), TextAlign::CENTER, "Sending");
+            return;
+          }
+          if (id(rx_codes) == 0) {
+            it.print(64, 30, id(font_big), TextAlign::CENTER, "Listening");
+            it.print(64, 52, id(font_small), TextAlign::CENTER, "press a remote button");
+            return;
+          }
+          it.print(0, 15, id(font_small), "Last code");
+          if (id(repeats) > 1)
+            it.printf(127, 15, id(font_small), TextAlign::TOP_RIGHT, "x%u",
+                      (unsigned) id(repeats));
+          const std::string &code = id(last_code).state;
+          it.print(0, 27, code.size() > 11 ? id(font_small) : id(font_big),
+                   code.c_str());
+          uint32_t s = (millis() - id(last_code_ms)) / 1000;
+          if (s < 60)        it.printf(0, 53, id(font_small), "%us ago", (unsigned) s);
+          else if (s < 3600) it.printf(0, 53, id(font_small), "%um ago", (unsigned) (s / 60));
+          else               it.printf(0, 53, id(font_small), "%uh ago", (unsigned) (s / 3600));
+          it.printf(127, 53, id(font_small), TextAlign::TOP_RIGHT, "%u codes",
+                    (unsigned) id(rx_codes));
+      - id: page_radio
+        lambda: |-
+          it.print(0, 0, id(font_small), "Radio");
+          it.print(127, 0, id(font_small), TextAlign::TOP_RIGHT,
+                   id(tx_active) ? "TX" : "RX");
+          it.horizontal_line(0, 12, 128);
+          it.print(0, 14, id(font_small), "433.92 MHz OOK, floor ${rx_floor}");
+          it.printf(0, 26, id(font_small), "Frames %u, codes %u",
+                    (unsigned) id(rx_frames), (unsigned) id(rx_codes));
+          it.printf(0, 38, id(font_small), "Last frame %u pulses",
+                    (unsigned) id(last_frame_len));
+          uint32_t up = id(uptime_s).state;
+          it.printf(0, 50, id(font_small), "%s", id(ip_addr).state.c_str());
+          it.printf(127, 50, id(font_small), TextAlign::TOP_RIGHT, "up %uh%02um",
+                    (unsigned) (up / 3600), (unsigned) (up / 60 % 60));
+
+script:
+  # Something happened: light the screen (back on the status page if it was
+  # dark) and restart the timeout.
+  - id: wake_screen
+    then:
+      - lambda: |-
+          id(last_activity) = millis();
+          if (!id(screen_on)) {
+            id(screen_on) = true;
+            id(oled).show_page(id(page_status));
+            id(oled).turn_on();
+          }
+
+interval:
+  - interval: 5s
+    then:
+      - lambda: |-
+          float mins = id(screen_timeout).state;
+          bool want = isnan(mins) || mins <= 0 ||
+                      millis() - id(last_activity) < (uint32_t) (mins * 60000.0f);
+          if (want != id(screen_on)) {
+            id(screen_on) = want;
+            if (want) id(oled).turn_on();
+            else id(oled).turn_off();
+          }
+
+number:
+  - platform: template
+    id: screen_timeout
+    name: Screen timeout
+    icon: mdi:monitor-off
+    entity_category: config
+    unit_of_measurement: min
+    min_value: 0
+    max_value: 60
+    step: 1
+    initial_value: 5
+    optimistic: true
+    restore_value: true
+    on_value:
+      - script.execute: wake_screen
 
 # ---------------------------------------------------------------------------
 # Board extras
 # ---------------------------------------------------------------------------
+binary_sensor:
+  # BOOT button: wakes the screen, or flips to the next page if it's awake.
+  - platform: gpio
+    id: boot_button
+    internal: true
+    pin:
+      number: GPIO0
+      inverted: true
+      mode:
+        input: true
+        pullup: true
+    filters:
+      - delayed_on: 20ms
+    on_press:
+      - if:
+          condition:
+            lambda: return id(screen_on);
+          then:
+            - display.page.show_next: oled
+            - component.update: oled
+      - script.execute: wake_screen
+
 output:
   - platform: gpio
     id: led
@@ -138,10 +328,15 @@ text_sensor:
     id: last_code
     name: Last RF code
     icon: mdi:remote
+  - platform: wifi_info
+    ip_address:
+      id: ip_addr
+      name: IP address
 
 sensor:
   - platform: wifi_signal
     name: Wi-Fi signal
     update_interval: 60s
   - platform: uptime
+    id: uptime_s
     name: Uptime
