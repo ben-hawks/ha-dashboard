@@ -4,8 +4,10 @@ A slide-in wall mount based on the idea of Kreato 3D's
 [Lenovo Tab M10 HD 2 Gen wall mount](https://cults3d.com/en/3d-model/gadget/lenovo-tab-m10-hd-2-gen-wall-mount),
 redrawn from scratch in OpenSCAD (`m10-wall-mount.scad`).
 
-- **One printed part**, `m10-mount.stl`, screwed to the wall. Print it back
-  face down with no supports. PETG or PLA both work, with 3 to 4 walls.
+- **Printed parts:** `m10-mount.stl`, screwed to the wall, and
+  `m10-retainer.stl`, a small block that holds the USB-C plug in place. Print
+  both back face down with no supports. PETG or PLA both work, with 3 to 4
+  walls.
 - **The bare tablet (no case) slides in** from the open left end. Grooves
   along its top and bottom edges hold it, with a 2 mm, 45° lip over the bezel.
   About 40 mm of the left end sticks out, so you can grip it and so the rear
@@ -29,7 +31,8 @@ redrawn from scratch in OpenSCAD (`m10-wall-mount.scad`).
    one side of the port and 17.3 mm toward the cable, 6.3 mm thick, with a
    4.4 mm strain relief). For a different cable, change `plug_*`, `cable_x`
    and `cable_d`.
-   **Test fit first:** `m10-test.stl` is just the port end (about 25 mm of the
+   **Test fit first:** print `m10-test.stl` and the retainer. The test piece is
+   just the port end (about 25 mm of the
    grooves plus the plug pocket, ~36 cm³). Check that the tablet slides in and
    docks onto the plug before printing the whole mount.
 2. **Magnets:** six pockets are provided. Hold a loose magnet against the back
@@ -42,13 +45,18 @@ redrawn from scratch in OpenSCAD (`m10-wall-mount.scad`).
 
 ## Installing
 
-1. Screw the mount to the wall through the 5 countersunk holes, sized for 4 mm
+1. Glue in the magnets (CA or epoxy), with their faces flush with the floor.
+2. With the mount face down, drop the plug head into its pocket from the back,
+   with the connector pointing into the tablet slot. Press the cable into the
+   channel on the back. If the cable comes out the wrong way, flip the plug
+   over.
+3. Press the retainer into the pocket behind the plug, flush with the back of
+   the mount. It holds the plug at the port's height. A dab of glue on the
+   retainer is optional, since the wall holds it in once the mount is up.
+4. Screw the mount to the wall through the 5 countersunk holes, sized for 4 mm
    screws. The heads sit flush with the floor.
-2. Glue in the magnets (CA or epoxy), with their faces flush with the floor.
-3. Lay the cable in the channel on the back, and push the plug head into its
-   pocket from the tablet side.
-4. Slide the tablet in to check the plug lines up with the port. Then fix the
-   plug with a dab of hot glue so it doesn't get pushed back.
+5. Slide the tablet in from the left. It pushes onto the plug as it reaches
+   the end.
 
 `PORT_RIGHT = false` mirrors the whole mount if you'd rather have the port on
 the left. Change `stick_out` for more or less overhang.
@@ -57,6 +65,7 @@ Export the STLs:
 
 ```bash
 openscad -D 'PART="mount"' -o m10-mount.stl m10-wall-mount.scad
+openscad -D 'PART="retainer"' -o m10-retainer.stl m10-wall-mount.scad
 openscad -D 'PART="test"'  -o m10-test.stl  m10-wall-mount.scad
 ```
 

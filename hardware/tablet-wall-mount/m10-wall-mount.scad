@@ -10,12 +10,13 @@
 // it to pull it out.
 //
 // PART = "mount"    - the part to print (back face down, no supports)
+// PART = "retainer" - small block that holds the USB-C plug in its pocket
 // PART = "assembly" - mount + tablet, for checking (don't print)
 //
 // Coordinates (front view): X right, Y up, Z out of the wall.
 // The USB-C port is on the RIGHT (set PORT_RIGHT=false to mirror everything).
 
-PART = "assembly";   // "mount", "assembly" or "test" (port end only, for a test fit)
+PART = "assembly";   // "mount", "retainer", "test" (port end only) or "assembly"
 PORT_RIGHT = true;
 
 /* ---- Tablet ---- */
@@ -84,6 +85,10 @@ H_tot   = lip_z0 + lip;
 port_z  = back_t + clr_z/2 + tab_t/2;
 pk_x1   = Wi/2 + plug_L + plug_clr;       // end of plug pocket
 cab_x   = Wi/2 + cable_x;                 // cable centre line
+hy0 = cable_dir > 0 ? -plug_far - plug_clr : -plug_near - plug_clr;   // head pocket, y
+hy1 = cable_dir > 0 ?  plug_near + plug_clr :  plug_far + plug_clr;
+ret_t   = port_z - plug_T/2 - plug_clr;   // retainer thickness (wall -> back of plug)
+ret_clr = 0.1;                            // retainer press fit, each side
 x_right = pk_x1 + wall;                   // right outer edge
 
 module rrect(w, h, r) {
@@ -130,16 +135,15 @@ module mount() {
         hull() { slot_slab(0, lip_z0); slot_slab(lip, lip_z0 + lip - e); }
         translate([0,0,lip_z0]) linear_extrude(H_tot) slot2d(lip);
 
-        // plug head pocket (offset towards the cable), open towards the tablet
-        hy0 = yc > 0 ? -plug_far - plug_clr :  -plug_near - plug_clr;
-        hy1 = yc > 0 ?  plug_near + plug_clr :  plug_far + plug_clr;
+        // plug head pocket (offset towards the cable). Open at the back: the
+        // plug and cable go in from behind, then the retainer presses in behind
+        // the plug. Opens into the tablet slot only at the plug's height.
         box(Wi/2 - 1, pk_x1, hy0, hy1,
             port_z - plug_T/2 - plug_clr, port_z + plug_T/2 + plug_clr);
-        // slot so the strain relief can slide in with the head, then a channel
-        // in the back (open to the wall) along the cable line out to the edge
+        box(Wi/2, pk_x1, hy0, hy1, -1, port_z);
+        // cable channel in the back (open to the wall), out to the edge
         cy0 = yc > 0 ? 0 : -Ho/2 - 1;
         cy1 = yc > 0 ? Ho/2 + 1 : 0;
-        box(Wi/2 - 1, cab_x + cable_d/2, cy0, cy1, port_z - cable_d/2, port_z + cable_d/2);
         box(cab_x - cable_d/2, cab_x + cable_d/2, cy0, cy1, -1, port_z + cable_d/2);
         // optional hole behind the cable for a cable coming out of the wall
         if (in_wall_hole)
@@ -170,15 +174,20 @@ module mount() {
     }
 }
 
+// Fills the space between the wall and the back of the plug, holding the plug
+// at the port's height. Press it into the back of the pocket.
+module retainer() box(Wi/2 + ret_clr, pk_x1 - ret_clr, hy0 + ret_clr, hy1 - ret_clr, 0, ret_t);
+
 module tablet() color([0.08,0.08,0.1])
     translate([0,0,back_t + clr_z/2]) linear_extrude(tab_t) rrect(tab_w, tab_h, tab_r);
 
 module oriented() { if (PORT_RIGHT) children(); else mirror([1,0,0]) children(); }
 
 if (PART == "mount")    oriented() mount();
+if (PART == "retainer") oriented() retainer();
 // Test fit: just the port end (plug pocket, end of the grooves, corner radius).
 if (PART == "test")     oriented() intersection() {
     mount();
     translate([Wi/2 - 25, -Ho, -1]) cube([100, 2*Ho, 50]);
 }
-if (PART == "assembly") oriented() { color("silver") mount(); tablet(); }
+if (PART == "assembly") oriented() { color("silver") mount(); color("orange") retainer(); tablet(); }
