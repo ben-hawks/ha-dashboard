@@ -24,9 +24,14 @@ redrawn from scratch in OpenSCAD (`m10-wall-mount.scad`).
 
 ## Before printing
 
-1. **Measure your plug** with it pushed into the tablet, and set `plug_L` (from
-   the tablet edge to the far end of the head), `plug_W`, `plug_T` and
-   `cable_d`. The defaults are 20 × 12.5 × 7 mm with a 5 mm cable.
+1. **Plug:** the pocket is sized for the Anker 240W braided USB-C to
+   right-angle USB-C cable (head 14.6 mm out from the edge, extending 6 mm
+   one side of the port and 17.3 mm toward the cable, 6.3 mm thick, with a
+   4.4 mm strain relief). For a different cable, change `plug_*`, `cable_x`
+   and `cable_d`.
+   **Test fit first:** `m10-test.stl` is just the port end (about 25 mm of the
+   grooves plus the plug pocket, ~36 cm³). Check that the tablet slides in and
+   docks onto the plug before printing the whole mount.
 2. **Magnets:** six pockets are provided. Hold a loose magnet against the back
    of the tablet in the inserted position, and glue magnets into the pockets
    where it pulls. Empty pockets do no harm. Move them with `mag_xy`. For 3 mm
@@ -48,10 +53,11 @@ redrawn from scratch in OpenSCAD (`m10-wall-mount.scad`).
 `PORT_RIGHT = false` mirrors the whole mount if you'd rather have the port on
 the left. Change `stick_out` for more or less overhang.
 
-Export the STL:
+Export the STLs:
 
 ```bash
 openscad -D 'PART="mount"' -o m10-mount.stl m10-wall-mount.scad
+openscad -D 'PART="test"'  -o m10-test.stl  m10-wall-mount.scad
 ```
 
 ## Tablet details used

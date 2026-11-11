@@ -15,7 +15,7 @@
 // Coordinates (front view): X right, Y up, Z out of the wall.
 // The USB-C port is on the RIGHT (set PORT_RIGHT=false to mirror everything).
 
-PART = "assembly";
+PART = "assembly";   // "mount", "assembly" or "test" (port end only, for a test fit)
 PORT_RIGHT = true;
 
 /* ---- Tablet ---- */
@@ -35,14 +35,18 @@ edge_r   = 2;        // rounded-over front outer edge
 stick_out = 40;      // how much of the tablet's left end sticks out (grip,
                      // and keeps the rear camera bump clear)
 
-/* ---- 90 deg USB-C plug (measure yours!) ---- */
-// Head of the plug, measured with the plug pushed fully into the tablet:
-plug_L   = 20;       // from the tablet edge to the far end of the head
-plug_W   = 12.5;     // across the head, along the tablet edge
-plug_T   = 7.0;      // head thickness (front-to-back)
-plug_clr = 0.2;      // fit; fix the plug with a dab of hot glue once aligned
-cable_d  = 5;        // cable diameter
+/* ---- 90 deg USB-C plug ---- */
+// Defaults: Anker 240W braided USB-C to right-angle USB-C, measured from photos.
+// All measured with the plug pushed fully into the tablet:
+plug_L    = 14.6;    // from the tablet edge to the back of the head
+plug_far  = 6.0;     // head extent from the port centre, away from the cable
+plug_near = 17.3;    // head extent from the port centre, towards the cable
+plug_T    = 6.3;     // head thickness front-to-back
+plug_clr  = 0.2;     // fit; fix the plug with a dab of hot glue once aligned
+cable_x   = 8.9;     // centre of the strain relief / cable, from the tablet edge
+cable_d   = 4.8;     // strain relief / cable diameter (+ clearance)
 cable_dir = -1;      // cable leaves the head going -1 = down, +1 = up
+                     // (flip the plug over to make it go the other way)
 
 /* ---- Other edge openings (measured from the non-port / jack end) ---- */
 speaker_from = 33;   // speaker grilles on both short edges, |y| range from centre
@@ -79,6 +83,7 @@ lip_z0  = cav_top - lip_drop;
 H_tot   = lip_z0 + lip;
 port_z  = back_t + clr_z/2 + tab_t/2;
 pk_x1   = Wi/2 + plug_L + plug_clr;       // end of plug pocket
+cab_x   = Wi/2 + cable_x;                 // cable centre line
 x_right = pk_x1 + wall;                   // right outer edge
 
 module rrect(w, h, r) {
@@ -125,17 +130,20 @@ module mount() {
         hull() { slot_slab(0, lip_z0); slot_slab(lip, lip_z0 + lip - e); }
         translate([0,0,lip_z0]) linear_extrude(H_tot) slot2d(lip);
 
-        // plug head pocket, open towards the tablet
-        box(Wi/2 - 1, pk_x1, -plug_W/2 - plug_clr, plug_W/2 + plug_clr,
+        // plug head pocket (offset towards the cable), open towards the tablet
+        hy0 = yc > 0 ? -plug_far - plug_clr :  -plug_near - plug_clr;
+        hy1 = yc > 0 ?  plug_near + plug_clr :  plug_far + plug_clr;
+        box(Wi/2 - 1, pk_x1, hy0, hy1,
             port_z - plug_T/2 - plug_clr, port_z + plug_T/2 + plug_clr);
-        // cable slot beside the head, then a channel in the back out to the edge
-        box(Wi/2 - 1, pk_x1, yc > 0 ? 0 : -Ho/2 - 1, yc > 0 ? Ho/2 + 1 : 0,
-            port_z - cable_d/2, port_z + cable_d/2);
-        box(pk_x1 - cable_d - 1, pk_x1, yc > 0 ? 0 : -Ho/2 - 1, yc > 0 ? Ho/2 + 1 : 0,
-            -1, port_z + cable_d/2);
-        // optional hole behind the plug for a cable coming out of the wall
+        // slot so the strain relief can slide in with the head, then a channel
+        // in the back (open to the wall) along the cable line out to the edge
+        cy0 = yc > 0 ? 0 : -Ho/2 - 1;
+        cy1 = yc > 0 ? Ho/2 + 1 : 0;
+        box(Wi/2 - 1, cab_x + cable_d/2, cy0, cy1, port_z - cable_d/2, port_z + cable_d/2);
+        box(cab_x - cable_d/2, cab_x + cable_d/2, cy0, cy1, -1, port_z + cable_d/2);
+        // optional hole behind the cable for a cable coming out of the wall
         if (in_wall_hole)
-            translate([pk_x1 - 8, yc*(plug_W/2 + 12), -1]) cylinder(d=14, h=port_z);
+            translate([cab_x, yc*(plug_near + 14), -1]) cylinder(d=12, h=port_z);
 
         // speaker grilles, port end (through the side) - the other end sticks out
         for (sy=[-1,1])
@@ -168,4 +176,9 @@ module tablet() color([0.08,0.08,0.1])
 module oriented() { if (PORT_RIGHT) children(); else mirror([1,0,0]) children(); }
 
 if (PART == "mount")    oriented() mount();
+// Test fit: just the port end (plug pocket, end of the grooves, corner radius).
+if (PART == "test")     oriented() intersection() {
+    mount();
+    translate([Wi/2 - 25, -Ho, -1]) cube([100, 2*Ho, 50]);
+}
 if (PART == "assembly") oriented() { color("silver") mount(); tablet(); }
