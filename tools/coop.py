@@ -650,6 +650,11 @@ def fan_card():
                                                  "state_content": "state"}),
                   find("sensor", "humidity", {**info, "name": "Fan's Humidity",
                                               "icon": "mdi:water-percent"}),
+                  # How much more water the coop air holds than outside
+                  # (what the drying rule compares); empty without an
+                  # outside reading. The g/m³ figures are on the device.
+                  find("sensor", "coop_air_wetter_than_outside",
+                       {**info, "name": "Wetter than outside", "icon": "mdi:water-plus"}),
                   # Only while the probe has stopped reporting.
                   find("binary_sensor", "sensor_problem",
                        {**info, "name": "Fan's probe isn't reporting", "color": "red",

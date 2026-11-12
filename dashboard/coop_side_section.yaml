@@ -296,6 +296,14 @@ cards:
           tap_action: *id004
           name: Fan's Humidity
           icon: mdi:water-percent
+      - domain: sensor
+        entity_id: '*coop_fan_coop_air_wetter_than_outside'
+        options:
+          type: tile
+          vertical: false
+          tap_action: *id004
+          name: Wetter than outside
+          icon: mdi:water-plus
       - domain: binary_sensor
         entity_id: '*coop_fan_sensor_problem'
         options:
