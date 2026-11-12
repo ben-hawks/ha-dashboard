@@ -543,9 +543,32 @@ def coop_graphs():
                               {"value": 90, "color": "#ff6b5e"}],
          "color_thresholds_transition": "smooth"},
         {**base, "name": "Coop humidity", "icon": "mdi:water-percent",
-         "entities": [{"entity": "sensor.coop_humidity", "color": "#46d0c0"}],
+         # Outside (the weather station) as a faint reference, as above.
+         "entities": [{"entity": "sensor.coop_humidity", "color": "#46d0c0"},
+                      {"entity": "sensor.station_humidity", "color": "#a5adc6",
+                       "show_fill": False, "show_state": False}],
          "lower_bound": 0, "upper_bound": 100},
     ]
+
+
+# The fan board's absolute-humidity sensors (esphome/coop-fan.yaml).
+COOP_AH = "sensor.chicken_coop_coop_fan_coop_absolute_humidity"
+OUTSIDE_AH = "sensor.chicken_coop_coop_fan_outside_absolute_humidity"
+
+
+def water_graph():
+    """Water in the air, coop vs outside (g/m³): what the fan's drying rule
+    compares. The fan only vents for damp when the coop line sits enough
+    above the outside one ("Inside wetter than outside by")."""
+    base = coop_graphs()[0]
+    return {**{k: v for k, v in base.items() if k not in ("entities", "color_thresholds",
+                                                          "color_thresholds_transition")},
+            "name": "Water in the air · coop vs outside", "icon": "mdi:water",
+            "height": 80,
+            "show": {**base["show"], "legend": True},
+            "entities": [{"entity": COOP_AH, "name": "Coop", "color": "#46d0c0"},
+                         {"entity": OUTSIDE_AH, "name": "Outside", "color": "#a5adc6",
+                          "show_fill": False}]}
 
 
 def controls():
@@ -710,6 +733,7 @@ def section():
             {**controls(), "grid_options": {"columns": "full"}},
             {"type": "grid", "columns": 2, "square": False, "grid_options": {"columns": "full"},
              "cards": coop_graphs()},
+            {**water_graph(), "grid_options": {"columns": "full"}},
         ],
     }
 

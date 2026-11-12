@@ -426,5 +426,39 @@ cards:
     entities:
     - entity: sensor.coop_humidity
       color: '#46d0c0'
+    - entity: sensor.station_humidity
+      color: '#a5adc6'
+      show_fill: false
+      show_state: false
     lower_bound: 0
     upper_bound: 100
+- type: custom:mini-graph-card
+  hours_to_show: 24
+  points_per_hour: 2
+  hour24: false
+  height: 80
+  line_width: 3
+  smoothing: true
+  animate: false
+  font_size: 70
+  font_size_header: 12
+  show:
+    icon: true
+    name: true
+    state: true
+    legend: true
+    labels: false
+    points: false
+    fill: fade
+  name: Water in the air · coop vs outside
+  icon: mdi:water
+  entities:
+  - entity: sensor.chicken_coop_coop_fan_coop_absolute_humidity
+    name: Coop
+    color: '#46d0c0'
+  - entity: sensor.chicken_coop_coop_fan_outside_absolute_humidity
+    name: Outside
+    color: '#a5adc6'
+    show_fill: false
+  grid_options:
+    columns: full
