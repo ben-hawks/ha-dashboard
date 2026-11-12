@@ -53,7 +53,9 @@ to vent), **On** and **Off** (manual, back to Auto after "Manual mode
 lasts", 4 h by default). Underneath: why it's on or off ("On (drying
 out)"), its probe's temperature and humidity (**Fan's Temp**, **Fan's Humidity**), and a red warning only while
 the probe stops reporting, and a short summary of the Auto rules with the
-current settings ("runs at 85 °F or hotter, until below 82 °F…"). Tap a
+current settings, including how much wetter the coop air is than outside
+(the fan only dries the coop when outside air would actually help; see
+`esphome/coop-fan.yaml`), ("runs at 85 °F or hotter, until below 82 °F…"). Tap a
 tile for the details; the settings themselves are on the Coop Fan device
 page, and the summary follows them. Found by the ends of its entity IDs
 (`…coop_fan_fan_mode` etc.), with or without an area prefix.

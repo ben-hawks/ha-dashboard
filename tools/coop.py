@@ -677,10 +677,18 @@ def fan_rules_card():
             f"{{%- set damp = {setting('dry_out_above')} | float(70) | round(0) | int %}}"
             f"{{%- set cold = {setting('don_t_vent_below')} | float(15) | round(0) | int %}}"
             f"{{%- set hours = {setting('manual_mode_lasts')} | float(4) | round(0) | int %}}"
+            f"{{%- set wetter_by = {setting('inside_wetter_than_outside_by')} | float(10) | round(0) | int %}}"
+            # How much more water the coop air holds than outside, right now.
+            "{%- set now_wetter = states.sensor | selectattr('entity_id', 'search',"
+            " 'coop_fan_coop_air_wetter_than_outside$') | map(attribute='state') | first"
+            " | default('unknown') %}"
             "**In Auto, the fan runs when**\n"
             f"- 🌡️ it's **{{{{ hot }}}} °F** or hotter, until it's below {{{{ hot - {FAN_HOT_GAP_F} }}}} °F\n"
-            f"- 💧 humidity is **{{{{ damp }}}} %** or more, until it's below {{{{ damp - {FAN_DAMP_GAP_PCT} }}}} %"
-            " (not when it's below **{{ cold }} °F**: too cold to vent)\n"
+            f"- 💧 humidity is **{{{{ damp }}}} %** or more, until it's below {{{{ damp - {FAN_DAMP_GAP_PCT} }}}} %,"
+            " and the coop air holds **{{ wetter_by }} %** more water than outside"
+            " ({{ 'now %+d %%' % (now_wetter | float | round(0) | int) if now_wetter | is_number"
+            " else 'no outside reading right now, so this is skipped' }})."
+            " Not below **{{ cold }} °F**: too cold to vent\n"
             "- ✋ On / Off by hand lasts "
             "{{ 'until changed' if hours == 0 else hours ~ ' h, then back to Auto' }}"),
     }

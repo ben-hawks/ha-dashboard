@@ -6,6 +6,14 @@
 #   - Too hot:   runs at "Cool down above" (default 85 °F) and stops 3 °F below.
 #   - Too damp:  runs at "Dry out above" (default 70 %) and stops 5 % below.
 #                Damp air in a cold coop is what causes frostbite on combs.
+#                Only when venting would actually dry the coop: the coop air
+#                must hold at least "Inside wetter than outside by" (default
+#                10 %) more water than the outside air (the weather station,
+#                read from Home Assistant), and it stops once that drops 5 %
+#                lower. Compared as absolute humidity (grams of water per m³),
+#                not RH: cold outside air at 90 % RH can still be far drier
+#                than a coop at 70 %. If Home Assistant or the station isn't
+#                available, this check is skipped (the plain rule above).
 #   - Too cold:  it won't run for dampness below "Don't vent below" (default
 #                15 °F), so it doesn't pull freezing drafts over the hens.
 #   - Sensor problem (no reading for 2 minutes): it falls back to the last
@@ -38,6 +46,12 @@ substitutions:
   friendly_name: Coop Fan
   hot_hysteresis_f: "3"
   damp_hysteresis_pct: "5"
+  # Outside air, from Home Assistant (tools/weather.py's station sensors).
+  outside_temperature: sensor.station_temperature   # °F
+  outside_humidity: sensor.station_humidity         # %
+  # Outside readings older than this count as unavailable.
+  outside_max_age_ms: "1800000"                     # 30 min
+  drier_hysteresis_pct: "5"
 
 esphome:
   name: ${name}
@@ -84,6 +98,10 @@ globals:
   - id: last_good_f
     type: float
     initial_value: "NAN"
+  # When an outside reading last arrived from Home Assistant.
+  - id: last_outside
+    type: uint32_t
+    initial_value: "0"
 
 # ---------------------------------------------------------------------------
 # Relays
@@ -162,7 +180,68 @@ sensor:
             send_every: 1
             send_first_at: 1
       on_value:
+        - component.update: coop_ah
+        - component.update: wetter_inside
         - script.execute: evaluate
+
+  # Outside air from Home Assistant. Internal: they're HA's own sensors.
+  - platform: homeassistant
+    id: outside_temp_f
+    entity_id: ${outside_temperature}
+    internal: true
+    on_value:
+      - lambda: id(last_outside) = millis();
+      - component.update: outside_ah
+      - component.update: wetter_inside
+  - platform: homeassistant
+    id: outside_rh
+    entity_id: ${outside_humidity}
+    internal: true
+    on_value:
+      - lambda: id(last_outside) = millis();
+      - component.update: outside_ah
+      - component.update: wetter_inside
+
+  # Water in the air, g/m³ (Magnus formula), inside and out, and how much
+  # wetter the coop is: what the drying check compares.
+  - platform: template
+    id: coop_ah
+    name: Coop absolute humidity
+    icon: mdi:water
+    unit_of_measurement: "g/m³"
+    accuracy_decimals: 1
+    state_class: measurement
+    update_interval: 30s
+    lambda: |-
+      float t = id(coop_temp).state, rh = id(coop_humidity).state;
+      if (isnan(t) || isnan(rh)) return NAN;
+      return 6.112f * expf(17.67f * t / (t + 243.5f)) * rh * 2.1674f / (273.15f + t);
+  - platform: template
+    id: outside_ah
+    name: Outside absolute humidity
+    icon: mdi:water-outline
+    unit_of_measurement: "g/m³"
+    accuracy_decimals: 1
+    state_class: measurement
+    update_interval: 30s
+    lambda: |-
+      if (id(last_outside) == 0 || millis() - id(last_outside) > ${outside_max_age_ms} ||
+          !api::global_api_server->is_connected()) return NAN;
+      float t = (id(outside_temp_f).state - 32.0f) / 1.8f, rh = id(outside_rh).state;
+      if (isnan(t) || isnan(rh)) return NAN;
+      return 6.112f * expf(17.67f * t / (t + 243.5f)) * rh * 2.1674f / (273.15f + t);
+  - platform: template
+    id: wetter_inside
+    name: Coop air wetter than outside
+    icon: mdi:water-plus
+    unit_of_measurement: "%"
+    accuracy_decimals: 0
+    state_class: measurement
+    update_interval: 30s
+    lambda: |-
+      float ai = id(coop_ah).state, ao = id(outside_ah).state;
+      if (isnan(ai) || isnan(ao) || ao < 0.1f) return NAN;
+      return (ai / ao - 1.0f) * 100.0f;
 
   - platform: wifi_signal
     name: Wi-Fi signal
@@ -246,6 +325,20 @@ number:
     on_value:
       - script.execute: evaluate
   - platform: template
+    id: drier_by
+    name: Inside wetter than outside by
+    icon: mdi:water-plus-outline
+    entity_category: config
+    unit_of_measurement: "%"
+    min_value: 0
+    max_value: 100
+    step: 1
+    initial_value: 10
+    optimistic: true
+    restore_value: true
+    on_value:
+      - script.execute: evaluate
+  - platform: template
     id: manual_hours
     name: Manual mode lasts
     icon: mdi:timer-outline
@@ -312,9 +405,17 @@ script:
             bool too_cold = f < id(min_vent).state;
             bool damp = on ? rh > id(damp_on).state - ${damp_hysteresis_pct}
                            : rh >= id(damp_on).state;
-            want = hot || (damp && !too_cold);
+            // Would outside air dry it? Only known while HA and the station
+            // are reachable; otherwise assume yes (the plain rule).
+            float wetter = id(wetter_inside).state;   // NAN without outside air
+            bool known = !isnan(wetter);
+            bool drier_out = !known ||
+                (on ? wetter > id(drier_by).state - ${drier_hysteresis_pct}
+                    : wetter >= id(drier_by).state);
+            want = hot || (damp && drier_out && !too_cold);
             if (hot) why = "On (too hot)";
-            else if (want) why = "On (drying out)";
+            else if (want) why = known ? "On (drying out)" : "On (drying out, no outside reading)";
+            else if (damp && !drier_out) why = "Off (damp, but outside air isn't drier)";
             else if (damp) why = "Off (damp, but too cold to vent)";
             else why = "Off (comfortable)";
           }
