@@ -71,6 +71,16 @@ power.
 4. Plug the washer and dryer into them.
 5. Run one normal cycle on each machine, then tune (below).
 
+### Firmware updates
+
+Update the plugs **only from the ESPHome Device Builder** (Washer / Dryer →
+Install). Athom's own "Firmware Update" entity is removed from both configs:
+installing it put Athom's stock firmware back over ours, turning the plugs
+into generic "Athom Plug V3 xxxxxx" devices (it happened once). If that ever
+happens again: install `washer.yaml` / `dryer.yaml` **to the plug's IP
+address** (the name no longer resolves), then check its power-on state is
+**Always On** and the relay is on.
+
 ## How it works
 
 - **The plug relay must never cut power mid-cycle.** Power-on state is

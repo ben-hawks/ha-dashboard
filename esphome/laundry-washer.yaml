@@ -31,6 +31,17 @@ wifi:
     ssid: Washer Fallback Hotspot
     password: !secret fallback_ap_password
 
+# Updates come only from this config (ESPHome Device Builder → Install).
+# Athom's "Firmware Update" entity is removed: installing it puts Athom's
+# stock firmware back over this one (the plug turns into a generic
+# "Athom Plug V3" and drops out of the laundry setup).
+update:
+  - id: !remove update_http_request
+ota:
+  - id: !remove ota_http_request
+http_request: !remove
+dashboard_import: !remove
+
 globals:
   - id: !extend restore_mode
     initial_value: "2"
