@@ -267,7 +267,9 @@ def open_sensor():
         "unit_of_measurement": "%", "icon": "mdi:air-filter", "state_class": "measurement",
         "state": (f"{{% set ns = namespace(o={plain}) %}}"
                   f"{{% for v in {vents} %}}"
-                  "{% set ns.o = ns.o + (state_attr(v, 'current_position') | float(100)) / 100 %}"
+                  # a vent that can't be reached counts as closed (worst case)
+                  "{% set ns.o = ns.o + (0 if states(v) in ['unavailable', 'unknown']"
+                  " else state_attr(v, 'current_position') | float(100)) / 100 %}"
                   "{% endfor %}"
                   f"{{{{ (100 * ns.o / {max(total, 1)}) | round(0) }}}}"),
     }
@@ -367,8 +369,10 @@ VENTS = """
     {%- elif new_call == 'heat' %}{% set need = row.heat_need %}
     {%- else %}{% set need = row.cool_need %}{% endif %}
     {%- set pos = 100 if need >= 0 else (50 if need > -1 else minp) %}
-    {%- set ns.items = ns.items + [{'vents': z.vents, 'need': need, 'pos': pos}] %}
-    {%- set ns.open = ns.open + (z.vents | count) * pos / 100 %}
+    {#- A vent that can't be reached (flat cell, out of range) is assumed closed. -#}
+    {%- set live = z.vents | select('has_value') | list %}
+    {%- set ns.items = ns.items + [{'vents': live, 'need': need, 'pos': pos}] %}
+    {%- set ns.open = ns.open + (live | count) * pos / 100 %}
   {%- endif %}
 {%- endfor %}
 {%- set out = namespace(list=[], open=ns.open) %}

@@ -63,8 +63,12 @@ again at its next scheduled change.
   pressure, and so the furnace's temperature rise, in check. The Ameristar
   M801P080BU36 is rated for a 30–60 °F rise and is already near the top of
   that range on its medium-low fan speed.
+  A vent Home Assistant can't reach (flat cell, out of range) counts as
+  **closed** here, so other vents open to make up for it.
 - **Delta Tango:** if `RISE_SENSOR` is set and the supply/return rise passes
   **Max temperature rise** (default 57 °F), every vent opens for 30 minutes.
+  **Until `RISE_SENSOR` is set, nothing measures the furnace's rise**, so
+  install the Delta Tango before switching control to Home Assistant.
 
 ## Adding a room's sensor and vents
 
