@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Generate the Garden section of the Outdoors tab and its package.
+"""Generate the Plants tab's bed cards and their package.
 
 Writes:
-  dashboard/views/garden_section.yaml   one card per soil probe: plant
+  dashboard/views/garden_section.yaml   one card per soil probe, grouped by
+                                        where they are (GROUP): plant
                                         illustration, moisture, status,
                                         soil temperature, EC and a 3-day
                                         moisture graph
@@ -30,7 +31,9 @@ few hours.
 
 The helper sensors find each probe's readings by channel number at the end
 of the Ecowitt entity ID (…soil_moisture_1, …soil_temperature_1, …), so
-the dashboard doesn't depend on the gateway's name or area prefix.
+the dashboard doesn't depend on the gateway's name or area prefix. Other
+probes (our ESPHome soil sensors) name their sensors in the bed's
+"sources" instead, again by the end of the entity ID.
 
 To add a probe, rename a bed, or add a plant type (art + thresholds), edit
 BEDS / PLANT_TYPES and run:  python3 tools/garden.py
@@ -45,16 +48,42 @@ import yaml
 
 ROOT = Path(__file__).resolve().parent.parent
 
-# One entry per soil probe. channel = the probe's number in Ecowitt.
+# One entry per soil probe, in the order shown. channel = the bed's number
+# (for Ecowitt probes, the probe's channel in Ecowitt); group = the heading
+# it's shown under on the Plants tab.
+#
+# Ecowitt probes are found by channel. Other probes list their sensors in
+# "sources" (the end of each entity ID; moisture is required, the others
+# optional) and their battery's low point in "battery_low" (volts).
 BEDS = [
-    {"channel": 1, "name": "Bed 1"},
-    {"channel": 2, "name": "Bed 2"},
-    {"channel": 3, "name": "Bed 3"},
-    {"channel": 4, "name": "Bed 4"},
+    {"channel": 1, "name": "Bed 1", "group": "Garden"},
+    {"channel": 2, "name": "Bed 2", "group": "Garden"},
+    {"channel": 3, "name": "Bed 3", "group": "Garden"},
+    {"channel": 4, "name": "Bed 4", "group": "Garden"},
+    # ESPHome soil sensors (XIAO ESP32-C6, capacitive probe, LiPo cell).
+    {"channel": 5, "name": "Garage 1", "group": "Garage", "battery_low": 3.5,
+     "sources": {"moisture": "soil_sensor_1_soil_moisture",
+                 "soil_temperature": "soil_sensor_1_soil_temperature",
+                 "battery": "soil_sensor_1_battery_voltage"}},
+    {"channel": 6, "name": "Garage 2", "group": "Garage", "battery_low": 3.5,
+     "sources": {"moisture": "soil_sensor_2_soil_moisture",
+                 "soil_temperature": "soil_sensor_2_soil_temperature",
+                 "battery": "soil_sensor_2_battery_voltage"}},
 ]
 
-# A probe battery (1.5 V AA) under this is flagged on its card.
+# An Ecowitt probe's battery (1.5 V AA) under this is flagged on its card.
 BATTERY_LOW_V = 1.2
+
+
+def sources(bed):
+    """The end of each reading's entity ID for this bed (regex)."""
+    c = bed["channel"]
+    return bed.get("sources") or {
+        "moisture": f"soil_moisture_{c}",
+        "soil_temperature": f"soil_temperature_{c}",
+        "conductivity": f"soil_(electrical_conductivity|ec)_{c}",
+        "battery": f"soil_battery_{c}",
+    }
 
 LEAF = "#5aa84e"
 LEAF_LIGHT = "#7cc96b"
@@ -489,9 +518,10 @@ def card_for(bed):
          "style": {**at(212, 103), **small, "white-space": "nowrap"}},
         {"type": "state-label", "entity": f"sensor.garden_{c}_soil_temperature",
          "style": {**at(170, 140), **small}},
-        {"type": "state-label", "entity": f"sensor.garden_{c}_conductivity",
-         "style": {**at(250, 140), **small}},
     ]
+    if "conductivity" in sources(bed):
+        elements.append({"type": "state-label", "entity": f"sensor.garden_{c}_conductivity",
+                         "style": {**at(250, 140), **small}})
     for state, icon, color in [("Dry", "mdi:water-off-outline", "#e0a03a"),
                                ("Good", "mdi:water-check", "#4caf50"),
                                ("Wet", "mdi:water-alert", "#3b82f6")]:
@@ -553,26 +583,32 @@ WIDE = [{"condition": "screen", "media_query": "(min-width: 768px)"}]
 NARROW = [{"condition": "screen", "media_query": "(max-width: 767px)"}]
 
 
+def groups():
+    """The beds by group, in BEDS order: [(group, [beds])]."""
+    out = {}
+    for b in BEDS:
+        out.setdefault(b.get("group", "Garden"), []).append(b)
+    return list(out.items())
+
+
 def section():
-    # The beds sit in a grid card that always splits evenly, up to four per
-    # row. (Sizing them with grid_options doesn't work here: in a section
-    # spanning 3 columns, Home Assistant counts card widths out of 36, not 12.)
-    cards = [card_for(b) for b in BEDS]
-    return {
-        "type": "grid",
-        "column_span": 3,
-        # No heading: Weather and Garden together fit on the 1280×800 wall
-        # tablet without scrolling.
-        "cards": [
-            {"type": "grid", "columns": min(len(BEDS), 4), "square": False,
-             "grid_options": {"columns": "full"}, "visibility": WIDE,
-             "cards": cards},
-        ] + [
-            # Phones: one bed under another.
-            {**card, "grid_options": {"columns": "full"}, "visibility": NARROW}
-            for card in cards
-        ],
-    }
+    # Each group: a heading, then its beds in a grid card that always splits
+    # evenly, up to four per row. (Sizing them with grid_options doesn't work
+    # here: in a section spanning 3 columns, Home Assistant counts card
+    # widths out of 36, not 12.)
+    cards = []
+    for group, beds in groups():
+        bed_cards = [card_for(b) for b in beds]
+        cards.append({"type": "heading", "heading": group,
+                      "icon": "mdi:flower" if group == "Garden" else "mdi:sprout",
+                      "grid_options": {"columns": "full"}})
+        cards.append({"type": "grid", "columns": min(len(beds), 4), "square": False,
+                      "grid_options": {"columns": "full"}, "visibility": WIDE,
+                      "cards": bed_cards})
+        # Phones: one bed under another.
+        cards += [{**card, "grid_options": {"columns": "full"}, "visibility": NARROW}
+                  for card in bed_cards]
+    return {"type": "grid", "column_span": 3, "cards": cards}
 
 
 # ---------------------------------------------------------------------------
@@ -691,16 +727,18 @@ def package():
             "name": f"Garden {c} outdoors",
             "icon": "mdi:home-switch-outline",
         }
+        src = sources(b)
         sensors += [
-            mirror(c, "moisture", "Moisture", f"soil_moisture_{c}", "%",
-                   "moisture", "mdi:water-percent"),
-            mirror(c, "soil_temperature", "Soil Temperature", f"soil_temperature_{c}",
-                   "°F", "temperature", "mdi:thermometer"),
-            mirror(c, "conductivity", "Conductivity",
-                   f"soil_(electrical_conductivity|ec)_{c}", "µS/cm",
-                   "conductivity", "mdi:flash-outline"),
-            mirror(c, "battery", "Battery", f"soil_battery_{c}", "V",
-                   "voltage", "mdi:battery"),
+            mirror(c, key, label, src[key], unit, device_class, icon)
+            for key, label, unit, device_class, icon in [
+                ("moisture", "Moisture", "%", "moisture", "mdi:water-percent"),
+                ("soil_temperature", "Soil Temperature", "°F", "temperature",
+                 "mdi:thermometer"),
+                ("conductivity", "Conductivity", "µS/cm", "conductivity",
+                 "mdi:flash-outline"),
+                ("battery", "Battery", "V", "voltage", "mdi:battery"),
+            ] if key in src
+        ] + [
             {
                 "name": f"Garden {c} Name",
                 "unique_id": f"garden_{c}_name",
@@ -763,7 +801,8 @@ def package():
             "unique_id": f"garden_{c}_battery_low",
             "device_class": "battery",
             "availability": f"{{{{ has_value('sensor.garden_{c}_battery') }}}}",
-            "state": f"{{{{ states('sensor.garden_{c}_battery') | float(9) < {BATTERY_LOW_V} }}}}",
+            "state": (f"{{{{ states('sensor.garden_{c}_battery') | float(9)"
+                      f" < {b.get('battery_low', BATTERY_LOW_V)} }}}}"),
         })
     # One line for the Home alert banner. A probe reading exactly 0% is
     # taken to be out of the ground (or not set up yet), not a dry bed.

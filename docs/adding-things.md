@@ -11,7 +11,8 @@ themes/wall_tablet.yaml        colours
 
 ## What updates on its own
 
-- **Garden beds**: one card per soil probe on **Outdoors**. Tap a bed's
+- **Garden beds**: one card per soil probe on the **Plants** tab, under a
+  heading per group (Garden, Garage). Tap a bed's
   picture to choose what's planted (Seedling, Lettuce, Tomato, Pepper,
   Carrot, Herbs, Cucumber, Strawberry, Blueberry, Raspberry, Sunflower,
   Flowers, Succulent); the picture and the Dry/Wet levels follow. Tap the
@@ -32,6 +33,10 @@ themes/wall_tablet.yaml        colours
   or add a plant type or change its levels, edit `BEDS` / `PLANT_TYPES` in
   `tools/garden.py` and run
   `python3 tools/garden.py` (`--gallery out.html` previews every picture).
+  An Ecowitt probe needs only its channel; an ESPHome soil sensor lists
+  its sensors' entity-ID endings under `sources` and its battery's low
+  point under `battery_low` (see the Garage entries), and a bed's `group`
+  is the heading it appears under.
 - **Drip watering**: the pump icon left of each bed's pot switches Auto
   watering on/off (hold it for what the pump is doing and why). Beds on the
   pump, run lengths, watering times and limits are `DRIP_ZONES` / `DRIP` in

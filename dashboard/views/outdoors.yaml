@@ -1,10 +1,10 @@
-# Outdoors, in three full-width bands, top to bottom:
+# Outdoors, in two full-width bands, top to bottom:
 #   Weather       station card | forecast | 24 h graphs  (tools/weather.py)
-#   Garden        one card per bed                       (tools/garden.py)
 #   Coop & shed   chicken coop sensors | shed power station
+# The garden beds have their own tab, Plants (views/plants.yaml).
 # Each band lays its cards out with a grid card, so the columns stay even and
-# in the same order. Weather and Garden have no headings so both fit on the
-# 1280×800 wall tablet without scrolling.
+# in the same order. Weather has no heading, to keep it compact on the
+# 1280×800 wall tablet.
 #
 # Phones: each band also has a stacked copy of its cards (one per row),
 # shown below 768 px wide instead of the side-by-side grid. Same view, same
@@ -16,8 +16,6 @@ max_columns: 3
 
 sections:
   - !include weather_station_section.yaml
-
-  - !include garden_section.yaml
 
   - type: grid
     column_span: 3

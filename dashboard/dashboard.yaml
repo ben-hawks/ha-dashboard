@@ -19,5 +19,6 @@ views:
   - !include views/rooms.yaml
   - !include views/climate.yaml
   - !include views/outdoors.yaml
+  - !include views/plants.yaml
   - !include views/safety.yaml
   - !include views/devices.yaml

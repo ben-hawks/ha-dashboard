@@ -3,12 +3,17 @@
 type: grid
 column_span: 3
 cards:
+- type: heading
+  heading: Garden
+  icon: mdi:flower
+  grid_options:
+    columns: full
 - type: grid
   columns: 4
   square: false
   grid_options:
     columns: full
-  visibility:
+  visibility: &id013
   - condition: screen
     media_query: '(min-width: 768px)'
   cards:
@@ -1076,6 +1081,346 @@ cards:
   visibility: *id010
 - type: vertical-stack
   cards: *id012
+  grid_options:
+    columns: full
+  visibility: *id010
+- type: heading
+  heading: Garage
+  icon: mdi:sprout
+  grid_options:
+    columns: full
+- type: grid
+  columns: 2
+  square: false
+  grid_options:
+    columns: full
+  visibility: *id013
+  cards:
+  - type: vertical-stack
+    cards: &id016
+    - type: picture-elements
+      image: data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMDAgMTYwIj48L3N2Zz4=
+      elements:
+      - type: image
+        entity: sensor.garden_5_status
+        image: data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMDAgMTYwIj48L3N2Zz4=
+        state_image: *id002
+        tap_action:
+          action: none
+        style: &id014
+          left: 50%
+          top: 50%
+          width: 100%
+      - type: image
+        entity: sensor.garden_5_level
+        image: data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMDAgMTYwIj48ZGVmcz48bGluZWFyR3JhZGllbnQgaWQ9ImIiIHgxPSIwIiB4Mj0iMSI+PHN0b3Agb2Zmc2V0PSIwIiBzdG9wLWNvbG9yPSIjNDZkMGMwIi8+PHN0b3Agb2Zmc2V0PSIxIiBzdG9wLWNvbG9yPSIjNmFhOWZmIi8+PC9saW5lYXJHcmFkaWVudD48L2RlZnM+PHJlY3QgeD0iMTUwIiB5PSIxMjEiIHdpZHRoPSIxMjQiIGhlaWdodD0iNiIgcng9IjMiIGZpbGw9IiM4YTk2YjgiIGZpbGwtb3BhY2l0eT0iMC4yNSIvPjwvc3ZnPg==
+        state_image: *id003
+        tap_action:
+          action: none
+        style: *id014
+      - type: image
+        entity: input_select.garden_5_plant
+        image: data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMDAgMTYwIj48cGF0aCBkPSJNNjUgMTA5IEM2NSA5NiA2NCA4NiA2NiA3NCIgc3Ryb2tlPSIjNGE4YTQwIiBzdHJva2Utd2lkdGg9IjMuNSIgZmlsbD0ibm9uZSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+PHBhdGggdHJhbnNmb3JtPSJ0cmFuc2xhdGUoNjYgODApIHJvdGF0ZSgtNjIpIiBkPSJNMCAwIEMxMS40IC05LjAgMTEuNCAtMjIuNSAwIC0zMCBDLTExLjQgLTIyLjUgLTExLjQgLTkuMCAwIDAgWiIgZmlsbD0iIzVhYTg0ZSIvPjxwYXRoIHRyYW5zZm9ybT0idHJhbnNsYXRlKDY2IDc0KSByb3RhdGUoNTUpIiBkPSJNMCAwIEMxMi45IC0xMC4yIDEyLjkgLTI1LjUgMCAtMzQgQy0xMi45IC0yNS41IC0xMi45IC0xMC4yIDAgMCBaIiBmaWxsPSIjN2NjOTZiIi8+PHBhdGggdHJhbnNmb3JtPSJ0cmFuc2xhdGUoNjYgNzIpIHJvdGF0ZSgtNSkiIGQ9Ik0wIDAgQzYuMSAtNC44IDYuMSAtMTIuMCAwIC0xNiBDLTYuMSAtMTIuMCAtNi4xIC00LjggMCAwIFoiIGZpbGw9IiM1YWE4NGUiLz48ZWxsaXBzZSBjeD0iNjUiIGN5PSIxNTMiIHJ4PSIzNCIgcnk9IjQiIGZpbGw9IiMwMDAiIGZpbGwtb3BhY2l0eT0iMC4xNSIvPjxwYXRoIGQ9Ik0zNiAxMTggTDk0IDExOCBMODcgMTUyIEw0MyAxNTIgWiIgZmlsbD0iI2M4NzE0YSIvPjxyZWN0IHg9IjMwIiB5PSIxMDgiIHdpZHRoPSI3MCIgaGVpZ2h0PSIxMiIgcng9IjMiIGZpbGw9IiNiNTYwM2MiLz48ZWxsaXBzZSBjeD0iNjUiIGN5PSIxMDkiIHJ4PSIzMSIgcnk9IjQiIGZpbGw9IiM1YjNhMjkiLz48L3N2Zz4=
+        state_image: *id005
+        tap_action:
+          action: more-info
+        style: *id014
+      - type: state-label
+        entity: sensor.garden_5_title
+        tap_action:
+          action: more-info
+          entity: input_text.garden_5_name
+        style:
+          left: 70.0%
+          top: 16.2%
+          font-size: 15px
+          font-weight: '500'
+          color: var(--secondary-text-color)
+          white-space: nowrap
+      - type: state-label
+        entity: sensor.garden_5_moisture
+        style:
+          left: 70.7%
+          top: 45.0%
+          font-size: 34px
+          font-weight: '600'
+          color: var(--primary-text-color)
+      - type: state-label
+        entity: sensor.garden_5_status
+        attribute: label
+        style:
+          left: 70.7%
+          top: 64.4%
+          font-size: 13px
+          color: var(--secondary-text-color)
+          white-space: nowrap
+      - type: state-label
+        entity: sensor.garden_5_soil_temperature
+        style:
+          left: 56.7%
+          top: 87.5%
+          font-size: 13px
+          color: var(--secondary-text-color)
+      - type: conditional
+        conditions:
+        - entity: sensor.garden_5_status
+          state: Dry
+        elements:
+        - type: icon
+          icon: mdi:water-off-outline
+          tap_action:
+            action: none
+          style:
+            left: 48.7%
+            top: 45.0%
+            color: '#e0a03a'
+            --mdc-icon-size: 28px
+      - type: conditional
+        conditions:
+        - entity: sensor.garden_5_status
+          state: Good
+        elements:
+        - type: icon
+          icon: mdi:water-check
+          tap_action:
+            action: none
+          style:
+            left: 48.7%
+            top: 45.0%
+            color: '#4caf50'
+            --mdc-icon-size: 28px
+      - type: conditional
+        conditions:
+        - entity: sensor.garden_5_status
+          state: Wet
+        elements:
+        - type: icon
+          icon: mdi:water-alert
+          tap_action:
+            action: none
+          style:
+            left: 48.7%
+            top: 45.0%
+            color: '#3b82f6'
+            --mdc-icon-size: 28px
+      - type: state-icon
+        entity: input_boolean.garden_5_outdoors
+        tap_action:
+          action: toggle
+        style:
+          left: 6.7%
+          top: 87.5%
+          color: var(--secondary-text-color)
+          --mdc-icon-size: 20px
+      - type: conditional
+        conditions:
+        - entity: binary_sensor.garden_5_battery_low
+          state: 'on'
+        elements:
+        - type: icon
+          icon: mdi:battery-alert-variant-outline
+          title: Probe battery low
+          style:
+            left: 94.7%
+            top: 13.8%
+            color: '#e0533d'
+            --mdc-icon-size: 22px
+    - type: custom:mini-graph-card
+      entities:
+      - entity: sensor.garden_5_target_position
+        name: Moisture vs. target · 3 days
+      hours_to_show: 72
+      points_per_hour: 1
+      hour24: false
+      height: 70
+      line_width: 3
+      smoothing: true
+      animate: false
+      lower_bound: 0
+      upper_bound: 100
+      font_size_header: 13
+      show:
+        icon: false
+        state: false
+        legend: false
+        labels: false
+        points: false
+        fill: fade
+        name: true
+      color_thresholds:
+      - value: 0
+        color: '#ffb347'
+      - value: 33.3
+        color: '#6fdc8c'
+      - value: 66.7
+        color: '#6aa9ff'
+      color_thresholds_transition: smooth
+  - type: vertical-stack
+    cards: &id017
+    - type: picture-elements
+      image: data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMDAgMTYwIj48L3N2Zz4=
+      elements:
+      - type: image
+        entity: sensor.garden_6_status
+        image: data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMDAgMTYwIj48L3N2Zz4=
+        state_image: *id002
+        tap_action:
+          action: none
+        style: &id015
+          left: 50%
+          top: 50%
+          width: 100%
+      - type: image
+        entity: sensor.garden_6_level
+        image: data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMDAgMTYwIj48ZGVmcz48bGluZWFyR3JhZGllbnQgaWQ9ImIiIHgxPSIwIiB4Mj0iMSI+PHN0b3Agb2Zmc2V0PSIwIiBzdG9wLWNvbG9yPSIjNDZkMGMwIi8+PHN0b3Agb2Zmc2V0PSIxIiBzdG9wLWNvbG9yPSIjNmFhOWZmIi8+PC9saW5lYXJHcmFkaWVudD48L2RlZnM+PHJlY3QgeD0iMTUwIiB5PSIxMjEiIHdpZHRoPSIxMjQiIGhlaWdodD0iNiIgcng9IjMiIGZpbGw9IiM4YTk2YjgiIGZpbGwtb3BhY2l0eT0iMC4yNSIvPjwvc3ZnPg==
+        state_image: *id003
+        tap_action:
+          action: none
+        style: *id015
+      - type: image
+        entity: input_select.garden_6_plant
+        image: data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMDAgMTYwIj48cGF0aCBkPSJNNjUgMTA5IEM2NSA5NiA2NCA4NiA2NiA3NCIgc3Ryb2tlPSIjNGE4YTQwIiBzdHJva2Utd2lkdGg9IjMuNSIgZmlsbD0ibm9uZSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+PHBhdGggdHJhbnNmb3JtPSJ0cmFuc2xhdGUoNjYgODApIHJvdGF0ZSgtNjIpIiBkPSJNMCAwIEMxMS40IC05LjAgMTEuNCAtMjIuNSAwIC0zMCBDLTExLjQgLTIyLjUgLTExLjQgLTkuMCAwIDAgWiIgZmlsbD0iIzVhYTg0ZSIvPjxwYXRoIHRyYW5zZm9ybT0idHJhbnNsYXRlKDY2IDc0KSByb3RhdGUoNTUpIiBkPSJNMCAwIEMxMi45IC0xMC4yIDEyLjkgLTI1LjUgMCAtMzQgQy0xMi45IC0yNS41IC0xMi45IC0xMC4yIDAgMCBaIiBmaWxsPSIjN2NjOTZiIi8+PHBhdGggdHJhbnNmb3JtPSJ0cmFuc2xhdGUoNjYgNzIpIHJvdGF0ZSgtNSkiIGQ9Ik0wIDAgQzYuMSAtNC44IDYuMSAtMTIuMCAwIC0xNiBDLTYuMSAtMTIuMCAtNi4xIC00LjggMCAwIFoiIGZpbGw9IiM1YWE4NGUiLz48ZWxsaXBzZSBjeD0iNjUiIGN5PSIxNTMiIHJ4PSIzNCIgcnk9IjQiIGZpbGw9IiMwMDAiIGZpbGwtb3BhY2l0eT0iMC4xNSIvPjxwYXRoIGQ9Ik0zNiAxMTggTDk0IDExOCBMODcgMTUyIEw0MyAxNTIgWiIgZmlsbD0iI2M4NzE0YSIvPjxyZWN0IHg9IjMwIiB5PSIxMDgiIHdpZHRoPSI3MCIgaGVpZ2h0PSIxMiIgcng9IjMiIGZpbGw9IiNiNTYwM2MiLz48ZWxsaXBzZSBjeD0iNjUiIGN5PSIxMDkiIHJ4PSIzMSIgcnk9IjQiIGZpbGw9IiM1YjNhMjkiLz48L3N2Zz4=
+        state_image: *id005
+        tap_action:
+          action: more-info
+        style: *id015
+      - type: state-label
+        entity: sensor.garden_6_title
+        tap_action:
+          action: more-info
+          entity: input_text.garden_6_name
+        style:
+          left: 70.0%
+          top: 16.2%
+          font-size: 15px
+          font-weight: '500'
+          color: var(--secondary-text-color)
+          white-space: nowrap
+      - type: state-label
+        entity: sensor.garden_6_moisture
+        style:
+          left: 70.7%
+          top: 45.0%
+          font-size: 34px
+          font-weight: '600'
+          color: var(--primary-text-color)
+      - type: state-label
+        entity: sensor.garden_6_status
+        attribute: label
+        style:
+          left: 70.7%
+          top: 64.4%
+          font-size: 13px
+          color: var(--secondary-text-color)
+          white-space: nowrap
+      - type: state-label
+        entity: sensor.garden_6_soil_temperature
+        style:
+          left: 56.7%
+          top: 87.5%
+          font-size: 13px
+          color: var(--secondary-text-color)
+      - type: conditional
+        conditions:
+        - entity: sensor.garden_6_status
+          state: Dry
+        elements:
+        - type: icon
+          icon: mdi:water-off-outline
+          tap_action:
+            action: none
+          style:
+            left: 48.7%
+            top: 45.0%
+            color: '#e0a03a'
+            --mdc-icon-size: 28px
+      - type: conditional
+        conditions:
+        - entity: sensor.garden_6_status
+          state: Good
+        elements:
+        - type: icon
+          icon: mdi:water-check
+          tap_action:
+            action: none
+          style:
+            left: 48.7%
+            top: 45.0%
+            color: '#4caf50'
+            --mdc-icon-size: 28px
+      - type: conditional
+        conditions:
+        - entity: sensor.garden_6_status
+          state: Wet
+        elements:
+        - type: icon
+          icon: mdi:water-alert
+          tap_action:
+            action: none
+          style:
+            left: 48.7%
+            top: 45.0%
+            color: '#3b82f6'
+            --mdc-icon-size: 28px
+      - type: state-icon
+        entity: input_boolean.garden_6_outdoors
+        tap_action:
+          action: toggle
+        style:
+          left: 6.7%
+          top: 87.5%
+          color: var(--secondary-text-color)
+          --mdc-icon-size: 20px
+      - type: conditional
+        conditions:
+        - entity: binary_sensor.garden_6_battery_low
+          state: 'on'
+        elements:
+        - type: icon
+          icon: mdi:battery-alert-variant-outline
+          title: Probe battery low
+          style:
+            left: 94.7%
+            top: 13.8%
+            color: '#e0533d'
+            --mdc-icon-size: 22px
+    - type: custom:mini-graph-card
+      entities:
+      - entity: sensor.garden_6_target_position
+        name: Moisture vs. target · 3 days
+      hours_to_show: 72
+      points_per_hour: 1
+      hour24: false
+      height: 70
+      line_width: 3
+      smoothing: true
+      animate: false
+      lower_bound: 0
+      upper_bound: 100
+      font_size_header: 13
+      show:
+        icon: false
+        state: false
+        legend: false
+        labels: false
+        points: false
+        fill: fade
+        name: true
+      color_thresholds:
+      - value: 0
+        color: '#ffb347'
+      - value: 33.3
+        color: '#6fdc8c'
+      - value: 66.7
+        color: '#6aa9ff'
+      color_thresholds_transition: smooth
+- type: vertical-stack
+  cards: *id016
+  grid_options:
+    columns: full
+  visibility: *id010
+- type: vertical-stack
+  cards: *id017
   grid_options:
     columns: full
   visibility: *id010
