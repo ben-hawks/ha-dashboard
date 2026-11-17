@@ -276,6 +276,113 @@ def art_succulent():
     return out + '<ellipse cx="65" cy="80" rx="2" ry="3" fill="#d98aa0"/>'
 
 
+# Herbs with their own pictures and levels (the generic "Herbs" stays).
+LAVENDER = "#8e7cc3"
+GREY_GREEN = "#8fae8b"
+
+
+def art_lavender():
+    """Grey-green tufts with tall stems ending in purple flower spikes."""
+    out = ""
+    for a in range(-60, 61, 20):
+        out += leaf(65, 108, 22, a, GREY_GREEN, 0.18)
+    for x1, y1 in [(44, 46), (54, 36), (65, 30), (76, 36), (86, 46)]:
+        out += stems(f"M65 104 L{x1} {y1}", GREY_GREEN, 2)
+        for i in range(6):
+            t = i / 6
+            x, y = x1 + (65 - x1) * 0.05 * i, y1 + i * 4.5
+            out += (f'<ellipse cx="{x:.1f}" cy="{y:.1f}" rx="{3.2 - t:.1f}" ry="2.6" '
+                    f'fill="{LAVENDER if i % 2 else "#a493d3"}"/>')
+    return out
+
+
+def art_lemon_balm():
+    """A bushy mound of broad, bright yellow-green leaves with veins."""
+    out = stems("M65 109 L65 66 M65 96 L48 78 M65 92 L83 76 M65 80 L52 60 M65 76 L80 58")
+    for x, y, a, length in [(48, 78, -60, 26), (83, 76, 60, 26), (52, 60, -30, 26),
+                            (80, 58, 30, 26), (65, 66, 0, 28), (58, 96, -80, 22),
+                            (72, 96, 80, 22), (65, 52, -12, 20), (65, 52, 12, 20)]:
+        out += leaf(x, y, length, a, "#9ccc5a", 0.62).replace(
+            "/>", ' stroke="#6f9e3a" stroke-width="1"/>')
+        out += (f'<path transform="translate({x} {y}) rotate({a})" d="M0 0 L0 {-length * 0.85:.1f}" '
+                'stroke="#6f9e3a" stroke-width="1"/>')
+    return out
+
+
+def art_spearmint():
+    """Upright stems with pairs of pointed, toothed leaves."""
+    out = ""
+    for x0, x1 in [(52, 46), (65, 65), (78, 84)]:
+        top = 44 if x0 == 65 else 56
+        out += stems(f"M{x0} 109 L{x1} {top}", "#3f7f3a", 2.5)
+        for i, t in enumerate((0.2, 0.42, 0.64, 0.86)):
+            x, y = x0 + (x1 - x0) * t, 109 + (top - 109) * t
+            size = 20 - i * 3
+            for a in (-62, 62):
+                out += leaf(x, y, size, a, LEAF_DARK if i % 2 else "#4f9a46", 0.36).replace(
+                    "/>", ' stroke="#2f6a2c" stroke-width="0.8" stroke-dasharray="2 1.2"/>')
+        out += leaf(x1, top + 2, 12, 0, "#6cba5c", 0.3)
+    return out
+
+
+def art_basil():
+    """Big glossy, cupped leaves held out wide in pairs up a short stem."""
+    out = stems("M65 109 L65 50 M65 84 L50 70 M65 84 L80 70", "#4a8a40", 3)
+    for x, y, a, size in [(65, 102, -78, 30), (65, 102, 78, 30), (65, 88, -64, 28),
+                          (65, 88, 64, 28), (50, 70, -40, 22), (80, 70, 40, 22),
+                          (65, 66, -30, 22), (65, 66, 30, 22), (65, 52, 0, 18)]:
+        out += leaf(x, y, size, a, "#3fa34d", 0.66).replace(
+            "/>", ' stroke="#2c7a38" stroke-width="1"/>')
+        # A pale midrib for the glossy look.
+        out += (f'<path transform="translate({x} {y}) rotate({a})" '
+                f'd="M0 -3 Q{size * 0.12:.1f} {-size * 0.5:.1f} 0 {-size * 0.85:.1f}" '
+                'stroke="#b6e3a8" stroke-width="1.4" fill="none" stroke-opacity="0.7"/>')
+    return out
+
+
+def art_oregano():
+    """A low, spreading mound of small round leaves with pink flower heads."""
+    import math
+    out = stems("M65 109 C58 98 46 94 36 92 M65 109 C72 98 84 94 94 92 "
+                "M65 109 C62 94 56 82 54 70 M65 109 C68 94 74 82 76 70 M65 109 L65 66",
+                "#6a8a4a", 2)
+    # Leaves scattered over a dome (golden-angle spiral, so they spread evenly).
+    for k in range(60):
+        r = math.sqrt(k / 60)
+        ang = k * 2.39996
+        x = 65 + r * 30 * math.cos(ang)
+        y = 92 - abs(r * 24 * math.sin(ang))
+        if y < 109:
+            out += (f'<circle cx="{x:.1f}" cy="{y:.1f}" r="4" '
+                    f'fill="{LEAF if k % 3 else LEAF_LIGHT}" stroke="#3f8f45" stroke-width="0.6"/>')
+    for x, y in [(52, 68), (78, 68), (65, 64), (40, 86), (90, 86)]:
+        for dx, dy in [(-2.5, 0), (2.5, 0), (0, -2.5), (0, 1.5)]:
+            out += f'<circle cx="{x + dx}" cy="{y + dy}" r="2" fill="#d98ab8"/>'
+    return out
+
+
+def art_thyme():
+    """Woody, wiry branches covered in tiny dark leaves and lilac flowers."""
+    branches = [("M65 109 C56 98 46 92 36 90", (36, 90)), ("M65 109 C74 98 84 92 94 90", (94, 90)),
+                ("M65 109 C60 92 52 80 46 70", (46, 70)), ("M65 109 C70 92 78 80 84 70", (84, 70)),
+                ("M65 109 C64 90 64 74 63 60", (63, 60))]
+    out = "".join(stems(d, WOOD, 1.8) for d, _ in branches)
+    import math
+    for k in range(70):
+        b = k % 5
+        t = (k // 5) / 14
+        (x0, y0), (x1, y1) = (65, 109), branches[b][1]
+        x = x0 + (x1 - x0) * t + math.sin(k * 1.7) * 4
+        y = y0 + (y1 - y0) * t + math.cos(k * 1.3) * 3
+        if t > 0.15:
+            out += (f'<ellipse cx="{x:.1f}" cy="{y:.1f}" rx="2.2" ry="1.4" fill="{LEAF_DARK if k % 3 else "#6f9a5a"}" '
+                    f'transform="rotate({(k * 37) % 180} {x:.1f} {y:.1f})"/>')
+    for _, (x, y) in branches:
+        out += "".join(f'<circle cx="{x + dx}" cy="{y + dy}" r="1.8" fill="#c7a6e0"/>'
+                       for dx, dy in [(-2, 0), (2, 0), (0, -2.4)])
+    return out
+
+
 # Plant types offered on the dashboard. dry/wet: moisture % below/above which
 # the bed shows Dry/Wet. Starting points; adjust to taste.
 PLANT_TYPES = {
@@ -292,6 +399,14 @@ PLANT_TYPES = {
     "Sunflower":  (art_sunflower, 25, 60),
     "Flowers":    (art_flowers, 30, 70),
     "Succulent":  (art_succulent, 10, 40),
+    # Herbs, each with its own needs: the Mediterranean ones like to dry out
+    # between waterings, basil and the mints want steadier moisture.
+    "Lavender":   (art_lavender, 15, 45),
+    "Thyme":      (art_thyme, 15, 45),
+    "Oregano":    (art_oregano, 20, 50),
+    "Lemon balm": (art_lemon_balm, 30, 65),
+    "Basil":      (art_basil, 35, 65),
+    "Spearmint":  (art_spearmint, 40, 75),
 }
 DEFAULT_PLANT = "Seedling"
 
@@ -302,6 +417,10 @@ DEFAULT_PLANT = "Seedling"
 SEASON_SENSITIVITY = {
     "Seedling": 0.5, "Lettuce": 0.5, "Carrot": 0.6, "Herbs": 0.8,
     "Strawberry": 1.1, "Blueberry": 1.2, "Raspberry": 1.2, "Succulent": 1.4,
+    # Mediterranean herbs slow right down in winter; basil (a warm-season
+    # annual) and the mints keep a steadier target.
+    "Lavender": 1.3, "Thyme": 1.3, "Oregano": 1.2, "Lemon balm": 0.9,
+    "Basil": 0.8, "Spearmint": 0.8,
 }
 
 # How the plant's Dry/Wet levels scale with the season. Both levels are
@@ -396,6 +515,8 @@ EC_FLUSH_ABOVE = {
     "Carrot": 1000, "Herbs": 1500, "Cucumber": 2500, "Strawberry": 1000,
     "Blueberry": 1000, "Raspberry": 1000, "Sunflower": 2500, "Flowers": 1500,
     "Succulent": 3000,
+    "Lavender": 1500, "Thyme": 1500, "Oregano": 1500, "Lemon balm": 1500,
+    "Basil": 1500, "Spearmint": 1800,
 }
 
 

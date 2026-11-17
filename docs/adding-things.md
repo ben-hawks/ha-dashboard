@@ -15,7 +15,8 @@ themes/wall_tablet.yaml        colours
   heading per group (Garden, Garage). Tap a bed's
   picture to choose what's planted (Seedling, Lettuce, Tomato, Pepper,
   Carrot, Herbs, Cucumber, Strawberry, Blueberry, Raspberry, Sunflower,
-  Flowers, Succulent); the picture and the Dry/Wet levels follow. Tap the
+  Flowers, Succulent, Lavender, Thyme, Oregano, Lemon balm, Basil,
+  Spearmint); the picture and the Dry/Wet levels follow. Tap the
   bed's title to rename it. Tap the small house/sun icon in the bottom-left
   corner to mark the bed indoors or outdoors (all start indoors). The levels
   follow the season: indoors by day length (shorter days, drier target),
