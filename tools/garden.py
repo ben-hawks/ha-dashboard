@@ -54,25 +54,35 @@ ROOT = Path(__file__).resolve().parent.parent
 #
 # Ecowitt probes are found by channel. Other probes list their sensors in
 # "sources" (the end of each entity ID; moisture is required, the others
-# optional) and their battery's low point in "battery_low" (volts).
+# optional). "battery" is the cell type, for its charge level (see
+# BATTERY_CURVES); Ecowitt probes take one alkaline AA.
 BEDS = [
     {"channel": 1, "name": "Bed 1", "group": "Garden"},
     {"channel": 2, "name": "Bed 2", "group": "Garden"},
     {"channel": 3, "name": "Bed 3", "group": "Garden"},
     {"channel": 4, "name": "Bed 4", "group": "Garden"},
     # ESPHome soil sensors (XIAO ESP32-C6, capacitive probe, LiPo cell).
-    {"channel": 5, "name": "Garage 1", "group": "Garage", "battery_low": 3.5,
+    {"channel": 5, "name": "Garage 1", "group": "Garage", "battery": "18650",
      "sources": {"moisture": "soil_sensor_1_soil_moisture",
                  "soil_temperature": "soil_sensor_1_soil_temperature",
                  "battery": "soil_sensor_1_battery_voltage"}},
-    {"channel": 6, "name": "Garage 2", "group": "Garage", "battery_low": 3.5,
+    {"channel": 6, "name": "Garage 2", "group": "Garage", "battery": "18650",
      "sources": {"moisture": "soil_sensor_2_soil_moisture",
                  "soil_temperature": "soil_sensor_2_soil_temperature",
                  "battery": "soil_sensor_2_battery_voltage"}},
 ]
 
-# An Ecowitt probe's battery (1.5 V AA) under this is flagged on its card.
-BATTERY_LOW_V = 1.2
+# Battery voltage → charge %, per cell type (piecewise-linear, light load).
+# Alkaline AAs sag steadily from 1.6 V; Li-ion 18650s sit around 3.6–3.9 V
+# for most of their charge and drop fast below 3.4 V.
+BATTERY_CURVES = {
+    "AA": [(1.0, 0), (1.1, 5), (1.2, 20), (1.3, 45), (1.4, 75), (1.5, 92), (1.6, 100)],
+    "18650": [(3.0, 0), (3.3, 5), (3.45, 20), (3.6, 35), (3.7, 50), (3.8, 63),
+              (3.9, 75), (4.0, 85), (4.1, 94), (4.2, 100)],
+}
+# A battery under this % is flagged on its card (red icon). The Home tab's
+# "Low batteries" count uses the same 20 %.
+BATTERY_LOW_PCT = 20
 
 
 def sources(bed):
@@ -682,12 +692,22 @@ def card_for(bed):
                               "hold_action": {"action": "more-info", "entity": ids["plan"]},
                               "style": {**at(18, 112), "color": color, "--mdc-icon-size": "20px"}}],
             })
+    # The probe's battery: a small level icon in the corner (tap for the %),
+    # turning into a red warning icon when it's low.
+    if "battery" in sources(bed):
+        elements.append({
+            "type": "state-icon", "entity": f"sensor.garden_{c}_battery_level",
+            "title": "Probe battery", "tap_action": {"action": "more-info"},
+            "style": {**at(286, 22), "color": "var(--secondary-text-color)",
+                      "--mdc-icon-size": "18px", "opacity": "0.7"},
+        })
     elements.append({
         "type": "conditional",
         "conditions": [{"entity": f"binary_sensor.garden_{c}_battery_low", "state": "on"}],
         "elements": [{"type": "icon", "icon": "mdi:battery-alert-variant-outline",
-                      "title": "Probe battery low",
-                      "style": {**at(284, 22), "color": RED, "--mdc-icon-size": "22px"}}],
+                      "title": "Probe battery low", "entity": f"sensor.garden_{c}_battery_level",
+                      "tap_action": {"action": "more-info"},
+                      "style": {**at(286, 22), "color": RED, "--mdc-icon-size": "22px"}}],
     })
     return {
         "type": "vertical-stack",
@@ -903,6 +923,22 @@ def package():
                 },
             },
         ]
+        # Charge level from the probe's battery voltage, by cell type.
+        sensors.append({
+            "name": f"Garden {c} Battery Level",
+            "unique_id": f"garden_{c}_battery_level",
+            "unit_of_measurement": "%",
+            "device_class": "battery",
+            "state_class": "measurement",
+            "availability": f"{{{{ has_value('sensor.garden_{c}_battery') }}}}",
+            "state": lerp(BATTERY_CURVES[b.get("battery", "AA")],
+                          f"states('sensor.garden_{c}_battery') | float(0)")
+                     + "{{ ns.y | round(0) | int }}",
+            "attributes": {
+                "voltage": f"{{{{ states('sensor.garden_{c}_battery') }}}}",
+                "cell": b.get("battery", "AA"),
+            },
+        })
         # For the graph: moisture placed on the bed's target, 0–100 with the
         # target range in the middle third, whatever the target is today.
         sensors.append({
@@ -921,9 +957,9 @@ def package():
             "name": f"Garden {c} Battery Low",
             "unique_id": f"garden_{c}_battery_low",
             "device_class": "battery",
-            "availability": f"{{{{ has_value('sensor.garden_{c}_battery') }}}}",
-            "state": (f"{{{{ states('sensor.garden_{c}_battery') | float(9)"
-                      f" < {b.get('battery_low', BATTERY_LOW_V)} }}}}"),
+            "availability": f"{{{{ has_value('sensor.garden_{c}_battery_level') }}}}",
+            "state": (f"{{{{ states('sensor.garden_{c}_battery_level') | float(100)"
+                      f" < {BATTERY_LOW_PCT} }}}}"),
         })
     # One line for the Home alert banner. A probe reading exactly 0% is
     # taken to be out of the ground (or not set up yet), not a dry bed.

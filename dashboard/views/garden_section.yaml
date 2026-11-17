@@ -269,6 +269,17 @@ cards:
             top: 70.0%
             color: var(--secondary-text-color)
             --mdc-icon-size: 20px
+      - type: state-icon
+        entity: sensor.garden_1_battery_level
+        title: Probe battery
+        tap_action:
+          action: more-info
+        style:
+          left: 95.3%
+          top: 13.8%
+          color: var(--secondary-text-color)
+          --mdc-icon-size: 18px
+          opacity: '0.7'
       - type: conditional
         conditions:
         - entity: binary_sensor.garden_1_battery_low
@@ -277,8 +288,11 @@ cards:
         - type: icon
           icon: mdi:battery-alert-variant-outline
           title: Probe battery low
+          entity: sensor.garden_1_battery_level
+          tap_action:
+            action: more-info
           style:
-            left: 94.7%
+            left: 95.3%
             top: 13.8%
             color: '#e0533d'
             --mdc-icon-size: 22px
@@ -521,6 +535,17 @@ cards:
             top: 70.0%
             color: var(--secondary-text-color)
             --mdc-icon-size: 20px
+      - type: state-icon
+        entity: sensor.garden_2_battery_level
+        title: Probe battery
+        tap_action:
+          action: more-info
+        style:
+          left: 95.3%
+          top: 13.8%
+          color: var(--secondary-text-color)
+          --mdc-icon-size: 18px
+          opacity: '0.7'
       - type: conditional
         conditions:
         - entity: binary_sensor.garden_2_battery_low
@@ -529,8 +554,11 @@ cards:
         - type: icon
           icon: mdi:battery-alert-variant-outline
           title: Probe battery low
+          entity: sensor.garden_2_battery_level
+          tap_action:
+            action: more-info
           style:
-            left: 94.7%
+            left: 95.3%
             top: 13.8%
             color: '#e0533d'
             --mdc-icon-size: 22px
@@ -773,6 +801,17 @@ cards:
             top: 70.0%
             color: var(--secondary-text-color)
             --mdc-icon-size: 20px
+      - type: state-icon
+        entity: sensor.garden_3_battery_level
+        title: Probe battery
+        tap_action:
+          action: more-info
+        style:
+          left: 95.3%
+          top: 13.8%
+          color: var(--secondary-text-color)
+          --mdc-icon-size: 18px
+          opacity: '0.7'
       - type: conditional
         conditions:
         - entity: binary_sensor.garden_3_battery_low
@@ -781,8 +820,11 @@ cards:
         - type: icon
           icon: mdi:battery-alert-variant-outline
           title: Probe battery low
+          entity: sensor.garden_3_battery_level
+          tap_action:
+            action: more-info
           style:
-            left: 94.7%
+            left: 95.3%
             top: 13.8%
             color: '#e0533d'
             --mdc-icon-size: 22px
@@ -1025,6 +1067,17 @@ cards:
             top: 70.0%
             color: var(--secondary-text-color)
             --mdc-icon-size: 20px
+      - type: state-icon
+        entity: sensor.garden_4_battery_level
+        title: Probe battery
+        tap_action:
+          action: more-info
+        style:
+          left: 95.3%
+          top: 13.8%
+          color: var(--secondary-text-color)
+          --mdc-icon-size: 18px
+          opacity: '0.7'
       - type: conditional
         conditions:
         - entity: binary_sensor.garden_4_battery_low
@@ -1033,8 +1086,11 @@ cards:
         - type: icon
           icon: mdi:battery-alert-variant-outline
           title: Probe battery low
+          entity: sensor.garden_4_battery_level
+          tap_action:
+            action: more-info
           style:
-            left: 94.7%
+            left: 95.3%
             top: 13.8%
             color: '#e0533d'
             --mdc-icon-size: 22px
@@ -1218,6 +1274,17 @@ cards:
           top: 87.5%
           color: var(--secondary-text-color)
           --mdc-icon-size: 20px
+      - type: state-icon
+        entity: sensor.garden_5_battery_level
+        title: Probe battery
+        tap_action:
+          action: more-info
+        style:
+          left: 95.3%
+          top: 13.8%
+          color: var(--secondary-text-color)
+          --mdc-icon-size: 18px
+          opacity: '0.7'
       - type: conditional
         conditions:
         - entity: binary_sensor.garden_5_battery_low
@@ -1226,8 +1293,11 @@ cards:
         - type: icon
           icon: mdi:battery-alert-variant-outline
           title: Probe battery low
+          entity: sensor.garden_5_battery_level
+          tap_action:
+            action: more-info
           style:
-            left: 94.7%
+            left: 95.3%
             top: 13.8%
             color: '#e0533d'
             --mdc-icon-size: 22px
@@ -1377,6 +1447,17 @@ cards:
           top: 87.5%
           color: var(--secondary-text-color)
           --mdc-icon-size: 20px
+      - type: state-icon
+        entity: sensor.garden_6_battery_level
+        title: Probe battery
+        tap_action:
+          action: more-info
+        style:
+          left: 95.3%
+          top: 13.8%
+          color: var(--secondary-text-color)
+          --mdc-icon-size: 18px
+          opacity: '0.7'
       - type: conditional
         conditions:
         - entity: binary_sensor.garden_6_battery_low
@@ -1385,8 +1466,11 @@ cards:
         - type: icon
           icon: mdi:battery-alert-variant-outline
           title: Probe battery low
+          entity: sensor.garden_6_battery_level
+          tap_action:
+            action: more-info
           style:
-            left: 94.7%
+            left: 95.3%
             top: 13.8%
             color: '#e0533d'
             --mdc-icon-size: 22px
